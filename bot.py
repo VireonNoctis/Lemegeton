@@ -1,13 +1,14 @@
-# bot.py
 import discord
 from discord.ext import commands
 from config import TOKEN, GUILD_ID, BOT_ID
 import logging
 import asyncio
 
-# -----------------------------
+from database import init_challenge_rules_table, init_db
+
+# ------------------------------------------------------
 # Logging Setup
-# -----------------------------
+# ------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] [%(levelname)s] %(message)s",
@@ -15,17 +16,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# -----------------------------
+# ------------------------------------------------------
 # Bot Configuration
-# -----------------------------
+# ------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, application_id=BOT_ID)
 
-# -----------------------------
-# Cog List
-# -----------------------------
+# ------------------------------------------------------
+# List of Cog Extensions
+# ------------------------------------------------------
 COGS = {
     "cogs.registration": "Registration",
     "cogs.manga": "Manga",
@@ -34,53 +35,67 @@ COGS = {
     "cogs.changelog": "Changelog",
     "cogs.anime": "Anime",
     "cogs.profile": "Profile",
-    "cogs.recommendations": "Recommendations"
+    "cogs.recommendations": "Recommendations",
 }
 
-# -----------------------------
-# Load Cogs
-# -----------------------------
+# ------------------------------------------------------
+# Load All Cogs
+# ------------------------------------------------------
 async def load_cogs():
     for cog_path, class_name in COGS.items():
         try:
-            if cog_path in bot.extensions:
-                await bot.unload_extension(cog_path)
             await bot.load_extension(cog_path)
             logger.info("✅ Loaded cog: %s", class_name)
+        except commands.errors.ExtensionAlreadyLoaded:
+            logger.info("⚠ Cog '%s' already loaded, skipping", class_name)
         except Exception as e:
             logger.exception("❌ Failed to load cog '%s': %s", class_name, e)
 
-# -----------------------------
-# Ready Event
-# -----------------------------
+# ------------------------------------------------------
+# Bot Ready Event
+# ------------------------------------------------------
 @bot.event
 async def on_ready():
     logger.info("Bot is starting...")
 
+    # Initialize database tables
+    try:
+        await init_db()
+        await init_challenge_rules_table()
+        logger.info("✅ Database initialized")
+    except Exception as e:
+        logger.exception("❌ Database initialization failed: %s", e)
+
     guild = discord.Object(id=GUILD_ID)
 
-    # -----------------------------
-    # Log all loaded cogs
-    # -----------------------------
-    for cog_name, cog_instance in bot.cogs.items():
-        logger.info("   • Cog loaded: %s", cog_name)
+    # Delete old guild commands
+    try:
+        existing_commands = await bot.tree.fetch_commands(guild=guild)
+        for cmd in existing_commands:
+            await bot.tree.delete_command(cmd.name, guild=guild)
+            logger.info("🗑 Deleted old command '%s' from guild", cmd.name)
+    except Exception as e:
+        logger.exception("❌ Failed to delete old commands: %s", e)
 
-    # -----------------------------
-    # Sync slash commands for the guild
-    # -----------------------------
+    # Sync all slash commands to the guild
     try:
         synced = await bot.tree.sync(guild=guild)
         logger.info("✅ Synced %d slash commands to guild %s", len(synced), GUILD_ID)
-        for cmd in synced:
-            logger.info("   • /%s", cmd.name)
     except Exception as e:
         logger.exception("❌ Failed to sync slash commands: %s", e)
 
+    # Verify loaded cogs
+    for cog_path, class_name in COGS.items():
+        if bot.get_cog(class_name):
+            logger.info("✅ Cog '%s' is loaded and ready!", class_name)
+        else:
+            logger.warning("❌ Cog '%s' is NOT loaded!", class_name)
+
     logger.info("✅ Logged in as %s (ID: %s)", bot.user, bot.user.id)
 
-# -----------------------------
+# ------------------------------------------------------
 # Main Entry Point
-# -----------------------------
+# ------------------------------------------------------
 async def main():
     async with bot:
         await load_cogs()
