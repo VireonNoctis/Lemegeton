@@ -1,9 +1,8 @@
 import discord
 from discord.ext import commands
-from config import TOKEN, GUILD_ID, BOT_ID
 import logging
 import asyncio
-
+from config import TOKEN, GUILD_ID, BOT_ID
 from database import init_challenge_rules_table, init_db
 
 # ------------------------------------------------------
@@ -25,7 +24,7 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents, application_id=BOT_ID)
 
 # ------------------------------------------------------
-# List of Cog Extensions
+# Cog Extensions
 # ------------------------------------------------------
 COGS = {
     "cogs.registration": "Registration",
@@ -47,7 +46,7 @@ async def load_cogs():
             await bot.load_extension(cog_path)
             logger.info("✅ Loaded cog: %s", class_name)
         except commands.errors.ExtensionAlreadyLoaded:
-            logger.info("⚠ Cog '%s' already loaded, skipping", class_name)
+            logger.warning("⚠ Cog '%s' already loaded, skipping", class_name)
         except Exception as e:
             logger.exception("❌ Failed to load cog '%s': %s", class_name, e)
 
@@ -62,34 +61,25 @@ async def on_ready():
     try:
         await init_db()
         await init_challenge_rules_table()
-        logger.info("✅ Database initialized")
+        logger.info("✅ Database initialized successfully")
     except Exception as e:
         logger.exception("❌ Database initialization failed: %s", e)
 
     guild = discord.Object(id=GUILD_ID)
 
-    # Delete old guild commands
-    try:
-        existing_commands = await bot.tree.fetch_commands(guild=guild)
-        for cmd in existing_commands:
-            await bot.tree.delete_command(cmd.name, guild=guild)
-            logger.info("🗑 Deleted old command '%s' from guild", cmd.name)
-    except Exception as e:
-        logger.exception("❌ Failed to delete old commands: %s", e)
-
     # Sync all slash commands to the guild
     try:
-        synced = await bot.tree.sync(guild=guild)
-        logger.info("✅ Synced %d slash commands to guild %s", len(synced), GUILD_ID)
+        synced_commands = await bot.tree.sync(guild=guild)
+        logger.info("✅ Synced %d slash commands to guild %s", len(synced_commands), GUILD_ID)
     except Exception as e:
         logger.exception("❌ Failed to sync slash commands: %s", e)
 
     # Verify loaded cogs
-    for cog_path, class_name in COGS.items():
+    for _, class_name in COGS.items():  # underscore used for unused cog_path
         if bot.get_cog(class_name):
-            logger.info("✅ Cog '%s' is loaded and ready!", class_name)
+            logger.info("✅ Cog '%s' is loaded and ready", class_name)
         else:
-            logger.warning("❌ Cog '%s' is NOT loaded!", class_name)
+            logger.warning("❌ Cog '%s' is NOT loaded", class_name)
 
     logger.info("✅ Logged in as %s (ID: %s)", bot.user, bot.user.id)
 
