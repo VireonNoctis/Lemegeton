@@ -231,3 +231,59 @@ async def fetch_anilist_entries(username: str, media_type: str) -> List[Dict]:
         except Exception as e:
             logger.error(f"Unexpected error fetching entries for {username} ({media_type}): {e}")
             return []
+
+# -----------------------------
+# Fetch media by title (for /search_similar)
+# -----------------------------
+async def fetch_media_by_title(session: aiohttp.ClientSession, title: str, media_type: str):
+    """
+    Fetch a single media entry from AniList by title.
+    Returns the media object with relations (prequels, sequels, spin-offs, etc.)
+    """
+    query = '''
+    query ($search: String, $type: MediaType) {
+      Media(search: $search, type: $type) {
+        id
+        title {
+          romaji
+          english
+          native
+        }
+        format
+        status
+        relations {
+          edges {
+            relationType
+            node {
+              id
+              title {
+                romaji
+                english
+                native
+              }
+              format
+              status
+            }
+          }
+        }
+      }
+    }
+    '''
+    variables = {"search": title, "type": media_type}
+
+    url = "https://graphql.anilist.co"
+
+    try:
+        async with session.post(url, json={"query": query, "variables": variables}) as resp:
+            if resp.status != 200:
+                logger.warning(f"Failed to fetch media by title '{title}' ({media_type}): HTTP {resp.status}")
+                return None
+            data = await resp.json()
+            return data.get("data", {}).get("Media")
+    except aiohttp.ClientError as e:
+        logger.warning(f"Client error fetching media by title '{title}': {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error fetching media by title '{title}': {e}")
+        return None
+
