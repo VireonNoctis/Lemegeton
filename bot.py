@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import logging
 import asyncio
+
 from config import TOKEN, GUILD_ID, BOT_ID
 from database import init_challenge_rules_table, init_db
 
