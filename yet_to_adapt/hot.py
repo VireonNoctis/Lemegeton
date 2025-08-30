@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import aiohttp
 import random
+import asyncio
 
 class Hot(commands.Cog):
     def __init__(self, bot: commands.Bot):
