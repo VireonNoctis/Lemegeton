@@ -287,3 +287,72 @@ async def fetch_media_by_title(session: aiohttp.ClientSession, title: str, media
         logger.error(f"Unexpected error fetching media by title '{title}': {e}")
         return None
 
+
+
+
+# -----------------------------
+# Fetch AniList User Stats
+# -----------------------------
+async def fetch_user_stats(username: str) -> dict:
+    """
+    Fetch a user's overall AniList stats (anime + manga).
+    Includes counts, completed, average score, and genres.
+    """
+    query = """
+    query ($username: String) {
+      User(name: $username) {
+        id
+        name
+        statistics {
+          anime {
+            count
+            meanScore
+            genres {
+              genre
+              count
+            }
+            statuses {
+              status
+              count
+            }
+            scores {
+              score
+              count
+            }
+          }
+          manga {
+            count
+            meanScore
+            genres {
+              genre
+              count
+            }
+            statuses {
+              status
+              count
+            }
+            scores {
+              score
+              count
+            }
+          }
+        }
+      }
+    }
+    """
+    variables = {"username": username}
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(ANILIST_API_URL, json={"query": query, "variables": variables}) as resp:
+                if resp.status != 200:
+                    logger.warning(f"AniList API request failed [{resp.status}] for stats of {username}")
+                    return {}
+                return await resp.json()
+        except aiohttp.ClientError as e:
+            logger.warning(f"Client error fetching stats for {username}: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error fetching stats for {username}: {e}")
+            return {}
+
