@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from config import GUILD_ID
 from database import get_user, remove_user  # Ensure remove_user is async
 import logging
 from typing import Optional
@@ -21,7 +22,8 @@ logger = logging.getLogger("UnregisterCog")
 class Unregister(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-
+        
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="unregister",
         description="Unregister yourself from the system"

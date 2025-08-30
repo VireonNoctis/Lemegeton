@@ -1,96 +1,74 @@
+# bot.py
+import sys
+import os
+import asyncio
+import logging
 import discord
 from discord.ext import commands
-import logging
-import asyncio
+
+# Add project root to sys.path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import TOKEN, GUILD_ID, BOT_ID
-from database import init_challenge_rules_table, init_db
 
 # ------------------------------------------------------
 # Logging Setup
 # ------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
+    format="[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("Bot")
 
 # ------------------------------------------------------
-# Bot Configuration
+# Intents and Bot Setup
 # ------------------------------------------------------
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, application_id=BOT_ID)
 
 # ------------------------------------------------------
-# Cog Extensions
-# ------------------------------------------------------
-COGS = {
-    "cogs.registration": "Registration",
-    "cogs.manga": "Manga",
-    "cogs.unregister": "Unregister",
-    "cogs.challenge_rules": "ChallengeRules",
-    "cogs.changelog": "Changelog",
-    "cogs.anime": "Anime",
-    "cogs.profile": "Profile",
-    "cogs.recommendations": "Recommendations",
-}
-
-# ------------------------------------------------------
-# Load All Cogs
+# Load Cogs
 # ------------------------------------------------------
 async def load_cogs():
-    for cog_path, class_name in COGS.items():
-        try:
-            await bot.load_extension(cog_path)
-            logger.info("✅ Loaded cog: %s", class_name)
-        except commands.errors.ExtensionAlreadyLoaded:
-            logger.warning("⚠ Cog '%s' already loaded, skipping", class_name)
-        except Exception as e:
-            logger.exception("❌ Failed to load cog '%s': %s", class_name, e)
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py") and filename != "__init__.py":
+            cog_name = f"cogs.{filename[:-3]}"  # Remove .py
+            try:
+                await bot.load_extension(cog_name)
+                logger.info(f"Loaded cog: {cog_name}")
+            except Exception as e:
+                logger.exception(f"Failed to load cog {cog_name}")
+
 
 # ------------------------------------------------------
-# Bot Ready Event
+# Events
 # ------------------------------------------------------
 @bot.event
 async def on_ready():
-    logger.info("Bot is starting...")
+    logger.info(f"Logged in as {bot.user} (ID: {bot.user.id})")
+    logger.info("------")
 
-    # Initialize database tables
-    try:
-        await init_db()
-        await init_challenge_rules_table()
-        logger.info("✅ Database initialized successfully")
-    except Exception as e:
-        logger.exception("❌ Database initialization failed: %s", e)
-
+    # Sync guild commands
     guild = discord.Object(id=GUILD_ID)
+    synced = await bot.tree.sync(guild=guild)
+    logger.info(f"✅ Synced {len(synced)} guild commands for {GUILD_ID}")
 
-    # Sync all slash commands to the guild
-    try:
-        synced_commands = await bot.tree.sync(guild=guild)
-        logger.info("✅ Synced %d slash commands to guild %s", len(synced_commands), GUILD_ID)
-    except Exception as e:
-        logger.exception("❌ Failed to sync slash commands: %s", e)
-
-    # Verify loaded cogs
-    for _, class_name in COGS.items():  # underscore used for unused cog_path
-        if bot.get_cog(class_name):
-            logger.info("✅ Cog '%s' is loaded and ready", class_name)
-        else:
-            logger.warning("❌ Cog '%s' is NOT loaded", class_name)
-
-    logger.info("✅ Logged in as %s (ID: %s)", bot.user, bot.user.id)
+    # Sync global commands
+    global_synced = await bot.tree.sync()
+    logger.info(f"✅ Synced {len(global_synced)} global commands")
 
 # ------------------------------------------------------
-# Main Entry Point
+# Run Bot
 # ------------------------------------------------------
 async def main():
-    async with bot:
-        await load_cogs()
-        await bot.start(TOKEN)
+    await load_cogs()
+    await bot.start(TOKEN)
 
+# ------------------------------------------------------
+# Entry Point
+# ------------------------------------------------------
 if __name__ == "__main__":
     asyncio.run(main())

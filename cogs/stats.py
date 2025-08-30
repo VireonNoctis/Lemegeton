@@ -1,10 +1,24 @@
+# cogs/stats.py
 import discord
 from discord.ext import commands
 from discord import app_commands
 import random
+import logging
+import aiohttp
 
 from database import get_user, save_user, upsert_user_stats
-from helpers.media_helper import fetch_user_stats
+from config import GUILD_ID
+
+# -----------------------------
+# Logging Setup
+# -----------------------------
+logger = logging.getLogger("Stats")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(levelname)s] %(name)s: %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 
 class Stats(commands.Cog):
@@ -12,11 +26,11 @@ class Stats(commands.Cog):
         self.bot = bot
 
     @app_commands.command(name="stats", description="Show AniList stats if you are registered")
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
     async def stats(self, interaction: discord.Interaction):
-        # Check if user is registered
-        user = await get_user(interaction.user.id)
-        if not user:
-            # If not registered, show register button
+        logger.info(f"Fetching stats for Discord user: {interaction.user.id}")
+        user_record = await get_user(interaction.user.id)
+        if not user_record:
             view = discord.ui.View()
             view.add_item(RegisterButton(interaction.user.id))
             await interaction.response.send_message(
@@ -26,22 +40,67 @@ class Stats(commands.Cog):
             )
             return
 
-        username = user[1]  # DB schema: (id, discord_id, username) or (discord_id, username)
+        username = user_record[2]  # DB schema: (id, discord_id, username)
+        await interaction.response.defer(ephemeral=False)
         await self.send_stats(interaction, username)
 
     async def send_stats(self, interaction: discord.Interaction, username: str):
-        """Helper to fetch stats and send embed"""
-        data = await fetch_user_stats(username)
-        user_data = data.get("data", {}).get("User")
+        """Fetch AniList stats directly from API and send embed"""
+        logger.info(f"Fetching AniList stats for username: {username}")
 
+        query = """
+        query ($username: String) {
+          User(name: $username) {
+            id
+            name
+            avatar { large }
+            bannerImage
+            statistics {
+              anime {
+                count
+                meanScore
+                genres { genre count }
+                statuses { status count }
+                scores { score count }
+              }
+              manga {
+                count
+                meanScore
+                genres { genre count }
+                statuses { status count }
+                scores { score count }
+              }
+            }
+          }
+        }
+        """
+        variables = {"username": username}
+
+        async with aiohttp.ClientSession() as session:
+            try:
+                async with session.post("https://graphql.anilist.co", json={"query": query, "variables": variables}) as resp:
+                    if resp.status != 200:
+                        logger.error(f"AniList API request failed [status {resp.status}] for {username}")
+                        await interaction.followup.send(f"⚠️ Failed to fetch AniList stats for {username}.", ephemeral=True)
+                        return
+                    data = await resp.json()
+            except Exception as e:
+                logger.error(f"Error fetching AniList stats: {e}")
+                await interaction.followup.send(f"⚠️ Failed to fetch AniList stats for {username}.", ephemeral=True)
+                return
+
+        user_data = data.get("data", {}).get("User")
         if not user_data:
-            await interaction.followup.send(f"⚠️ Failed to fetch AniList stats for {username}.", ephemeral=True)
+            logger.error(f"No AniList user data found for {username}")
+            await interaction.followup.send(f"⚠️ No AniList data found for {username}.", ephemeral=True)
             return
 
+        # -----------------------------
+        # Extract stats
+        # -----------------------------
         stats_anime = user_data["statistics"]["anime"]
         stats_manga = user_data["statistics"]["manga"]
 
-        # Calculate averages from score distribution
         def calc_avg(scores):
             total = sum(s["score"] * s["count"] for s in scores)
             count = sum(s["count"] for s in scores)
@@ -50,10 +109,25 @@ class Stats(commands.Cog):
         anime_avg = calc_avg(stats_anime["scores"])
         manga_avg = calc_avg(stats_manga["scores"])
 
-        fav_anime = max(stats_anime["genres"], key=lambda g: g["count"], default={"genre": "N/A"})
-        fav_manga = max(stats_manga["genres"], key=lambda g: g["count"], default={"genre": "N/A"})
+        # Top genres
+        def top_genres(genres, top_n=5):
+            sorted_genres = sorted(genres, key=lambda g: g["count"], reverse=True)
+            return sorted_genres[:top_n] if sorted_genres else [{"genre": "N/A", "count": 0}]
 
-        # ✅ Save stats to database
+        top_anime_genres = top_genres(stats_anime["genres"])
+        top_manga_genres = top_genres(stats_manga["genres"])
+
+        # Score distribution bars
+        def score_bar(scores):
+            bars = ""
+            for s in sorted(scores, key=lambda x: x["score"], reverse=True):
+                bars += f"{s['score']}⭐ " + "█" * min(s["count"], 10) + f" ({s['count']})\n"
+            return bars if bars else "No data"
+
+        anime_scores_bar = score_bar(stats_anime["scores"])
+        manga_scores_bar = score_bar(stats_manga["scores"])
+
+        # Save stats in DB
         await upsert_user_stats(
             interaction.user.id,
             user_data["name"],
@@ -62,31 +136,42 @@ class Stats(commands.Cog):
             manga_avg,
             anime_avg
         )
+        logger.info(f"Upserted stats for {interaction.user.id} ({user_data['name']})")
 
-        # 🎨 Random embed color
-        color = discord.Color(random.randint(0, 0xFFFFFF))
-
-        # 📊 Stats embed
+        # -----------------------------
+        # Build embed
+        # -----------------------------
+        color = discord.Color.random()
         embed = discord.Embed(
             title=f"📊 AniList Stats for {user_data['name']}",
             url=f"https://anilist.co/user/{user_data['name']}/",
             color=color
         )
+
+        # Anime
         embed.add_field(name="🎬 Anime Watched", value=f"{stats_anime['count']} entries", inline=True)
         embed.add_field(name="⭐ Avg Anime Score", value=str(anime_avg), inline=True)
-        embed.add_field(name="❤️ Fav Anime Genre", value=fav_anime['genre'], inline=True)
+        embed.add_field(
+            name="❤️ Top Anime Genres",
+            value=", ".join([g["genre"] for g in top_anime_genres]),
+            inline=False
+        )
+        embed.add_field(name="📊 Anime Score Distribution", value=anime_scores_bar, inline=False)
 
+        # Manga
         embed.add_field(name="📖 Manga Read", value=f"{stats_manga['count']} entries", inline=True)
         embed.add_field(name="⭐ Avg Manga Score", value=str(manga_avg), inline=True)
-        embed.add_field(name="❤️ Fav Manga Genre", value=fav_manga['genre'], inline=True)
+        embed.add_field(
+            name="❤️ Top Manga Genres",
+            value=", ".join([g["genre"] for g in top_manga_genres]),
+            inline=False
+        )
+        embed.add_field(name="📊 Manga Score Distribution", value=manga_scores_bar, inline=False)
 
-        # ✅ Add avatar + banner
-        avatar_url = user_data.get("avatar", {}).get("large")
-        if avatar_url:
+        # Profile images
+        if avatar_url := user_data.get("avatar", {}).get("large"):
             embed.set_thumbnail(url=avatar_url)
-
-        banner_url = user_data.get("bannerImage")
-        if banner_url:
+        if banner_url := user_data.get("bannerImage"):
             embed.set_image(url=banner_url)
 
         embed.set_footer(text="Data from AniList")
@@ -94,6 +179,9 @@ class Stats(commands.Cog):
         await interaction.followup.send(embed=embed)
 
 
+# -----------------------------
+# Registration Button and Modal
+# -----------------------------
 class RegisterButton(discord.ui.Button):
     def __init__(self, user_id: int):
         super().__init__(label="Register AniList", style=discord.ButtonStyle.primary)

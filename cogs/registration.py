@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from config import GUILD_ID
 from database import add_user, get_user, update_username  # Ensure these are async functions
 import logging
 import re
@@ -33,62 +34,40 @@ class Registration(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    # --- Core logic callable from tests ---
+    async def handle_register(self, user_id: int, username: str) -> str:
+        username = username.strip()
+        if not username:
+            return "❌ Username cannot be empty."
+        if len(username) > MAX_USERNAME_LENGTH:
+            return f"❌ Username too long. Maximum {MAX_USERNAME_LENGTH} characters allowed."
+        if not re.match(USERNAME_REGEX, username):
+            return "❌ Invalid username. Only letters, numbers, underscores, and hyphens are allowed."
+
+        try:
+            user: Optional[dict] = await get_user(user_id)
+            if user:
+                await update_username(user_id, username)
+                logger.info(f"Updated username for user {user_id} -> '{username}'")
+                return f"✅ Your username has been updated to **{username}**!"
+            else:
+                await add_user(user_id, username)
+                logger.info(f"Registered new user {user_id} with username '{username}'")
+                return f"🎉 Successfully registered with username **{username}**!"
+        except Exception as e:
+            logger.exception(f"Error in handle_register for user {user_id}")
+            return "❌ An error occurred while registering you. Please try again later."
+
+    # --- Discord Slash Command ---
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="register",
         description="Register yourself to the system with your AniList username"
     )
     @app_commands.describe(username="Your AniList username")
     async def register(self, interaction: discord.Interaction, username: str):
-        username = username.strip()
-        logger.info(f"User {interaction.user.id} attempting to register with username '{username}'")
-
-        # --- Username Validation ---
-        if not username:
-            logger.info(f"User {interaction.user.id} submitted an empty username")
-            await interaction.response.send_message("❌ Username cannot be empty.", ephemeral=True)
-            return
-
-        if len(username) > MAX_USERNAME_LENGTH:
-            logger.info(f"User {interaction.user.id} submitted a too-long username '{username}'")
-            await interaction.response.send_message(
-                f"❌ Username too long. Maximum {MAX_USERNAME_LENGTH} characters allowed.", ephemeral=True
-            )
-            return
-
-        if not re.match(USERNAME_REGEX, username):
-            logger.info(f"User {interaction.user.id} submitted invalid characters in username '{username}'")
-            await interaction.response.send_message(
-                "❌ Invalid username. Only letters, numbers, underscores, and hyphens are allowed.", ephemeral=True
-            )
-            return
-
-        # --- Main Logic with Exception Handling ---
-        try:
-            user: Optional[dict] = await get_user(interaction.user.id)
-            if user:
-                # Update existing user
-                await update_username(interaction.user.id, username)
-                logger.info(f"Updated username for user {interaction.user.id} -> '{username}'")
-                await interaction.response.send_message(
-                    f"✅ Your username has been updated to **{username}**!", ephemeral=True
-                )
-            else:
-                # Add new user
-                await add_user(interaction.user.id, username)
-                logger.info(f"Registered new user {interaction.user.id} with username '{username}'")
-                await interaction.response.send_message(
-                    f"🎉 Successfully registered with username **{username}**!", ephemeral=True
-                )
-        except Exception as e:
-            logger.exception(f"Error in /register for user {interaction.user.id}")
-            if not interaction.response.is_done():
-                await interaction.response.send_message(
-                    "❌ An error occurred while registering you. Please try again later.", ephemeral=True
-                )
-            else:
-                await interaction.followup.send(
-                    "❌ An error occurred while registering you. Please try again later.", ephemeral=True
-                )
+        result = await self.handle_register(interaction.user.id, username)
+        await interaction.response.send_message(result, ephemeral=True)
 
 # ------------------------------------------------------
 # Cog Setup

@@ -153,6 +153,38 @@ async def init_achievements_table():
         await db.commit()
         logger.info("Achievements table ready.")
 
+
+# Upsert user stats
+async def upsert_user_stats(discord_id: int, username: str,
+                            total_manga: int, total_anime: int,
+                            avg_manga_score: float, avg_anime_score: float):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO user_stats (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(discord_id) DO UPDATE SET
+                username=excluded.username,
+                total_manga=excluded.total_manga,
+                total_anime=excluded.total_anime,
+                avg_manga_score=excluded.avg_manga_score,
+                avg_anime_score=excluded.avg_anime_score
+        """, (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score))
+        await db.commit()
+        logger.info(f"Upserted stats for {discord_id} ({username})")
+
+# Save or update a user
+async def save_user(discord_id: int, username: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO users (discord_id, username)
+            VALUES (?, ?)
+            ON CONFLICT(discord_id) DO UPDATE SET username=excluded.username
+        """, (discord_id, username))
+        await db.commit()
+        logger.info(f"Saved user: {username} ({discord_id})")
+
+
+
 # ------------------------------------------------------
 # INITIALIZE ALL DATABASE TABLES
 # ------------------------------------------------------
