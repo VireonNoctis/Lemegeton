@@ -1,2 +1,14 @@
 .env
 
+helpers/__pycache__/media_helper.cpython-313.pyc
+cogs/__pycache__/unregister.cpython-313.pyc
+cogs/__pycache__/registration.cpython-313.pyc
+cogs/__pycache__/recommendations.cpython-313.pyc
+cogs/__pycache__/profile.cpython-313.pyc
+cogs/__pycache__/manga.cpython-313.pyc
+cogs/__pycache__/changelog.cpython-313.pyc
+cogs/__pycache__/challenge_rules.cpython-313.pyc
+cogs/__pycache__/anime.cpython-313.pyc
+cogs/__pycache__/__init__.cpython-313.pyc
+__pycache__/database.cpython-313.pyc
+.env
