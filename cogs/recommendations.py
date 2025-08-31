@@ -5,7 +5,8 @@ from typing import Dict
 import aiohttp
 import asyncio
 import random
-from helpers.media_helper import fetch_anilist_entries, fetch_media
+from config import GUILD_ID
+from helpers.media_helper import fetch_anilist_entries, fetch_media_with_recommendations
 from database import get_all_users
 
 import logging
@@ -15,6 +16,8 @@ logger = logging.getLogger("RecommendationsCog")
 class Recommendations(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
 
     @app_commands.command(
         name="recommendations",
@@ -70,7 +73,7 @@ class Recommendations(commands.Cog):
                 async with aiohttp.ClientSession() as session:
                     for entry in high_rated:
                         try:
-                            media_info = await fetch_media(session, fetch_type, entry["id"])
+                            media_info = await fetch_media_with_recommendations(session, entry["id"], fetch_type)
                             if not media_info:
                                 continue
 
@@ -97,7 +100,7 @@ class Recommendations(commands.Cog):
                             logger.warning(f"⚠️ Failed to process media {entry['id']} for {username}: {e}")
 
         # Run all users in parallel
-        results = await asyncio.gather(*(process_user(user[1]) for user in users))
+        results = await asyncio.gather(*(process_user(user[2]) for user in users))
 
         # If no entries for chosen type
         if all(r == "NO_ENTRIES" or r is None for r in results):
