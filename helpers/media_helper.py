@@ -351,8 +351,10 @@ async def fetch_user_stats(username: str) -> dict:
                 return await resp.json()
         except aiohttp.ClientError as e:
             logger.warning(f"Client error fetching stats for {username}: {e}")
-
-
+            return {}
+        except Exception as e:
+            logger.error(f"Unexpected error fetching stats for {username}: {e}")
+            return {}
 
  # -----------------------------
 # Fetch AniList Media with Recommendations
@@ -404,9 +406,3 @@ async def fetch_media_with_recommendations(session: aiohttp.ClientSession, media
     except Exception as e:
         logger.error(f"Unexpected error fetching recommendations for {media_id} ({media_type}): {e}")
         return None
-
-            return {}
-        except Exception as e:
-            logger.error(f"Unexpected error fetching stats for {username}: {e}")
-            return {}
-
