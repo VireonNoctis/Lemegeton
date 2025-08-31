@@ -1,249 +1,346 @@
+# cogs/profile.py
 import discord
 from discord.ext import commands
 from discord import app_commands
 import aiohttp
-import aiosqlite
-from typing import List, Dict, Optional
-from collections import Counter
+import logging
+from typing import Optional, List, Dict, Tuple
+
+from database import get_user, save_user, upsert_user_stats
+from config import GUILD_ID
 
 ANILIST_API_URL = "https://graphql.anilist.co"
 
-USER_MANGA_QUERY = """
+logger = logging.getLogger("Profile")
+logger.setLevel(logging.INFO)
+if not logger.handlers:
+    h = logging.StreamHandler()
+    h.setFormatter(logging.Formatter("[%(levelname)s] %(name)s: %(message)s"))
+    logger.addHandler(h)
+
+
+# -----------------------------
+# AniList fetch helpers
+# -----------------------------
+USER_STATS_QUERY = """
 query ($username: String) {
-  MediaListCollection(userName: $username, type: MANGA) {
-    lists {
-      name
-      entries {
-        status
-        score
-        progress
-        media {
-          id
-          title { romaji english native }
-          siteUrl
-          coverImage { large }
-          genres
-        }
+  User(name: $username) {
+    id
+    name
+    avatar { large }
+    bannerImage
+    statistics {
+      anime {
+        count
+        meanScore
+        genres { genre count }
+        statuses { status count }
+        scores { score count }
+      }
+      manga {
+        count
+        meanScore
+        genres { genre count }
+        statuses { status count }
+        scores { score count }
       }
     }
   }
 }
 """
 
-USER_ANIME_QUERY = USER_MANGA_QUERY.replace("MANGA", "ANIME")
-
-class Profile(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
-    async def fetch_anilist(self, query: str, variables: dict):
-        async with aiohttp.ClientSession() as session:
-            async with session.post(ANILIST_API_URL, json={"query": query, "variables": variables}) as resp:
+async def fetch_user_stats(username: str) -> Optional[dict]:
+    variables = {"username": username}
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(ANILIST_API_URL, json={"query": USER_STATS_QUERY, "variables": variables}) as resp:
                 if resp.status != 200:
+                    logger.error(f"AniList API request failed [{resp.status}] for {username}")
                     return None
                 return await resp.json()
+        except Exception as e:
+            logger.exception(f"Error fetching AniList stats for {username}: {e}")
+            return None
 
-    def process_entries(self, lists: List[dict]):
-        all_entries: Dict[int, dict] = {}
-        for group in lists:
-            for entry in group.get("entries", []):
-                media = entry["media"]
-                media_id = media["id"]
-                if media_id not in all_entries:
-                    all_entries[media_id] = {
-                        "title": media["title"]["romaji"] or media["title"]["english"] or media["title"]["native"],
-                        "url": media["siteUrl"],
-                        "cover": media["coverImage"]["large"],
-                        "status": entry.get("status", "UNKNOWN"),
-                        "score": entry.get("score", 0),
-                        "progress": entry.get("progress", 0),
-                        "genres": media.get("genres", [])
-                    }
-        return list(all_entries.values())
 
-    def generate_stats(self, entries: List[dict]):
-        stats = {"Completed": 0, "InProgress": 0, "Planned": 0, "Dropped": 0, "Total": len(entries), "AverageScore": 0}
-        total_score = 0
-        scored_count = 0
-        for entry in entries:
-            status = entry["status"]
-            if status == "COMPLETED":
-                stats["Completed"] += 1
-            elif status == "CURRENT":
-                stats["InProgress"] += 1
-            elif status == "PLANNING":
-                stats["Planned"] += 1
-            elif status == "DROPPED":
-                stats["Dropped"] += 1
-            if entry["score"] and entry["score"] > 0:
-                total_score += entry["score"]
-                scored_count += 1
-        stats["AverageScore"] = round(total_score / scored_count, 2) if scored_count else 0
-        return stats
+# -----------------------------
+# Utility: build text sections
+# -----------------------------
+def calc_weighted_avg(scores: List[Dict[str, int]]) -> float:
+    total = sum(s["score"] * s["count"] for s in scores)
+    count = sum(s["count"] for s in scores)
+    return round(total / count, 2) if count else 0.0
 
-    async def update_user_stats(self, discord_id: int, username: str, manga_entries: List[dict], anime_entries: List[dict]):
-        manga_stats = self.generate_stats(manga_entries)
-        anime_stats = self.generate_stats(anime_entries)
+def top_genres(genres: List[Dict[str, int]], n: int = 5) -> List[str]:
+    return [g["genre"] for g in sorted(genres, key=lambda g: g["count"], reverse=True)[:n]]
 
-        # Update stats in DB
-        async with aiosqlite.connect("database.db") as db:
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS user_stats (
-                    discord_id INTEGER PRIMARY KEY,
-                    username TEXT,
-                    total_manga INTEGER,
-                    total_anime INTEGER,
-                    avg_manga_score REAL,
-                    avg_anime_score REAL
-                )
-            """)
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS achievements (
-                    discord_id INTEGER,
-                    achievement TEXT,
-                    PRIMARY KEY (discord_id, achievement)
-                )
-            """)
+def score_bar(scores: List[Dict[str, int]]) -> str:
+    # Sorted high→low, up to 10 blocks per score bucket
+    if not scores:
+        return "No data"
+    parts = []
+    for s in sorted(scores, key=lambda x: x["score"], reverse=True):
+        blocks = "█" * min(s["count"], 10)
+        parts.append(f"{s['score']}⭐ {blocks} ({s['count']})")
+    out = "\n".join(parts)
+    return out if len(out) <= 1024 else out[:1020] + "…"
 
-            await db.execute("""
-                INSERT INTO user_stats (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT(discord_id) DO UPDATE SET
-                    username=excluded.username,
-                    total_manga=excluded.total_manga,
-                    total_anime=excluded.total_anime,
-                    avg_manga_score=excluded.avg_manga_score,
-                    avg_anime_score=excluded.avg_anime_score
-            """, (discord_id, username, manga_stats['Total'], anime_stats['Total'],
-                  manga_stats['AverageScore'], anime_stats['AverageScore']))
-            await db.commit()
+def status_count(statuses: List[Dict[str, int]], key: str) -> int:
+    for s in statuses:
+        if s["status"] == key:
+            return s["count"]
+    return 0
 
-        # Achievements
-        achievements = []
+def build_achievements(anime_stats: dict, manga_stats: dict) -> List[str]:
+    ach = []
 
-        # Completion
-        if manga_stats['Completed'] >= 100: achievements.append("📚 Manga Enthusiast (100+ Manga)")
-        if manga_stats['Completed'] >= 250: achievements.append("📖 Bookworm (250+ Manga)")
-        if manga_stats['Completed'] >= 500: achievements.append("📚 Completionist (500+ Manga)")
-        if manga_stats['Completed'] >= 1000: achievements.append("📚 Ultimate Manga Collector (1000+ Manga)")
+    # Helper: counts
+    a_completed = status_count(anime_stats.get("statuses", []), "COMPLETED")
+    m_completed = status_count(manga_stats.get("statuses", []), "COMPLETED")
 
-        if anime_stats['Completed'] >= 100: achievements.append("🎬 Anime Enthusiast (100+ Anime)")
-        if anime_stats['Completed'] >= 250: achievements.append("🎥 Binge Watcher (250+ Anime)")
-        if anime_stats['Completed'] >= 500: achievements.append("🎬 Anime Addict (500+ Anime)")
-        if anime_stats['Completed'] >= 1000: achievements.append("🎬 Anime Marathoner (1000+ Anime)")
+    # Totals
+    total_manga = manga_stats.get("count", 0)
+    total_anime = anime_stats.get("count", 0)
 
-        # High Scores
-        if manga_stats['AverageScore'] >= 8: achievements.append("🏆 Manga Critic (Avg ≥ 8)")
-        if manga_stats['AverageScore'] >= 9: achievements.append("🥇 Score Master (Avg ≥ 9)")
-        if anime_stats['AverageScore'] >= 8: achievements.append("🎖 Anime Critic (Avg ≥ 8)")
-        if anime_stats['AverageScore'] >= 9: achievements.append("🥇 Anime Score Master (Avg ≥ 9)")
+    # Means (use weighted by buckets, not AniList meanScore to keep consistent with bars)
+    a_avg = calc_weighted_avg(anime_stats.get("scores", []))
+    m_avg = calc_weighted_avg(manga_stats.get("scores", []))
 
-        # Genre Variety / Binge
-        genre_counter = Counter()
-        for entry in manga_entries + anime_entries:
-            genre_counter.update(entry.get("genres", []))
-        if len(genre_counter) >= 10: achievements.append("🔄 Mixed Tastes (10+ genres)")
-        if any(v >= 50 for v in genre_counter.values()): achievements.append("🔥 Binge Mode (50+ in one genre)")
+    # Completion milestones
+    if m_completed >= 100:  ach.append("📚 Manga Enthusiast (100+ Manga)")
+    if m_completed >= 250:  ach.append("📖 Bookworm (250+ Manga)")
+    if m_completed >= 500:  ach.append("📚 Completionist (500+ Manga)")
+    if m_completed >= 1000: ach.append("📚 Ultimate Manga Collector (1000+ Manga)")
 
-        # Activity
-        if manga_stats['Total'] >= 100 or anime_stats['Total'] >= 100: achievements.append("📝 Active User (100+ entries)")
+    if a_completed >= 100:  ach.append("🎬 Anime Enthusiast (100+ Anime)")
+    if a_completed >= 250:  ach.append("🎥 Binge Watcher (250+ Anime)")
+    if a_completed >= 500:  ach.append("🎬 Anime Addict (500+ Anime)")
+    if a_completed >= 1000: ach.append("🎬 Anime Marathoner (1000+ Anime)")
 
-        # Insert achievements into DB
-        async with aiosqlite.connect("database.db") as db:
-            for ach in achievements:
-                await db.execute("INSERT OR IGNORE INTO achievements (discord_id, achievement) VALUES (?, ?)", (discord_id, ach))
-            await db.commit()
+    # High scores
+    if m_avg >= 8: ach.append("🏆 Manga Critic (Avg ≥ 8)")
+    if m_avg >= 9: ach.append("🥇 Score Master (Avg ≥ 9)")
+    if a_avg >= 8: ach.append("🎖 Anime Critic (Avg ≥ 8)")
+    if a_avg >= 9: ach.append("🥇 Anime Score Master (Avg ≥ 9)")
 
-        return achievements
+    # Genre variety / binge using statistics.genres counts
+    all_genres = {}
+    for g in manga_stats.get("genres", []):
+        all_genres[g["genre"]] = all_genres.get(g["genre"], 0) + g["count"]
+    for g in anime_stats.get("genres", []):
+        all_genres[g["genre"]] = all_genres.get(g["genre"], 0) + g["count"]
 
-    def create_embed(self, username: str, media_type: str, entries: List[dict]):
-        stats = self.generate_stats(entries)
-        embed = discord.Embed(
-            title=f"{username}'s {media_type} Profile",
-            color=discord.Color.blurple(),
-            url=f"https://anilist.co/{media_type.lower()}/{username}"
-        )
-        if entries:
-            embed.set_thumbnail(url=entries[0]["cover"])
-        embed.add_field(
-            name="📊 Stats",
-            value=(
-                f"Total: {stats['Total']}\n"
-                f"Completed: {stats['Completed']}\n"
-                f"In Progress: {stats['InProgress']}\n"
-                f"Planned: {stats['Planned']}\n"
-                f"Dropped: {stats['Dropped']}\n"
-                f"Average Score: {stats['AverageScore']}"
-            ),
-            inline=False
-        )
-        recent = sorted(entries, key=lambda x: x["progress"], reverse=True)[:5]
-        if recent:
-            embed.add_field(
-                name="📝 Recent Updates",
-                value="\n".join([f"[{e['title']}]({e['url']}) — {e['status']} ({e['progress']})" for e in recent]),
-                inline=False
-            )
-        return embed
+    if len(all_genres) >= 10:
+        ach.append("🔄 Mixed Tastes (10+ genres)")
+    if any(v >= 50 for v in all_genres.values()):
+        ach.append("🔥 Binge Mode (50+ in one genre)")
 
-    @app_commands.command(name="profile", description="View your AniList profile or another user's profile")
-    @app_commands.describe(user="Optional: Discord user to view their profile")
+    # Activity
+    if total_manga >= 100 or total_anime >= 100:
+        ach.append("📝 Active User (100+ entries)")
+
+    return ach
+
+
+# -----------------------------
+# The Cog
+# -----------------------------
+class Profile(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
+    @app_commands.command(name="profile", description="View your AniList profile (with stats & achievements) or another user's.")
+    @app_commands.describe(user="Optional: Discord user whose profile to view")
     async def profile(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
-        await interaction.response.defer()
         target = user or interaction.user
 
-        # Fetch username
-        async with aiosqlite.connect("database.db") as db:
-            async with db.execute("SELECT username FROM users WHERE discord_id = ?", (target.id,)) as cursor:
-                row = await cursor.fetchone()
-        if not row:
-            await interaction.followup.send(f"⚠️ {target.display_name} hasn't registered their AniList username yet!")
+        # fetch AniList username from DB
+        record = await get_user(target.id)  # schema: (id, discord_id, username)
+        if not record:
+            # Not registered → present registration
+            view = discord.ui.View()
+            view.add_item(RegisterButton(target.id))
+            await interaction.response.send_message(
+                f"❌ {target.mention} hasn’t registered an AniList username.\nClick below to register:",
+                view=view,
+                ephemeral=True if target.id == interaction.user.id else False
+            )
             return
-        username = row[0]
 
-        # Fetch Manga/Anime
-        manga_data = await self.fetch_anilist(USER_MANGA_QUERY, {"username": username})
-        manga_lists = manga_data.get("data", {}).get("MediaListCollection", {}).get("lists", [])
-        manga_entries = self.process_entries(manga_lists)
+        username = record[2]
+        await interaction.response.defer(ephemeral=False)
 
-        anime_data = await self.fetch_anilist(USER_ANIME_QUERY, {"username": username})
-        anime_lists = anime_data.get("data", {}).get("MediaListCollection", {}).get("lists", [])
-        anime_entries = self.process_entries(anime_lists)
+        data = await fetch_user_stats(username)
+        if not data:
+            await interaction.followup.send(f"⚠️ Failed to fetch AniList data for **{username}**.", ephemeral=True)
+            return
 
-        # Update stats & achievements
-        achievements = await self.update_user_stats(target.id, username, manga_entries, anime_entries)
+        user_data = data.get("data", {}).get("User")
+        if not user_data:
+            await interaction.followup.send(f"⚠️ No AniList data found for **{username}**.", ephemeral=True)
+            return
 
-        # Create embeds & pagination
-        embeds = [
-            self.create_embed(username, "Manga", manga_entries),
-            self.create_embed(username, "Anime", anime_entries)
-        ]
+        stats_anime = user_data["statistics"]["anime"]
+        stats_manga = user_data["statistics"]["manga"]
 
-        # Add achievements to both embeds
-        if achievements:
-            for embed in embeds:
-                embed.add_field(name="🏅 Achievements", value="\n".join(achievements), inline=False)
+        # Compute weighted averages from distribution buckets
+        anime_avg = calc_weighted_avg(stats_anime.get("scores", []))
+        manga_avg = calc_weighted_avg(stats_manga.get("scores", []))
 
-        current = 0
-        msg = await interaction.followup.send(embed=embeds[current])
+        # Persist headline stats
+        await upsert_user_stats(
+            discord_id=target.id,
+            username=user_data["name"],
+            total_manga=stats_manga.get("count", 0),
+            total_anime=stats_anime.get("count", 0),
+            avg_manga_score=manga_avg,
+            avg_anime_score=anime_avg
+        )
 
-        class Pager(discord.ui.View):
-            def __init__(self):
-                super().__init__(timeout=60)
+        # Build pages
+        avatar_url = (user_data.get("avatar") or {}).get("large")
+        banner_url = user_data.get("bannerImage")
+        profile_url = f"https://anilist.co/user/{user_data['name']}/"
 
-            @discord.ui.button(label="◀", style=discord.ButtonStyle.grey)
-            async def prev(self, interaction_: discord.Interaction, button: discord.ui.Button):
-                nonlocal current
-                current = (current - 1) % len(embeds)
-                await interaction_.response.edit_message(embed=embeds[current])
+        # Manga page
+        manga_embed = discord.Embed(
+            title=f"📖 {user_data['name']}'s Manga Profile",
+            url=profile_url,
+            color=discord.Color.blurple()
+        )
+        if avatar_url: manga_embed.set_thumbnail(url=avatar_url)
+        if banner_url: manga_embed.set_image(url=banner_url)
+        manga_embed.add_field(name="Total Manga", value=str(stats_manga.get("count", 0)), inline=True)
+        manga_embed.add_field(name="Avg Score", value=str(manga_avg), inline=True)
+        manga_embed.add_field(
+            name="Top Genres",
+            value=", ".join(top_genres(stats_manga.get("genres", []), 5)) or "N/A",
+            inline=False
+        )
+        manga_embed.add_field(
+            name="Score Distribution",
+            value=score_bar(stats_manga.get("scores", [])),
+            inline=False
+        )
+        manga_embed.set_footer(text="Data from AniList • Page 1/3")
 
-            @discord.ui.button(label="▶", style=discord.ButtonStyle.grey)
-            async def next(self, interaction_: discord.Interaction, button: discord.ui.Button):
-                nonlocal current
-                current = (current + 1) % len(embeds)
-                await interaction_.response.edit_message(embed=embeds[current])
+        # Anime page
+        anime_embed = discord.Embed(
+            title=f"🎬 {user_data['name']}'s Anime Profile",
+            url=profile_url,
+            color=discord.Color.green()
+        )
+        if avatar_url: anime_embed.set_thumbnail(url=avatar_url)
+        if banner_url: anime_embed.set_image(url=banner_url)
+        anime_embed.add_field(name="Total Anime", value=str(stats_anime.get("count", 0)), inline=True)
+        anime_embed.add_field(name="Avg Score", value=str(anime_avg), inline=True)
+        anime_embed.add_field(
+            name="Top Genres",
+            value=", ".join(top_genres(stats_anime.get("genres", []), 5)) or "N/A",
+            inline=False
+        )
+        anime_embed.add_field(
+            name="Score Distribution",
+            value=score_bar(stats_anime.get("scores", [])),
+            inline=False
+        )
+        anime_embed.set_footer(text="Data from AniList • Page 2/3")
 
-        await msg.edit(view=Pager())
+        # Achievements pages (paginate 10 per page)
+        achievements = build_achievements(stats_anime, stats_manga)
+        ach_pages: List[discord.Embed] = []
+        if not achievements:
+            e = discord.Embed(
+                title=f"🏅 Achievements — {user_data['name']}",
+                description="No achievements yet. Keep watching/reading!",
+                url=profile_url,
+                color=discord.Color.gold()
+            )
+            if avatar_url: e.set_thumbnail(url=avatar_url)
+            e.set_footer(text="Data from AniList • Page 3/3")
+            ach_pages.append(e)
+        else:
+            page_size = 10
+            for i in range(0, len(achievements), page_size):
+                chunk = achievements[i:i+page_size]
+                page_num = (i // page_size) + 3  # pages start at 3
+                e = discord.Embed(
+                    title=f"🏅 Achievements — {user_data['name']}",
+                    description="\n".join(f"{idx+1+i}. {a}" for idx, a in enumerate(chunk)),
+                    url=profile_url,
+                    color=discord.Color.gold()
+                )
+                if avatar_url: e.set_thumbnail(url=avatar_url)
+                e.set_footer(text=f"Data from AniList • Page {page_num}/{2 + ((len(achievements)-1)//page_size + 1)}")
+                ach_pages.append(e)
 
-async def setup(bot):
+        pages: List[discord.Embed] = [manga_embed, anime_embed] + ach_pages
+
+        # Send first page and attach pager
+        msg = await interaction.followup.send(embed=pages[0], view=Pager(pages))
+
+
+class Pager(discord.ui.View):
+    def __init__(self, pages: List[discord.Embed]):
+        super().__init__(timeout=120)
+        self.pages = pages
+        self.index = 0
+
+    async def on_timeout(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+
+    @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
+    async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index = (self.index - 1) % len(self.pages)
+        await interaction.response.edit_message(embed=self.pages[self.index], view=self)
+
+    @discord.ui.button(label="▶", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index = (self.index + 1) % len(self.pages)
+        await interaction.response.edit_message(embed=self.pages[self.index], view=self)
+
+
+# -----------------------------
+# Registration UI
+# -----------------------------
+class RegisterButton(discord.ui.Button):
+    def __init__(self, user_id: int):
+        super().__init__(label="Register AniList", style=discord.ButtonStyle.primary)
+        self.user_id = user_id
+
+    async def callback(self, interaction: discord.Interaction):
+        # Only allow the intended user to register themselves
+        if interaction.user.id != self.user_id:
+            await interaction.response.send_message("You can’t register for someone else.", ephemeral=True)
+            return
+        await interaction.response.send_modal(AniListRegisterModal(self.user_id))
+
+
+class AniListRegisterModal(discord.ui.Modal, title="Register AniList"):
+    username = discord.ui.TextInput(label="AniList Username", placeholder="e.g. yourusername", required=True)
+
+    def __init__(self, user_id: int):
+        super().__init__()
+        self.user_id = user_id
+
+    async def on_submit(self, interaction: discord.Interaction):
+        anilist_name = str(self.username.value).strip()
+        await save_user(self.user_id, anilist_name)
+
+        # After registering, immediately show the new profile
+        cog: Profile = interaction.client.get_cog("Profile")
+        if cog:
+            # Call /profile for this same user
+            await cog.profile.callback(cog, interaction, None)  # reuse handler (no target -> self)
+        else:
+            await interaction.response.send_message(
+                f"✅ Registered AniList username **{anilist_name}** successfully! Try `/profile`.",
+                ephemeral=True
+            )
+
+
+async def setup(bot: commands.Bot):
     await bot.add_cog(Profile(bot))
