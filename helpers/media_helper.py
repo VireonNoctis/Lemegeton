@@ -351,6 +351,60 @@ async def fetch_user_stats(username: str) -> dict:
                 return await resp.json()
         except aiohttp.ClientError as e:
             logger.warning(f"Client error fetching stats for {username}: {e}")
+
+
+
+ # -----------------------------
+# Fetch AniList Media with Recommendations
+# -----------------------------
+async def fetch_media_with_recommendations(session: aiohttp.ClientSession, media_id: int, media_type: str):
+    """
+    Fetch a media entry with its recommendations from AniList.
+    Returns the raw Media object (not an Embed).
+    """
+    query = """
+    query ($id: Int, $type: MediaType) {
+      Media(id: $id, type: $type) {
+        id
+        title {
+          romaji
+          english
+          native
+        }
+        recommendations {
+          edges {
+            node {
+              rating
+              mediaRecommendation {
+                id
+                title {
+                  romaji
+                  english
+                  native
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    """
+    variables = {"id": media_id, "type": media_type}
+
+    try:
+        async with session.post("https://graphql.anilist.co", json={"query": query, "variables": variables}) as resp:
+            if resp.status != 200:
+                logger.warning(f"AniList API request failed [{resp.status}] for {media_id} ({media_type})")
+                return None
+            data = await resp.json()
+            return data.get("data", {}).get("Media")
+    except aiohttp.ClientError as e:
+        logger.warning(f"Client error fetching recommendations for {media_id} ({media_type}): {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error fetching recommendations for {media_id} ({media_type}): {e}")
+        return None
+
             return {}
         except Exception as e:
             logger.error(f"Unexpected error fetching stats for {username}: {e}")
