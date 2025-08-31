@@ -5,7 +5,7 @@ from typing import Dict
 import aiohttp
 import asyncio
 import random
-from helpers.media_helper import fetch_anilist_entries, fetch_media
+from helpers.media_helper import fetch_anilist_entries, fetch_media_with_recommendations
 from database import get_all_users
 
 import logging
@@ -70,7 +70,7 @@ class Recommendations(commands.Cog):
                 async with aiohttp.ClientSession() as session:
                     for entry in high_rated:
                         try:
-                            media_info = await fetch_media(session, fetch_type, entry["id"])
+                            media_info = await fetch_media_with_recommendations(session, entry["id"], fetch_type)
                             if not media_info:
                                 continue
 
