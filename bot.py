@@ -1,11 +1,12 @@
+# bot.py
 import sys
 import os
 import asyncio
 import logging
+import time
+import aiohttp
 import discord
 from discord.ext import commands
-from time import time
-import aiohttp
 
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -69,13 +70,13 @@ async def update_streaming_status():
     trending = await fetch_trending_anime_list()
     index = 0
     refresh_interval = 3 * 60 * 60  # every 3 hours
-    last_refresh = time()
+    last_refresh = time.time()
 
     while not bot.is_closed():
         anime_title = trending[index]
         stream = discord.Streaming(
             name=f"Trending: {anime_title}",
-            url="https://anilist.co"
+            url="https://www.twitch.tv/kaicenat"
         )
         await bot.change_presence(activity=stream)
         logger.info(f"🎥 Streaming status updated to: {anime_title}")
@@ -84,13 +85,50 @@ async def update_streaming_status():
         index = (index + 1) % len(trending)
 
         # Refresh trending list if 3 hours passed
-        if time() - last_refresh >= refresh_interval:
+        if time.time() - last_refresh >= refresh_interval:
             logger.info("🔄 Refreshing AniList trending list...")
             trending = await fetch_trending_anime_list()
             index = 0
-            last_refresh = time()
+            last_refresh = time.time()
 
         await asyncio.sleep(300)  # wait 5 minutes before updating again
+
+# ------------------------------------------------------
+# Cog timestamps for tracking changes
+# ------------------------------------------------------
+cog_timestamps = {}
+
+async def load_cogs():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py") and filename != "__init__.py":
+            cog_name = f"cogs.{filename[:-3]}"
+            file_path = os.path.join("cogs", filename)
+            last_mod = os.path.getmtime(file_path)
+
+            # Check if we need to reload
+            if cog_name in bot.extensions:
+                if cog_timestamps.get(cog_name, 0) < last_mod:
+                    try:
+                        await bot.reload_extension(cog_name)
+                        logger.info(f"Reloaded cog: {cog_name}")
+                        cog_timestamps[cog_name] = last_mod
+                    except Exception:
+                        logger.exception(f"Failed to reload cog {cog_name}")
+            else:
+                try:
+                    await bot.load_extension(cog_name)
+                    logger.info(f"Loaded cog: {cog_name}")
+                    cog_timestamps[cog_name] = last_mod
+                except Exception:
+                    logger.exception(f"Failed to load cog {cog_name}")
+
+# ------------------------------------------------------
+# Watch cogs folder for changes
+# ------------------------------------------------------
+async def watch_cogs():
+    while True:
+        await load_cogs()
+        await asyncio.sleep(2)  # check every 2 seconds
 
 # ------------------------------------------------------
 # Events
@@ -117,6 +155,7 @@ async def on_ready():
 # ------------------------------------------------------
 async def main():
     await load_cogs()
+    # Start watching cogs in the background
     asyncio.create_task(watch_cogs())
     await bot.start(TOKEN)
 

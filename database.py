@@ -154,7 +154,58 @@ async def init_achievements_table():
         logger.info("Achievements table ready.")
 
 
-# Upsert user stats
+# ------------------------------------------------------
+# USER MANGA PROGRESS TABLE
+# ------------------------------------------------------
+async def init_user_manga_progress_table():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS user_manga_progress (
+                discord_id INTEGER NOT NULL,
+                manga_id INTEGER NOT NULL,
+                current_chapter INTEGER DEFAULT 0,
+                rating REAL DEFAULT 0,
+                PRIMARY KEY (discord_id, manga_id)
+            )
+        """)
+        await db.commit()
+        logger.info("User manga progress table ready.")
+
+async def set_user_manga_progress(discord_id: int, manga_id: int, chapter: int, rating: float):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
+                current_chapter=excluded.current_chapter,
+                rating=excluded.rating
+        """, (discord_id, manga_id, chapter, rating))
+        await db.commit()
+
+async def get_user_manga_progress(discord_id: int, manga_id: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute("""
+            SELECT current_chapter, rating FROM user_manga_progress
+            WHERE discord_id = ? AND manga_id = ?
+        """, (discord_id, manga_id))
+        row = await cursor.fetchone()
+        await cursor.close()
+        return {"current_chapter": row[0], "rating": row[1]} if row else None
+
+
+async def upsert_user_manga_progress(discord_id: int, manga_id: int, current_chapter: int, rating: float):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
+                current_chapter=excluded.current_chapter,
+                rating=excluded.rating
+        """, (discord_id, manga_id, current_chapter, rating))
+        await db.commit()
+        logger.info(f"Upserted manga progress: user {discord_id}, manga {manga_id}, chapter {current_chapter}, rating {rating}")
+        
+        
 async def upsert_user_stats(discord_id: int, username: str,
                             total_manga: int, total_anime: int,
                             avg_manga_score: float, avg_anime_score: float):
@@ -185,6 +236,7 @@ async def save_user(discord_id: int, username: str):
 
 
 
+
 # ------------------------------------------------------
 # INITIALIZE ALL DATABASE TABLES
 # ------------------------------------------------------
@@ -194,4 +246,5 @@ async def init_db():
     await init_recommendation_votes_table()
     await init_user_stats_table()
     await init_achievements_table()
+    await init_user_manga_progress_table()
     logger.info("All database tables initialized.")
