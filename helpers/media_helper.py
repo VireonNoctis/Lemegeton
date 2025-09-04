@@ -1,3 +1,4 @@
+import random
 import discord
 import aiohttp
 import asyncio
@@ -407,9 +408,6 @@ async def fetch_media_with_recommendations(session: aiohttp.ClientSession, media
         logger.error(f"Unexpected error fetching recommendations for {media_id} ({media_type}): {e}")
         return None
 
-
-
-# -----------------------------
 # Fetch Completely Random Media
 # -----------------------------
 async def fetch_random_media(media_type: str = "ANIME") -> Optional[discord.Embed]:
