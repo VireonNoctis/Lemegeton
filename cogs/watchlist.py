@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import random
 
+from config import GUILD_ID
 from helpers.media_helper import fetch_watchlist
 from database import get_user
 
@@ -39,6 +40,8 @@ class Watchlist(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="watchlist",
         description="📺 Show what someone is currently watching or reading on AniList"
@@ -64,13 +67,13 @@ class Watchlist(commands.Cog):
                     ephemeral=True
                 )
                 return
-            username = db_user[1]
+            username = db_user[2]
 
         # Case 2: Default to self if no args
         elif not username:
             db_user = await get_user(interaction.user.id)
             if db_user:
-                username = db_user[1]
+                username = db_user[2]
             else:
                 await interaction.followup.send(
                     "⚠️ You must provide either a registered server user or an AniList username. (You are not registered either!)",
