@@ -3,10 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import random
 
-<<<<<<< HEAD
 from config import GUILD_ID
-=======
->>>>>>> 8131418acf03dcad9a033a81f4e956fefafa2a4b
 from helpers.media_helper import fetch_random_media
 
 
@@ -14,10 +11,7 @@ class Random(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-<<<<<<< HEAD
     @app_commands.guilds(discord.Object(id=GUILD_ID))
-=======
->>>>>>> 8131418acf03dcad9a033a81f4e956fefafa2a4b
     @app_commands.command(
         name="random",
         description="🎲 Get a completely random Anime, Manga, Light Novel, or All suggestion from AniList"
