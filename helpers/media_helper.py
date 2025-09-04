@@ -406,3 +406,67 @@ async def fetch_media_with_recommendations(session: aiohttp.ClientSession, media
     except Exception as e:
         logger.error(f"Unexpected error fetching recommendations for {media_id} ({media_type}): {e}")
         return None
+
+
+
+# -----------------------------
+# Fetch Completely Random Media
+# -----------------------------
+async def fetch_random_media(media_type: str = "ANIME") -> Optional[discord.Embed]:
+    """
+    Fetch a completely random Anime, Manga, or Light Novel (LN) from AniList.
+    """
+    async with aiohttp.ClientSession() as session:
+        for _ in range(15):
+            random_id = random.randint(1, 180000)
+
+            if media_type in ["ANIME", "MANGA"]:
+                embed = await fetch_media(session, media_type, random_id)
+                if embed:
+                    return embed
+
+            if media_type == "LN":
+                query = """
+                query ($id: Int) {
+                  Media(id: $id, type: MANGA) {
+                    id
+                    format
+                    title { romaji english native }
+                    description(asHtml: false)
+                    coverImage { large medium }
+                    siteUrl
+                  }
+                }
+                """
+                try:
+                    async with session.post("https://graphql.anilist.co", json={"query": query, "variables": {"id": random_id}}) as resp:
+                        if resp.status != 200:
+                            continue
+                        data = await resp.json()
+                        media = data.get("data", {}).get("Media")
+                        if not media or media.get("format") != "NOVEL":
+                            continue
+
+                        title_name = media["title"].get("english") or media["title"].get("romaji") or media["title"].get("native") or "Unknown"
+                        description = media.get("description") or "No description available."
+                        description = re.sub(r"<br\s*/?>|</?i>|</?b>", "", description)
+                        if len(description) > 500:
+                            description = description[:500] + "..."
+
+                        embed = discord.Embed(
+                            title=title_name,
+                            url=media.get("siteUrl"),
+                            description=description,
+                            color=discord.Color.blue()
+                        )
+
+                        cover_url = media.get("coverImage", {}).get("large") or media.get("coverImage", {}).get("medium")
+                        if cover_url:
+                            embed.set_thumbnail(url=cover_url)
+
+                        return embed
+                except Exception as e:
+                    logger.error(f"Error fetching random LN: {e}")
+                    continue
+
+        return None
