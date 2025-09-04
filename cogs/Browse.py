@@ -12,7 +12,7 @@ logger = logging.getLogger("BrowseCog")
 API_URL = "https://graphql.anilist.co"
 
 
-class Search(commands.Cog):
+class Browse(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
