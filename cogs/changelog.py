@@ -4,11 +4,14 @@ from discord.ext import commands
 from pathlib import Path
 import re
 
+from config import GUILD_ID
+
 class Changelog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.changelog_path = Path("changelog.txt")  # Ensure this file exists in the root directory
+        self.changelog_path = Path("changelog.txt") 
 
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(name="changelog", description="View the latest bot updates and changes")
     async def changelog(self, interaction: discord.Interaction):
         if not self.changelog_path.exists():
