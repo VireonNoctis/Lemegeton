@@ -7,6 +7,34 @@ from helpers.media_helper import fetch_watchlist
 from database import get_user
 
 
+class WatchlistView(discord.ui.View):
+    def __init__(self, pages, user_name: str):
+        super().__init__(timeout=120)  # 2-minute timeout
+        self.pages = pages
+        self.current_page = 0
+        self.user_name = user_name
+
+    async def update_message(self, interaction: discord.Interaction):
+        embed = self.pages[self.current_page]
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="◀️ Back", style=discord.ButtonStyle.secondary)
+    async def back(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            await self.update_message(interaction)
+        else:
+            await interaction.response.defer()
+
+    @discord.ui.button(label="▶️ Next", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page < len(self.pages) - 1:
+            self.current_page += 1
+            await self.update_message(interaction)
+        else:
+            await interaction.response.defer()
+
+
 class Watchlist(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -27,7 +55,7 @@ class Watchlist(commands.Cog):
     ):
         await interaction.response.defer()
 
-        # Case 1: A Discord user was selected
+        # Case 1: Discord user
         if user:
             db_user = await get_user(user.id)
             if not db_user:
@@ -36,9 +64,9 @@ class Watchlist(commands.Cog):
                     ephemeral=True
                 )
                 return
-            username = db_user[1]  # DB schema: (discord_id, anilist_name)
+            username = db_user[1]
 
-        # Case 2: No username provided → default to self (if registered)
+        # Case 2: Default to self if no args
         elif not username:
             db_user = await get_user(interaction.user.id)
             if db_user:
@@ -50,10 +78,7 @@ class Watchlist(commands.Cog):
                 )
                 return
 
-        # Case 3: AniList username manually typed → use directly
-        # (no DB check required here)
-
-        # Fetch watchlist
+        # Fetch AniList watchlist
         data = await fetch_watchlist(username)
         if not data:
             await interaction.followup.send(f"⚠️ Could not fetch watchlist for **{username}**.", ephemeral=True)
@@ -81,23 +106,31 @@ class Watchlist(commands.Cog):
                 format_type = "📚 LN" if media.get("format") == "NOVEL" else "📖 Manga"
                 manga_entries.append(f"{format_type} [{title}]({media['siteUrl']}) — Ch {progress}/{total}")
 
-        if not anime_entries and not manga_entries:
+        all_entries = anime_entries + manga_entries
+        if not all_entries:
             await interaction.followup.send(f"ℹ️ **{username}** is not watching or reading anything right now.")
             return
 
-        embed = discord.Embed(
-            title=f"📺 Watchlist for {username}",
-            description="Here’s what they are currently watching/reading:",
-            color=discord.Color(random.randint(0, 0xFFFFFF))
-        )
+        # Split into pages of 10
+        pages = []
+        for i in range(0, len(all_entries), 10):
+            chunk = all_entries[i:i+10]
+            embed = discord.Embed(
+                title=f"📺 Watchlist for {username}",
+                description="\n".join(chunk),
+                color=discord.Color(random.randint(0, 0xFFFFFF))
+            )
+            embed.set_footer(text=f"Page {len(pages)+1}/{(len(all_entries)+9)//10} • Data from AniList")
+            pages.append(embed)
 
-        if anime_entries:
-            embed.add_field(name="🎬 Anime", value="\n".join(anime_entries[:10]), inline=False)
-        if manga_entries:
-            embed.add_field(name="📖 Manga / 📚 Light Novels", value="\n".join(manga_entries[:10]), inline=False)
+        # If only one page, just send normally
+        if len(pages) == 1:
+            await interaction.followup.send(embed=pages[0])
+            return
 
-        embed.set_footer(text="Data from AniList")
-        await interaction.followup.send(embed=embed)
+        # Send with pagination view
+        view = WatchlistView(pages, username)
+        await interaction.followup.send(embed=pages[0], view=view)
 
 
 async def setup(bot: commands.Bot):
