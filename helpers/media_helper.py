@@ -467,4 +467,112 @@ async def fetch_random_media(media_type: str = "ANIME") -> Optional[discord.Embe
                     logger.error(f"Error fetching random LN: {e}")
                     continue
 
+# -----------------------------
+# Fetch AniList Watchlist (Anime + Manga)
+# -----------------------------
+WATCHLIST_CACHE: Dict[str, Tuple[dict, float]] = {}
+WATCHLIST_CACHE_TTL = 300  # seconds
+
+WATCHLIST_QUERY = """
+query ($username: String) {
+  anime: MediaListCollection(userName: $username, type: ANIME, status_in: [CURRENT, REPEATING]) {
+    lists {
+      entries {
+        progress
+        media {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          episodes
+          siteUrl
+        }
+      }
+    }
+  }
+  manga: MediaListCollection(userName: $username, type: MANGA, status_in: [CURRENT, REPEATING]) {
+    lists {
+      entries {
+        progress
+        media {
+          id
+          title {
+            romaji
+            english
+            native
+          }
+          chapters
+          format
+          siteUrl
+        }
+      }
+    }
+  }
+}
+"""
+
+async def fetch_watchlist(username: str) -> Optional[dict]:
+    """
+    Fetches a user's current anime + manga watchlist from AniList.
+
+    Args:
+        username (str): AniList username.
+
+    Returns:
+        dict: {
+            "anime": [ ... ],
+            "manga": [ ... ]
+        }
+        or None if fetch failed.
+    """
+    now = asyncio.get_event_loop().time()
+
+    # ✅ Use cache if available
+    if username in WATCHLIST_CACHE:
+        cached_data, cached_time = WATCHLIST_CACHE[username]
+        if now - cached_time < WATCHLIST_CACHE_TTL:
+            logger.info(f"Using cached watchlist for {username}")
+            return cached_data
+
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(
+                ANILIST_API_URL,
+                json={"query": WATCHLIST_QUERY, "variables": {"username": username}},
+            ) as resp:
+                # ❌ Handle 404 (user not found)
+                if resp.status == 404:
+                    logger.warning(f"AniList user not found: {username}")
+                    return None
+
+                # ❌ Handle 429 (rate limit)
+                if resp.status == 429:
+                    logger.warning(f"Rate limited by AniList for {username}")
+                    return None
+
+                # ❌ Handle other HTTP errors
+                if resp.status != 200:
+                    logger.warning(f"AniList watchlist fetch failed ({resp.status}) for {username}")
+                    return None
+
+                data = await resp.json()
+                result = {
+                    "anime": data.get("data", {}).get("anime", {}).get("lists", []),
+                    "manga": data.get("data", {}).get("manga", {}).get("lists", []),
+                }
+
+                # ✅ Cache result
+                WATCHLIST_CACHE[username] = (result, now)
+                return result
+
+        except aiohttp.ClientError as e:
+            logger.warning(f"Client error fetching watchlist for {username}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error fetching watchlist for {username}: {e}")
+            return None
+
+
         return None
