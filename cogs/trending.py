@@ -74,7 +74,6 @@ class Trending(commands.Cog):
 
             return media_list
 
-        # 🎨 Build a more aesthetic embed
         async def build_embed(media_list, label: str):
             if not media_list:
                 return None
@@ -89,36 +88,38 @@ class Trending(commands.Cog):
             # 🏷️ Type icons for better styling
             type_icons = {"ANIME": "🎬", "MANGA": "📖", "LN": "📚"}
 
-            embed = discord.Embed(
-                title=f"{type_icons.get(label, '')} Top 10 Trending {label.capitalize()}",
-                url="https://anilist.co",  # ✅ Makes the embed title clickable
-                description=f"🔥 Here's what's **hot** on **AniList** right now!\nStay up to date with the latest trends 🚀",
-                color=random_color
-            )
-
-
+            # 🔹 Build description with neat formatting
+            description = ""
             for i, m in enumerate(media_list, start=1):
                 title = m["title"].get("romaji") or m["title"].get("english") or "Unknown Title"
                 url = m["siteUrl"]
                 score = m.get("trending", 0)
 
-                embed.add_field(
-                    name=f"**#{i}** • {title}",
-                    value=f"🔗 [View on AniList]({url}) • ✨ **Trending Score:** `{score}`",
-                    inline=False
+                # Use rank emoji for visual separation
+                rank_emoji = f"#{i}"  # You could also use 1️⃣ 2️⃣ etc. if preferred
+                description += (
+                    f"**{rank_emoji}** • [{title}]({url})\n"
+                    f"✨ Trending Score: `{score}`\n"
+                    f"──────────────\n"
                 )
 
+            embed = discord.Embed(
+                title=f"{type_icons.get(label, '')} Top 10 Trending {label.capitalize()}",
+                description=description.strip(),  # remove trailing separator
+                color=random_color
+            )
 
-            # 🖼️ Thumbnail: First trending item cover
+            # 🖼️ Thumbnail: first trending item cover
             embed.set_thumbnail(url=media_list[0]["coverImage"]["large"])
 
-            # 🌟 Better footer with emoji & subtle branding
+            # 🌟 Footer with subtle branding
             embed.set_footer(
                 text="⚡ Powered by AniList • Data updates every few hours",
                 icon_url=media_list[0]["coverImage"]["large"]
             )
 
             return embed
+
 
         # 🔹 Handle "All" option → fetch Anime, Manga, Light Novels together
         if media_type == "ALL":
