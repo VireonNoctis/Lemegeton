@@ -37,14 +37,17 @@ async def init_users_table():
         await db.commit()
         logger.info("Users table is ready.")
 
-async def add_user(discord_id: int, username: str):
+async def add_user(discord_id: int, username: str, anilist_username: str = None, anilist_id: int = None):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute(
-            "INSERT OR IGNORE INTO users (discord_id, username) VALUES (?, ?)",
-            (discord_id, username)
+            """
+            INSERT INTO users (discord_id, username, anilist_username, anilist_id)
+            VALUES (?, ?, ?, ?)
+            """,
+            (discord_id, username, anilist_username, anilist_id)
         )
         await db.commit()
-        logger.info(f"Added user: {username} ({discord_id})")
+
 
 async def get_user(discord_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
@@ -71,6 +74,19 @@ async def remove_user(discord_id: int):
         await db.execute("DELETE FROM users WHERE discord_id = ?", (discord_id,))
         await db.commit()
         logger.info(f"Removed user {discord_id}")
+
+async def update_anilist_info(discord_id: int, anilist_username: str, anilist_id: int):
+    """Update the anilist_username and anilist_id for a user in the database."""
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute(
+            """
+            UPDATE users
+            SET anilist_username = ?, anilist_id = ?
+            WHERE discord_id = ?
+            """,
+            (anilist_username, anilist_id, discord_id)
+        )
+        await db.commit()
 
 # ------------------------------------------------------
 # CHALLENGE RULES TABLE FUNCTIONS
@@ -192,18 +208,6 @@ async def get_user_manga_progress(discord_id: int, manga_id: int):
         await cursor.close()
         return {"current_chapter": row[0], "rating": row[1]} if row else None
 
-
-async def upsert_user_manga_progress(discord_id: int, manga_id: int, current_chapter: int, rating: float):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating)
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
-                current_chapter=excluded.current_chapter,
-                rating=excluded.rating
-        """, (discord_id, manga_id, current_chapter, rating))
-        await db.commit()
-        logger.info(f"Upserted manga progress: user {discord_id}, manga {manga_id}, chapter {current_chapter}, rating {rating}")
         
         
 async def upsert_user_stats(
@@ -246,6 +250,110 @@ async def save_user(discord_id: int, username: str):
         logger.info(f"Saved user: {username} ({discord_id})")
 
 
+# ------------------------------------------------------
+# MANGA CHALLENGES TABLE
+# ------------------------------------------------------
+async def init_manga_challenges_table():
+    async with aiosqlite.connect("database.db") as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS manga_challenges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                manga_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                total_chapters INTEGER NOT NULL,
+                chapters_read INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'in_progress',
+                FOREIGN KEY(user_id) REFERENCES users(id)
+            );
+        """)
+        await db.commit()
+
+async def init_global_challenges_table():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS global_challenges (
+                challenge_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                total_chapters INTEGER DEFAULT 0
+            )
+        """)
+        await db.commit()
+
+
+async def init_user_progress_table():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS user_progress (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                challenge_manga_id INTEGER NOT NULL,
+                chapters_read INTEGER NOT NULL DEFAULT 0,
+                status TEXT NOT NULL DEFAULT 'in_progress',
+                FOREIGN KEY(user_id) REFERENCES users(id),
+                FOREIGN KEY(challenge_manga_id) REFERENCES challenge_manga(id)
+            )
+        """)
+        await db.commit()
+
+async def add_global_challenge(manga_id: int, title: str, total_chapters: int):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "INSERT INTO global_challenges (manga_id, title, total_chapters) VALUES (?, ?, ?)",
+            (manga_id, title, total_chapters)
+        )
+        challenge_id = cursor.lastrowid
+        users = await db.execute_fetchall("SELECT id FROM users")
+        for (user_id,) in users:
+            await db.execute(
+                "INSERT INTO user_progress (user_id, challenge_id) VALUES (?, ?)",
+                (user_id, challenge_id)
+            )
+        await db.commit()
+        return challenge_id
+    
+async def init_challenge_manga_table():
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS challenge_manga (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                challenge_id INTEGER NOT NULL,
+                manga_id INTEGER NOT NULL UNIQUE,
+                title TEXT NOT NULL,
+                total_chapters INTEGER NOT NULL,
+                FOREIGN KEY(challenge_id) REFERENCES global_challenges(challenge_id)
+            )
+        """)
+        await db.commit()
+
+async def upsert_user_anilist_progress(user_id: int, manga_id: int, chapters_read: int, status: str):
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO user_progress (user_id, challenge_manga_id, chapters_read, status)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(user_id, challenge_manga_id) DO UPDATE SET
+                chapters_read=excluded.chapters_read,
+                status=excluded.status
+        """, (user_id, manga_id, chapters_read, status))
+        await db.commit()
+
+async def upsert_user_manga_progress(discord_id: int, manga_id: int, current_chapter: int, rating: float):
+    """
+    Insert or update a user's manga progress.
+    If a record for (discord_id, manga_id) exists, update current_chapter and rating.
+    Otherwise, insert a new record.
+    """
+    async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("""
+            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
+                current_chapter = excluded.current_chapter,
+                rating = excluded.rating
+        """, (discord_id, manga_id, current_chapter, rating))
+        await db.commit()
+
+
 
 
 # ------------------------------------------------------
@@ -258,4 +366,8 @@ async def init_db():
     await init_user_stats_table()
     await init_achievements_table()
     await init_user_manga_progress_table()
+    await init_manga_challenges_table()
+    await init_user_progress_table()
+    await init_global_challenges_table()
+    await init_challenge_manga_table()
     logger.info("All database tables initialized.")

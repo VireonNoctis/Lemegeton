@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from config import GUILD_ID
 from database import set_challenge_rules, get_challenge_rules  # These are placeholders in database.py
 import logging
 
@@ -22,6 +23,8 @@ class ChallengeRules(commands.Cog):
         self.bot = bot
         logger.info("ChallengeRules cog loaded")
 
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="challenge-rules-create",
         description="Administrator: Create or update the challenge rules"
