@@ -7,6 +7,7 @@ import time
 import aiohttp
 import discord
 from discord.ext import commands
+from database import init_db
 
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -76,7 +77,7 @@ async def update_streaming_status():
         anime_title = trending[index]
         stream = discord.Streaming(
             name=f"Trending: {anime_title}",
-            url="https://www.twitch.tv/kaicenat"
+            url="https://anilist.co"
         )
         await bot.change_presence(activity=stream)
         logger.info(f"🎥 Streaming status updated to: {anime_title}")
@@ -154,9 +155,16 @@ async def on_ready():
 # Run Bot
 # ------------------------------------------------------
 async def main():
+    # Initialize all database tables first
+    await init_db()
+
+    # Load cogs
     await load_cogs()
+
     # Start watching cogs in the background
     asyncio.create_task(watch_cogs())
+
+    # Start the bot
     await bot.start(TOKEN)
 
 # ------------------------------------------------------
