@@ -307,6 +307,7 @@ async def fetch_user_stats(username: str) -> dict:
         statistics {
           anime {
             count
+            chaptersRead
             meanScore
             genres {
               genre
@@ -323,6 +324,7 @@ async def fetch_user_stats(username: str) -> dict:
           }
           manga {
             count
+            chaptersRead
             meanScore
             genres {
               genre

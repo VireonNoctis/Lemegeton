@@ -206,22 +206,33 @@ async def upsert_user_manga_progress(discord_id: int, manga_id: int, current_cha
         logger.info(f"Upserted manga progress: user {discord_id}, manga {manga_id}, chapter {current_chapter}, rating {rating}")
         
         
-async def upsert_user_stats(discord_id: int, username: str,
-                            total_manga: int, total_anime: int,
-                            avg_manga_score: float, avg_anime_score: float):
+async def upsert_user_stats(
+    discord_id: int,
+    username: str,
+    total_manga: int,
+    total_anime: int,
+    avg_manga_score: float,
+    avg_anime_score: float,
+    total_chapters: int = 0  # new column for total chapters
+):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
-            INSERT INTO user_stats (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO user_stats (
+                discord_id, username, total_manga, total_anime,
+                avg_manga_score, avg_anime_score, total_chapters
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
                 username=excluded.username,
                 total_manga=excluded.total_manga,
                 total_anime=excluded.total_anime,
                 avg_manga_score=excluded.avg_manga_score,
-                avg_anime_score=excluded.avg_anime_score
-        """, (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score))
+                avg_anime_score=excluded.avg_anime_score,
+                total_chapters=excluded.total_chapters
+        """, (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score, total_chapters))
         await db.commit()
-        logger.info(f"Upserted stats for {discord_id} ({username})")
+        logger.info(f"Upserted stats for {discord_id} ({username}) with {total_chapters} total chapters")
+
 
 # Save or update a user
 async def save_user(discord_id: int, username: str):

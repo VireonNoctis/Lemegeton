@@ -1,170 +1,153 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 from discord import app_commands
-from typing import List, Dict, Optional
-from database import gather_user_stats, update_user_stats
-import logging
+import aiosqlite
+import aiohttp
+import asyncio
+import time
+from typing import Dict, List, Tuple
 
-# ------------------------------------------------------
-# Simple Logging Setup
-# ------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-logger = logging.getLogger("LeaderboardCog")
+from database import get_all_users, upsert_user_stats, DB_PATH
+from helpers.media_helper import fetch_user_stats
+from config import GUILD_ID
 
-# ------------------------------------------------------
-# Leaderboard Cog
-# ------------------------------------------------------
+CACHE_TTL = 86400  # 1 day
+last_fetch: Dict[int, float] = {}  # timestamp cache per user
+PAGE_SIZE = 5  # 5 users per page
+
+
+class LeaderboardView(discord.ui.View):
+    def __init__(self, leaderboard_data: List[Tuple[str, int, int, float]]):
+        super().__init__(timeout=300)
+        self.leaderboard_data = leaderboard_data
+        self.current_page = 0
+        self.max_page = (len(leaderboard_data) - 1) // PAGE_SIZE
+
+        # Disable buttons if not needed
+        self.prev_button.disabled = self.current_page == 0
+        self.next_button.disabled = self.current_page >= self.max_page
+
+    async def update_embed(self, message: discord.Message):
+        start = self.current_page * PAGE_SIZE
+        end = start + PAGE_SIZE
+        page_data = self.leaderboard_data[start:end]
+
+        embed = discord.Embed(
+            title="🏆 Golden Ratio",
+            description=f"Users ranked by average chapters read per manga (Page {self.current_page + 1}/{self.max_page + 1})",
+            color=discord.Color.random()
+        )
+
+        for idx, (username, total_manga, total_chapters, avg_chapters) in enumerate(page_data, start=start + 1):
+            embed.add_field(
+                name=f"{idx}. {username}",
+                value=f"Total Manga: {total_manga}\nTotal Chapters: {total_chapters}\nAverage Chapters per Manga: {avg_chapters:.2f}",
+                inline=False
+            )
+
+        embed.set_footer(text="Leaderboard based on cached AniList stats (updates once per day)")
+
+        # Always edit the message itself for buttons
+        await message.edit(embed=embed, view=self)
+
+    @discord.ui.button(label="◀️ Prev", style=discord.ButtonStyle.blurple)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.prev_button.disabled = self.current_page == 0
+            self.next_button.disabled = False
+            await self.update_embed(interaction.message)
+        await interaction.response.defer()  # acknowledge the click
+
+    @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.blurple)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_page < self.max_page:
+            self.current_page += 1
+            self.next_button.disabled = self.current_page >= self.max_page
+            self.prev_button.disabled = False
+            await self.update_embed(interaction.message)
+        await interaction.response.defer()
+
+
 class Leaderboard(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        self.update_stats_task.start()
-        logger.info("Leaderboard cog loaded and background task started")
 
-    def cog_unload(self):
-        self.update_stats_task.cancel()
-        logger.info("Leaderboard cog unloaded and background task canceled")
+    async def fetch_and_cache_stats(self):
+        users = await get_all_users()
+        async with aiohttp.ClientSession() as session:
+            for user in users:
+                discord_id, username = user[1], user[2]
+                now = time.time()
+                if discord_id in last_fetch and now - last_fetch[discord_id] < CACHE_TTL:
+                    continue
 
-    @tasks.loop(hours=24)
-    async def update_stats_task(self):
-        try:
-            await update_user_stats()
-            logger.info("Leaderboard stats updated successfully")
-        except Exception as e:
-            logger.exception(f"Failed to update leaderboard stats: {e}")
+                data = await fetch_user_stats(username)
+                if not data or "data" not in data or "User" not in data["data"]:
+                    continue
 
-    def create_leaderboard_pages(self, stats: List[Dict], media_type: str):
-        pages = []
+                user_data = data["data"]["User"]
+                manga_stats = user_data.get("statistics", {}).get("manga", {})
+                total_manga = manga_stats.get("count") or 0
+                total_chapters = manga_stats.get("chaptersRead") or 0
+                total_anime = user_data.get("statistics", {}).get("anime", {}).get("count") or 0
+                avg_manga_score = manga_stats.get("meanScore") or 0
+                avg_anime_score = user_data.get("statistics", {}).get("anime", {}).get("meanScore") or 0
 
-        if media_type == "manga":
-            total_key = "manga_total"
-            completed_key = "manga_completed"
-            avg_score_key = "manga_avg"
-            progress_key = "manga_progress"
-            chapters_key = "manga_chapters"
-        else:
-            total_key = "anime_total"
-            completed_key = "anime_completed"
-            avg_score_key = "anime_avg"
-            progress_key = "anime_progress"
-            chapters_key = None
-
-        # Total Entries
-        embed_total = discord.Embed(
-            title=f"🏆 {media_type.capitalize()} Leaderboard: Total Entries",
-            color=discord.Color.gold()
-        )
-        for i, user in enumerate(sorted(stats, key=lambda x: x[total_key], reverse=True)[:10], start=1):
-            embed_total.add_field(name=f"{i}. {user['username']}", value=f"Total: {user[total_key]}", inline=False)
-        pages.append(embed_total)
-
-        # Completed
-        embed_completed = discord.Embed(
-            title=f"🏆 {media_type.capitalize()} Leaderboard: Completed",
-            color=discord.Color.blue()
-        )
-        for i, user in enumerate(sorted(stats, key=lambda x: x[completed_key], reverse=True)[:10], start=1):
-            embed_completed.add_field(name=f"{i}. {user['username']}", value=f"Completed: {user[completed_key]}", inline=False)
-        pages.append(embed_completed)
-
-        # Average Score
-        embed_avg = discord.Embed(
-            title=f"🏆 {media_type.capitalize()} Leaderboard: Average Score",
-            color=discord.Color.green()
-        )
-        for i, user in enumerate(sorted(stats, key=lambda x: x[avg_score_key], reverse=True)[:10], start=1):
-            embed_avg.add_field(name=f"{i}. {user['username']}", value=f"Avg Score: {user[avg_score_key]}", inline=False)
-        pages.append(embed_avg)
-
-        # Golden Ratio (Average Chapters per Manga)
-        if media_type == "manga":
-            embed_golden = discord.Embed(
-                title=f"🏆 {media_type.capitalize()} Leaderboard: Golden Ratio",
-                description="Average chapters per manga entry",
-                color=discord.Color.purple()
-            )
-            sorted_golden = sorted(
-                stats,
-                key=lambda x: (x[chapters_key] / x[total_key]) if x[total_key] else 0,
-                reverse=True
-            )
-            for i, user in enumerate(sorted_golden[:10], start=1):
-                avg_chap = (user[chapters_key] / user[total_key]) if user[total_key] else 0
-                embed_golden.add_field(
-                    name=f"{i}. {user['username']}",
-                    value=f"Avg Chapters per Manga: {round(avg_chap, 2)}",
-                    inline=False
+                await upsert_user_stats(
+                    discord_id,
+                    username,
+                    total_manga,
+                    total_anime,
+                    avg_manga_score,
+                    avg_anime_score,
+                    total_chapters
                 )
-            pages.append(embed_golden)
+                last_fetch[discord_id] = now
 
-        logger.debug(f"Created {len(pages)} leaderboard pages for {media_type}")
-        return pages
-
-    @app_commands.command(name="leaderboard", description="View the server leaderboard with cached AniList stats")
-    @app_commands.choices(media=[
-        app_commands.Choice(name="manga", value="manga"),
-        app_commands.Choice(name="anime", value="anime")
-    ])
-    async def leaderboard(self, interaction: discord.Interaction, media: Optional[str] = "manga"):
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
+    @app_commands.command(
+        name="leaderboard",
+        description="📊 Show leaderboard: highest average chapters per manga read"
+    )
+    async def leaderboard(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        logger.info(f"User {interaction.user.id} requested {media} leaderboard")
+        await self.fetch_and_cache_stats()
 
-        try:
-            stats = await gather_user_stats()
-            if not stats:
-                await interaction.followup.send("No registered users found.")
-                logger.info("Leaderboard request failed: no users found")
-                return
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT username, total_manga, total_chapters FROM user_stats"
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
 
-            pages = self.create_leaderboard_pages(stats, media)
-            current = 0
-            msg = await interaction.followup.send(embed=pages[current])
+        if not rows:
+            await interaction.followup.send("⚠️ No user stats found.", ephemeral=True)
+            return
 
-            class Pager(discord.ui.View):
-                def __init__(self, cog):
-                    super().__init__(timeout=120)
-                    self.cog = cog
+        leaderboard_data = []
+        for username, total_manga, total_chapters in rows:
+            if total_manga and total_chapters is not None:
+                avg_chapters = total_chapters / total_manga
+                leaderboard_data.append((username, total_manga, total_chapters, avg_chapters))
 
-                @discord.ui.button(label="◀", style=discord.ButtonStyle.grey)
-                async def prev(self, interaction_: discord.Interaction, button: discord.ui.Button):
-                    nonlocal current
-                    current = (current - 1) % len(pages)
-                    await interaction_.response.edit_message(embed=pages[current])
+        if not leaderboard_data:
+            await interaction.followup.send("⚠️ No manga progress data found.", ephemeral=True)
+            return
+        
+        # Sort all users by average chapters per manga in descending order
+        leaderboard_data.sort(key=lambda x: x[3], reverse=True)
 
-                @discord.ui.button(label="▶", style=discord.ButtonStyle.grey)
-                async def next(self, interaction_: discord.Interaction, button: discord.ui.Button):
-                    nonlocal current
-                    current = (current + 1) % len(pages)
-                    await interaction_.response.edit_message(embed=pages[current])
+        # Create the view
+        view = LeaderboardView(leaderboard_data)
 
-                @discord.ui.button(label="🔄 Force Update", style=discord.ButtonStyle.green)
-                async def force_update(self, interaction_: discord.Interaction, button: discord.ui.Button):
-                    await interaction_.response.defer()
-                    try:
-                        await update_user_stats()
-                        updated_stats = await gather_user_stats()
-                        nonlocal pages, current
-                        pages = self.cog.create_leaderboard_pages(updated_stats, media)
-                        current = 0
-                        await interaction_.followup.send("✅ Leaderboard updated successfully!", ephemeral=True)
-                        await interaction_.edit_original_response(embed=pages[current])
-                        logger.info(f"Leaderboard forced update by user {interaction_.user.id}")
-                    except Exception as e:
-                        await interaction_.followup.send(f"❌ Failed to update leaderboard: {e}", ephemeral=True)
-                        logger.exception(f"Failed leaderboard update by user {interaction_.user.id}: {e}")
+        # Send an empty embed first and get the message object
+        msg = await interaction.followup.send(embed=discord.Embed(title="Loading leaderboard..."), view=view)
 
-            await msg.edit(view=Pager(self))
-
-        except Exception as e:
-            await interaction.followup.send("❌ An error occurred while fetching the leaderboard.", ephemeral=True)
-            logger.exception(f"Error in /leaderboard command: {e}")
+        # Update the embed with actual content
+        await view.update_embed(msg)
 
 
-# ------------------------------------------------------
-# Cog Setup
-# ------------------------------------------------------
-async def setup(bot):
+
+async def setup(bot: commands.Bot):
     await bot.add_cog(Leaderboard(bot))
