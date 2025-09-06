@@ -180,7 +180,7 @@ async def init_user_manga_progress_table():
                 discord_id INTEGER NOT NULL,
                 manga_id INTEGER NOT NULL,
                 current_chapter INTEGER DEFAULT 0,
-                rating REAL DEFAULT 0,
+                rating REAL DEFAULT 0,       
                 PRIMARY KEY (discord_id, manga_id)
             )
         """)
@@ -337,21 +337,23 @@ async def upsert_user_anilist_progress(user_id: int, manga_id: int, chapters_rea
         """, (user_id, manga_id, chapters_read, status))
         await db.commit()
 
-async def upsert_user_manga_progress(discord_id: int, manga_id: int, current_chapter: int, rating: float):
+async def upsert_user_manga_progress(discord_id: int, manga_id: int, title: str, current_chapter: int, rating: float):
     """
     Insert or update a user's manga progress.
-    If a record for (discord_id, manga_id) exists, update current_chapter and rating.
+    If a record for (discord_id, manga_id) exists, update current_chapter, rating, and title.
     Otherwise, insert a new record.
     """
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
-            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO user_manga_progress (discord_id, manga_id, title, current_chapter, rating)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(discord_id, manga_id) DO UPDATE SET
+                title = excluded.title,
                 current_chapter = excluded.current_chapter,
                 rating = excluded.rating
-        """, (discord_id, manga_id, current_chapter, rating))
+        """, (discord_id, manga_id, title, current_chapter, rating))
         await db.commit()
+
 
 
 
