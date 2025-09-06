@@ -125,7 +125,11 @@ class MangaChallenges(commands.Cog):
                             await cursor.close()
                             chapters_read = result[0] if result else 0
                             status = "Not Started" if chapters_read == 0 else "In Progress"
-                            user_progress_cache[cache_key] = (chapters_read, status)
+                            user_progress_cache[cache_key] = {
+                                "title": manga_title,
+                                "chapters_read": chapters_read,
+                                "status": status
+                            }
 
                         description_lines.append(
                             f"[{manga_title}](https://anilist.co/manga/{manga_id}) - `{chapters_read}/{total_chapters}` • Status: `{status}`"
@@ -194,62 +198,143 @@ class MangaChallenges(commands.Cog):
                 logger.info(f"Updating challenge {challenge_id} for user {self.user_id} (Page Slice: {start}:{end})")
 
                 async with aiosqlite.connect(DB_PATH) as db:
-                    # Fetch ALL manga in the challenge
                     manga_rows = await db.execute_fetchall(
                         "SELECT manga_id, title, total_chapters FROM challenge_manga WHERE challenge_id = ?",
                         (challenge_id,)
                     )
-
-                    # Only work on THIS PAGE'S slice
                     manga_rows = manga_rows[start:end]
-
-                    # Sort Alphabetically By Title
                     manga_rows.sort(key=lambda x: x[1].lower())
 
                     description_lines = []
-                    for manga_id, manga_title, total_chapters in manga_rows:
+                    for idx, (manga_id, manga_title, total_chapters) in enumerate(manga_rows, start=1):
                         # Fetch progress from AniList
                         chapters_read, status = await fetch_user_manga_progress(self.anilist_username, manga_id)
                         logger.info(f"User {self.user_id} - Manga '{manga_title}' ({manga_id}): {chapters_read}/{total_chapters} • {status}")
 
-                        description_lines.append(
-                            f"[{manga_title}](https://anilist.co/manga/{manga_id}) - `{chapters_read}/{total_chapters}` • Status: `{status}`"
-                        )
-
-                        # ✅ Cache everything including title
+                        # Update cache
                         user_progress_cache[(self.user_id, manga_id)] = {
                             "title": manga_title,
                             "chapters_read": chapters_read,
                             "status": status
                         }
 
-                        # ✅ Save title in DB too
+                        # Save to DB
                         await upsert_user_manga_progress(
                             self.user_id,
                             manga_id,
-                            manga_title,   
+                            manga_title,
                             chapters_read,
-                            0.0                
+                            0.0
                         )
 
+                        # Add manga info to description
+                        description_lines.append(
+                            f"[{manga_title}](https://anilist.co/manga/{manga_id}) - `{chapters_read}/{total_chapters}` • Status: `{status}`"
+                        )
 
-                        # Wait 5 seconds between updates to avoid rate limits
-                        await asyncio.sleep(5)
+                        # **Live update after each manga**
+                        self.embeds[self.current_page].description = "\n\n".join(description_lines)
+                        await interaction.edit_original_response(
+                            embed=self.embeds[self.current_page],
+                            view=self
+                        )
 
-                    # Update embed description ONLY for this page
-                    self.embeds[self.current_page].description = "\n\n".join(description_lines)
-                    await interaction.followup.edit_message(
-                        message_id=interaction.message.id,
-                        embed=self.embeds[self.current_page],
-                        view=self
-                    )
-                    logger.info(f"Finished updating page {self.current_page + 1} of challenge {challenge_id} for user {self.user_id}")
+                        # Sleep to avoid AniList rate limits
+                        await asyncio.sleep(2.5)
+
+                logger.info(f"Finished updating page {self.current_page + 1} of challenge {challenge_id} for user {self.user_id}")
 
             @discord.ui.button(label="📜 View Challenge Rules", style=discord.ButtonStyle.primary, row=2)
             async def view_rules(self, interaction: discord.Interaction, button: discord.ui.Button):
-                rules_text = await get_challenge_rules() or "No rules have been set yet. Administrators can set them using `/challenge-rules-create`"
-                embed = discord.Embed(title="📜 Manga Challenge Rules", description=rules_text, color=discord.Color.purple())
+                embed = discord.Embed(
+                    title="📜 Manga Challenge Rules",
+                    description="Here are the official manga challenge rules!",
+                    color=discord.Color.purple()
+                )
+
+                embed.add_field(
+                    name="📝 Progress Updates",
+                    value=(
+                        "- Name which trial it is (e.g. *Trial*, *Stage 1*) and resend your updated progress message when finished.\n"
+                        "- Notify **@kyerstorm** when done.\n"
+                        "- Use one of the following statuses:\n"
+                        "`Reread` • `Completed` • `Caught Up` • `In-Progress` • `Skipped` • `Paused` • `Dropped` • `Not Started`\n\n"
+                        "**Status Definitions:**\n"
+                        "• **Completed** → Fully read a finished work.\n"
+                        "• **Caught-Up** → Reached the latest chapter of an ongoing work.\n"
+                        "• **In-Progress** → Currently reading.\n"
+                        "• **Skipped** → Previously read, not rereading.\n"
+                        "• **Reread** → Reread a previously completed work.\n"
+                        "• **Dropped** → Read **≥25 chapters** and chose not to continue."
+                    ),
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="📌 General Rules",
+                    value=(
+                        "- Cannot complain or request changes if absent during challenge discussions.\n"
+                        "- **70%** of titles must be **Completed / Caught Up / Skipped**.\n"
+                        "- **30%** of titles can be **Dropped**.\n"
+                        "- Must read **≥25 chapters** before marking as Dropped.\n"
+                        "- No time limits unless stated.\n"
+                        "- Challenge entries are decided via **community voting**."
+                    ),
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="👥 Community Challenge Rules",
+                    value=(
+                        "- No points awarded while a challenge is marked **Awaiting Approval**, but you may start it.\n"
+                        "- Cannot suggest or use titles already in other challenges.\n"
+                        "[**📄 Full Title List Here**](https://docs.google.com/spreadsheets/d/11WFnWLsLB5aSCcSuPTTfxBbPc105VgTXPpI5ePnxy54/edit?usp=sharing)\n"
+                        "- Check challenge pins — rules may vary per challenge."
+                    ),
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="🏆 Leaderboard",
+                    value=(
+                        "- Use `/show \"Manga Challenge Leaderboard\"` to view rankings.\n"
+                        "- Updated on the **1st of each month**.\n"
+                        "- **Important:** Progress edits won't count unless you notify @kyerstorm."
+                    ),
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="📚 Manga Point System",
+                    value=(
+                        "- **20** Grimoires → 100% completed\n"
+                        "- **10** Grimoires → 70% completed\n"
+                        "- **7** Grimoires → Reread (only if ≥1/3 already read)\n"
+                        "- **5** Grimoires → Per manga completed\n"
+                        "- **2** Grimoires → Per skip\n"
+                        "- **1** Grimoire → Per drop"
+                    ),
+                    inline=False
+                )
+
+                embed.add_field(
+                    name="📖 CN/KN Novel Point System",
+                    value=(
+                        "- **20** Grimoires → 100% completed\n"
+                        "- **15** Grimoires → 70% completed\n"
+                        "- **20** Grimoires → Per novel completed (**>2000 chapters**)\n"
+                        "- **15** Grimoires → Per novel completed (**1501–2000 chapters**)\n"
+                        "- **10** Grimoires → Per novel completed (**501–1500 chapters**)\n"
+                        "- **5** Grimoires → Per novel completed (**<500 chapters**)\n"
+                        "- **3** Grimoires → Per skip\n"
+                        "- **1** Grimoire → Per drop"
+                    ),
+                    inline=False
+                )
+
+                embed.set_footer(text="📌 Always double-check challenge pins for specific rules!")
                 await interaction.response.send_message(embed=embed, ephemeral=True)
+
 
             async def select_callback(self, interaction: discord.Interaction):
                 self.current_page = int(self.select.values[0])
@@ -258,8 +343,6 @@ class MangaChallenges(commands.Cog):
 
         view = ChallengeView(embeds, options, embed_page_map, user_id, anilist_username)
         await interaction.followup.send(embed=embeds[0], view=view)
-        
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(MangaChallenges(bot))
