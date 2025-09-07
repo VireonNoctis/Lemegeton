@@ -118,13 +118,18 @@ class MangaChallenges(commands.Cog):
                                 status = cache["status"]
                         else:
                             cursor = await db.execute(
-                                "SELECT current_chapter, rating FROM user_manga_progress WHERE discord_id = ? AND manga_id = ?",
+                                "SELECT current_chapter, rating, status FROM user_manga_progress WHERE discord_id = ? AND manga_id = ?",
                                 (user_id, manga_id)
                             )
                             result = await cursor.fetchone()
                             await cursor.close()
-                            chapters_read = result[0] if result else 0
-                            status = "Not Started" if chapters_read == 0 else "In Progress"
+
+                            if result:
+                                chapters_read = result[0]
+                                status = result[2] if result[2] else ("Not Started" if chapters_read == 0 else "In Progress")
+                            else:
+                                chapters_read = 0
+                                status = "Not Started"
                             user_progress_cache[cache_key] = {
                                 "title": manga_title,
                                 "chapters_read": chapters_read,
@@ -224,7 +229,8 @@ class MangaChallenges(commands.Cog):
                             manga_id,
                             manga_title,
                             chapters_read,
-                            0.0
+                            0.0,
+                            status
                         )
 
                         # Add manga info to description

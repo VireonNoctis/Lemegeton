@@ -175,15 +175,24 @@ async def init_achievements_table():
 # ------------------------------------------------------
 async def init_user_manga_progress_table():
     async with aiosqlite.connect(DB_PATH) as db:
+        # Create the table with status column if it doesn't exist
         await db.execute("""
             CREATE TABLE IF NOT EXISTS user_manga_progress (
                 discord_id INTEGER NOT NULL,
                 manga_id INTEGER NOT NULL,
+                title TEXT DEFAULT '',
                 current_chapter INTEGER DEFAULT 0,
-                rating REAL DEFAULT 0,       
+                rating REAL DEFAULT 0,
+                status TEXT DEFAULT 'Not Started',   -- ✅ Added status column
                 PRIMARY KEY (discord_id, manga_id)
             )
         """)
+        # Add status column if table already exists but column is missing
+        try:
+            await db.execute("ALTER TABLE user_manga_progress ADD COLUMN status TEXT DEFAULT 'Not Started'")
+        except aiosqlite.OperationalError:
+            # Column already exists, ignore error
+            pass
         await db.commit()
         logger.info("User manga progress table ready.")
 
@@ -201,12 +210,17 @@ async def set_user_manga_progress(discord_id: int, manga_id: int, chapter: int, 
 async def get_user_manga_progress(discord_id: int, manga_id: int):
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute("""
-            SELECT current_chapter, rating FROM user_manga_progress
+            SELECT current_chapter, rating, status FROM user_manga_progress
             WHERE discord_id = ? AND manga_id = ?
         """, (discord_id, manga_id))
         row = await cursor.fetchone()
         await cursor.close()
-        return {"current_chapter": row[0], "rating": row[1]} if row else None
+        return {
+            "current_chapter": row[0],
+            "rating": row[1],
+            "status": row[2]
+        } if row else None
+
 
         
         
@@ -337,26 +351,28 @@ async def upsert_user_anilist_progress(user_id: int, manga_id: int, chapters_rea
         """, (user_id, manga_id, chapters_read, status))
         await db.commit()
 
-async def upsert_user_manga_progress(discord_id: int, manga_id: int, title: str, current_chapter: int, rating: float):
+async def upsert_user_manga_progress(
+    discord_id: int,
+    manga_id: int,
+    title: str,
+    current_chapter: int,
+    rating: float,
+    status: str
+):
     """
-    Insert or update a user's manga progress.
-    If a record for (discord_id, manga_id) exists, update current_chapter, rating, and title.
-    Otherwise, insert a new record.
+    Insert or update a user's manga progress including status.
     """
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
-            INSERT INTO user_manga_progress (discord_id, manga_id, title, current_chapter, rating)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO user_manga_progress (discord_id, manga_id, title, current_chapter, rating, status)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(discord_id, manga_id) DO UPDATE SET
                 title = excluded.title,
                 current_chapter = excluded.current_chapter,
-                rating = excluded.rating
-        """, (discord_id, manga_id, title, current_chapter, rating))
+                rating = excluded.rating,
+                status = excluded.status
+        """, (discord_id, manga_id, title, current_chapter, rating, status))
         await db.commit()
-
-
-
-
 
 # ------------------------------------------------------
 # INITIALIZE ALL DATABASE TABLES
