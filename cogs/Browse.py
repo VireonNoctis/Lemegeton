@@ -107,8 +107,8 @@ class Browse(commands.Cog):
     # /Browse Command
     # --------------------------------------------------
     @app_commands.guilds(discord.Object(id=GUILD_ID))
-    @app_commands.command(name="Browse", description="Search Anime, Manga, Light Novels and General Novels")
-    @app_commands.describe(Media="Choose a media type",Title="Choose The Title")
+    @app_commands.command(name="browse", description="Search Anime, Manga, Light Novels and General Novels")
+    @app_commands.describe(media="Choose a media type",title="Choose The Title")
     @app_commands.choices(media_type=[
         app_commands.Choice(name="Anime", value="ANIME"),
         app_commands.Choice(name="Manga", value="MANGA"),
