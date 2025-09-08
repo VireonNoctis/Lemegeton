@@ -10,6 +10,7 @@ from database import get_all_users
 
 logger = logging.getLogger("BrowseCog")
 API_URL = "https://graphql.anilist.co"
+GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes?q="
 
 
 class Browse(commands.Cog):
@@ -103,15 +104,16 @@ class Browse(commands.Cog):
         return {"progress": progress, "rating10": rating10}
 
     # --------------------------------------------------
-    # /search Command
+    # /Browse Command
     # --------------------------------------------------
     @app_commands.guilds(discord.Object(id=GUILD_ID))
-    @app_commands.command(name="search", description="Search for Anime, Manga, or Light Novels with AniList + MAL info")
-    @app_commands.describe(title="Title to search for", media_type="Select Anime, Manga, or Light Novel")
+    @app_commands.command(name="Browse", description="Search Anime, Manga, Light Novels and General Novels")
+    @app_commands.describe(Media="Choose a media type",Title="Choose The Title")
     @app_commands.choices(media_type=[
         app_commands.Choice(name="Anime", value="ANIME"),
         app_commands.Choice(name="Manga", value="MANGA"),
         app_commands.Choice(name="Light Novel", value="MANGA_NOVEL"),
+        app_commands.Choice(name="General Novel", value="BOOK"),
     ])
     async def search(self, interaction: discord.Interaction, title: str, media_type: app_commands.Choice[str]):
         await interaction.response.defer()
@@ -119,7 +121,45 @@ class Browse(commands.Cog):
         chosen_type = media_type.value
         real_type = "MANGA" if chosen_type == "MANGA_NOVEL" else chosen_type
 
-        # ✅ Fetch media details
+        if chosen_type == "BOOK":
+            # 📚 Google Books Fetch
+            async with aiohttp.ClientSession() as session:
+                async with session.get(GOOGLE_BOOKS_URL + title) as response:
+                    if response.status != 200:
+                        await interaction.followup.send("❌ No results found.", ephemeral=True)
+                        return
+                    data = await response.json()
+                    items = data.get("items", [])
+                    if not items:
+                        await interaction.followup.send("❌ No results found.", ephemeral=True)
+                        return
+                    book = items[0].get("volumeInfo", {})
+
+            # --------------------------------------------------
+            # Google Books Embed
+            # --------------------------------------------------
+            embed = discord.Embed(
+                title=f"📚 {book.get('title', 'Unknown')}",
+                url=book.get("infoLink"),
+                description=book.get("description", "No description available."),
+                color=discord.Color.random()
+            )
+
+            if "imageLinks" in book:
+                embed.set_thumbnail(url=book["imageLinks"].get("thumbnail"))
+
+            authors = ", ".join(book.get("authors", [])) if "authors" in book else "Unknown"
+            embed.add_field(name="✍️ Authors", value=authors, inline=True)
+            embed.add_field(name="📅 Published", value=book.get("publishedDate", "Unknown"), inline=True)
+            embed.add_field(name="🏢 Publisher", value=book.get("publisher", "Unknown"), inline=True)
+            embed.add_field(name="📄 Pages", value=book.get("pageCount", "Unknown"), inline=True)
+            embed.add_field(name="⭐ Rating", value=str(book.get("averageRating", "?")) + "/5", inline=True)
+
+            embed.set_footer(text="Fetched from Google Books")
+            await interaction.followup.send(embed=embed)
+            return
+
+        # ✅ AniList Fetch
         results = await self.fetch_media(title, real_type)
         if not results:
             await interaction.followup.send("❌ No results found.", ephemeral=True)
@@ -127,7 +167,6 @@ class Browse(commands.Cog):
 
         media = results[0]
 
-        # LN filter (since AniList has LN as type=MANGA with format=NOVEL)
         if chosen_type == "MANGA_NOVEL" and media.get("format") != "NOVEL":
             await interaction.followup.send("❌ No Light Novel results found.", ephemeral=True)
             return
@@ -147,21 +186,19 @@ class Browse(commands.Cog):
         genres = ", ".join(media.get("genres", [])) or "Unknown"
 
         # --------------------------------------------------
-        # Embed Layout
+        # AniList Embed
         # --------------------------------------------------
         embed = discord.Embed(
             title=f"{'🎬' if real_type=='ANIME' else '📖'} {media['title']['romaji'] or media['title']['english']}",
             url=media["siteUrl"],
             description=description,
-            color=discord.Color.green()
+            color=discord.Color.random()
         )
 
-        # Thumbnail
         cover_url = media.get("coverImage", {}).get("medium") or media.get("coverImage", {}).get("large")
         if cover_url:
             embed.set_thumbnail(url=cover_url)
 
-        # Banner
         banner_url = media.get("bannerImage")
         if banner_url:
             embed.set_image(url=banner_url)
@@ -179,7 +216,7 @@ class Browse(commands.Cog):
         embed.add_field(name="📅 Published", value=f"**Start:** {start_str}\n**End:** {end_str}", inline=False)
 
         # --------------------------------------------------
-        # 👥 Show progress for all registered users
+        # Registered Users' Progress
         # --------------------------------------------------
         users = await get_all_users()
         if users:
@@ -209,9 +246,6 @@ class Browse(commands.Cog):
                 inline=False
             )
 
-        # --------------------------------------------------
-        # Add MAL link if available
-        # --------------------------------------------------
         mal_link = None
         for link in media.get("externalLinks", []):
             if link.get("site") == "MyAnimeList":
@@ -231,12 +265,25 @@ class Browse(commands.Cog):
         if len(current) < 2:
             return []
 
-        results = await self.fetch_media(current, "ANIME")  # default search
+        media_type = getattr(interaction.namespace, "media_type", None)
         choices = []
-        for media in results[:10]:
-            title = media["title"].get("romaji") or media["title"].get("english") or "Unknown"
-            title = title[:100]
-            choices.append(app_commands.Choice(name=title, value=title))
+
+        if media_type == "BOOK":
+            async with aiohttp.ClientSession() as session:
+                async with session.get(GOOGLE_BOOKS_URL + current) as response:
+                    if response.status != 200:
+                        return []
+                    data = await response.json()
+                    for item in data.get("items", [])[:10]:
+                        info = item.get("volumeInfo", {})
+                        title = info.get("title", "Unknown")[:100]
+                        choices.append(app_commands.Choice(name=title, value=title))
+        else:
+            results = await self.fetch_media(current, "ANIME")
+            for media in results[:10]:
+                title = media["title"].get("romaji") or media["title"].get("english") or "Unknown"
+                title = title[:100]
+                choices.append(app_commands.Choice(name=title, value=title))
 
         return choices
 
