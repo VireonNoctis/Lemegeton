@@ -77,7 +77,7 @@ async def update_streaming_status():
         anime_title = trending[index]
         stream = discord.Streaming(
             name=f"🎥 {anime_title}",
-            url="https://anilist.co"
+            url="https://www.twitch.tv/owobotplays"
         )
         await bot.change_presence(activity=stream)
         logger.info(f"🎥 Streaming status updated to: {anime_title}")
