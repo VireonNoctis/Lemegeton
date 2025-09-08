@@ -20,3 +20,4 @@ soupsieve==2.7
 python-dotenv==1.1.1
 watchfiles==1.1.0
 propcache==0.3.2
+python-dotenv
