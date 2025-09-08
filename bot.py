@@ -76,8 +76,8 @@ async def update_streaming_status():
     while not bot.is_closed():
         anime_title = trending[index]
         stream = discord.Streaming(
-            name=f"Trending: {anime_title}",
-            url="https://anilist.co"
+            name=f"🎥 {anime_title}",
+            url="https://www.twitch.tv/owobotplays"
         )
         await bot.change_presence(activity=stream)
         logger.info(f"🎥 Streaming status updated to: {anime_title}")
@@ -92,7 +92,7 @@ async def update_streaming_status():
             index = 0
             last_refresh = time.time()
 
-        await asyncio.sleep(300)  # wait 5 minutes before updating again
+        await asyncio.sleep(60)  # wait 1 minutes before updating again
 
 # ------------------------------------------------------
 # Cog timestamps for tracking changes
