@@ -147,7 +147,7 @@ class Affinity(commands.Cog):
             current_entries = self.entries[start:end]
 
             description = "\n".join(
-                f"{i}. `{score}%` — <@{discord_id}>"
+                f"{i}. `{score}%` — {self.bot.get_guild(GUILD_ID).get_member(discord_id).display_name if self.bot.get_guild(GUILD_ID).get_member(discord_id) else f'User {discord_id}'}"
                 for i, (discord_id, score) in enumerate(current_entries, start=start + 1)
             )
 
