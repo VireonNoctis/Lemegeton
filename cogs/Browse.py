@@ -4,7 +4,7 @@ from discord import app_commands
 import aiohttp
 import logging
 from typing import List, Dict, Optional
-
+from discord.ui import View, Button
 from config import GUILD_ID
 from database import get_all_users
 
@@ -66,10 +66,10 @@ class Browse(commands.Cog):
 
         query = """
         query($userName: String, $mediaId: Int, $type: MediaType) {
-          MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
+        MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
             progress
             score
-          }
+        }
         }
         """
         variables = {"userName": anilist_username, "mediaId": media_id, "type": media_type}
@@ -77,7 +77,10 @@ class Browse(commands.Cog):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(API_URL, json={"query": query, "variables": variables}) as resp:
-                    if resp.status != 200:
+                    if resp.status == 404:
+                        # ❌ User doesn’t have this media in their list
+                        return None
+                    elif resp.status != 200:
                         logger.warning(f"AniList fetch failed ({resp.status}) for {anilist_username=} {media_id=}")
                         return None
                     payload = await resp.json()
@@ -87,11 +90,13 @@ class Browse(commands.Cog):
 
         entry = payload.get("data", {}).get("MediaList")
         if not entry:
+            # ❌ No entry → skip
             return None
 
         progress = entry.get("progress")
         score = entry.get("score")
 
+        # Normalize AniList’s 100-point scale into 10-point if needed
         rating10: Optional[float]
         if score is None:
             rating10 = None
@@ -107,8 +112,14 @@ class Browse(commands.Cog):
     # /Browse Command
     # --------------------------------------------------
     @app_commands.guilds(discord.Object(id=GUILD_ID))
-    @app_commands.command(name="browse", description="Search Anime, Manga, Light Novels and General Novels")
-    @app_commands.describe(media="Choose a media type",title="Choose The Title")
+    @app_commands.command(
+        name="browse",
+        description="Search Anime, Manga, Light Novels and General Novels"
+    )
+    @app_commands.describe(
+        media_type="Choose a media type",
+        title="Choose the title"
+    )
     @app_commands.choices(media_type=[
         app_commands.Choice(name="Anime", value="ANIME"),
         app_commands.Choice(name="Manga", value="MANGA"),
@@ -116,6 +127,7 @@ class Browse(commands.Cog):
         app_commands.Choice(name="General Novel", value="BOOK"),
     ])
     async def search(self, interaction: discord.Interaction, title: str, media_type: app_commands.Choice[str]):
+
         await interaction.response.defer()
 
         chosen_type = media_type.value
@@ -216,9 +228,11 @@ class Browse(commands.Cog):
         embed.add_field(name="📅 Published", value=f"**Start:** {start_str}\n**End:** {end_str}", inline=False)
 
         # --------------------------------------------------
-        # Registered Users' Progress
+        # Registered Users' Progress (Second Page)
         # --------------------------------------------------
         users = await get_all_users()
+        progress_embed = None
+
         if users:
             col_name = "Episodes" if real_type == "ANIME" else "Chapters"
             progress_lines = [f"`{'User':<20} {col_name:<10} {'Rating':<7}`"]
@@ -228,23 +242,29 @@ class Browse(commands.Cog):
                 discord_name = user[2]  # Assuming: (discord_id, discord_name, anilist_username)
                 anilist_username = user[2] if len(user) > 2 else None
 
-                anilist_progress = await self.fetch_user_anilist_progress(anilist_username, media.get("id", 0), real_type)
+                anilist_progress = await self.fetch_user_anilist_progress(
+                    anilist_username, media.get("id", 0), real_type
+                )
 
+                # ⬅️ Skip this user entirely if they don’t have the anime/manga
                 if not anilist_progress:
-                    progress_text = "—"
-                    rating_text = "—"
-                else:
-                    total = media.get("episodes") if real_type == "ANIME" else media.get("chapters")
-                    progress_text = f"{anilist_progress['progress']}/{total or '?'}" if anilist_progress.get("progress") is not None else "—"
-                    rating_text = f"{anilist_progress['rating10']}/10" if anilist_progress.get("rating10") is not None else "—"
+                    continue
+
+                total = media.get("episodes") if real_type == "ANIME" else media.get("chapters")
+                progress_text = f"{anilist_progress['progress']}/{total or '?'}" if anilist_progress.get("progress") is not None else "—"
+                rating_text = f"{anilist_progress['rating10']}/10" if anilist_progress.get("rating10") is not None else "—"
 
                 progress_lines.append(f"`{discord_name:<20} {progress_text:<10} {rating_text:<7}`")
 
-            embed.add_field(
-                name="👥 Registered Users' Progress",
-                value="\n".join(progress_lines),
-                inline=False
-            )
+            # ✅ Only build the embed if there’s at least one valid user
+            if len(progress_lines) > 2:
+                progress_embed = discord.Embed(
+                    title="👥 Registered Users' Progress",
+                    description="\n".join(progress_lines),
+                    color=discord.Color.blue()
+                )
+                progress_embed.set_footer(text="Fetched from AniList")
+
 
         mal_link = None
         for link in media.get("externalLinks", []):
@@ -255,7 +275,29 @@ class Browse(commands.Cog):
             embed.add_field(name="🔗 MyAnimeList", value=f"[View on MAL]({mal_link})", inline=False)
 
         embed.set_footer(text="Fetched from AniList")
-        await interaction.followup.send(embed=embed)
+
+        # Always send media info first
+        if progress_embed:
+            class PageView(View):
+                def __init__(self, embed1, embed2):
+                    super().__init__(timeout=120)
+                    self.embeds = [embed1, embed2]
+                    self.current = 0
+
+                @discord.ui.button(label="◀️ Prev", style=discord.ButtonStyle.blurple)
+                async def prev_button(self, interaction: discord.Interaction, button: Button):
+                    self.current = (self.current - 1) % len(self.embeds)
+                    await interaction.response.edit_message(embed=self.embeds[self.current], view=self)
+
+                @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.blurple)
+                async def next_button(self, interaction: discord.Interaction, button: Button):
+                    self.current = (self.current + 1) % len(self.embeds)
+                    await interaction.response.edit_message(embed=self.embeds[self.current], view=self)
+
+            view = PageView(embed, progress_embed)
+            await interaction.followup.send(embed=embed, view=view)
+        else:
+            await interaction.followup.send(embed=embed)
 
     # --------------------------------------------------
     # Autocomplete
