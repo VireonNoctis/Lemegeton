@@ -11,7 +11,7 @@ ANILIST_API_URL = "https://graphql.anilist.co"
 ACTIVITY_REGEX = re.compile(r"https?://anilist\.co/activity/(\d+)")
 
 
-class AniList(commands.Cog):
+class AniListCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -207,4 +207,4 @@ class AniList(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(AniList(bot))
+    await bot.add_cog(AniListCog(bot))
