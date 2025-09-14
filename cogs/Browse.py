@@ -13,7 +13,7 @@ API_URL = "https://graphql.anilist.co"
 GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes?q="
 
 
-class Browse(commands.Cog):
+class BrowseCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -126,8 +126,9 @@ class Browse(commands.Cog):
         app_commands.Choice(name="Light Novel", value="MANGA_NOVEL"),
         app_commands.Choice(name="General Novel", value="BOOK"),
     ])
-    async def search(self, interaction: discord.Interaction, title: str, media_type: app_commands.Choice[str]):
-
+    async def search(self, interaction: discord.Interaction, media_type: app_commands.Choice[str], title: str):
+        # NOTE: media_type is now the first parameter so the slash command UI will show:
+        # /browse <media_type> <title>
         await interaction.response.defer()
 
         chosen_type = media_type.value
@@ -331,4 +332,4 @@ class Browse(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(Browse(bot))
+    await bot.add_cog(BrowseCog(bot))
