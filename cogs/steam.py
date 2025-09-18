@@ -6,6 +6,18 @@ import aiohttp
 import aiosqlite
 from config import STEAM_API_KEY, DB_PATH, GUILD_ID
 from datetime import datetime
+import logging
+
+# Configure logging at the top of your cog
+logger = logging.getLogger("steam")
+logger.setLevel(logging.INFO)
+
+# You can also add a handler if not already configured elsewhere
+if not logger.hasHandlers():
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 class Steam(commands.Cog):
     """Steam commands: register, view profile, search games."""
@@ -65,11 +77,13 @@ class Steam(commands.Cog):
     )
     @app_commands.describe(user="SteamID64 or custom profile URL (optional if registered)")
     async def steam_profile(self, interaction: discord.Interaction, user: str = None):
+        logger.info(f"/steam profile called by {interaction.user} with user={user}")
         await interaction.response.defer()
 
         steam_id = None
         # Use registered Steam ID if user not provided
         if not user:
+            logger.info(f"Fetching registered Steam ID for {interaction.user}")
             async with aiosqlite.connect(DB_PATH) as db:
                 cursor = await db.execute(
                     "SELECT steam_id, vanity_name FROM steam_users WHERE discord_id = ?",
@@ -78,6 +92,7 @@ class Steam(commands.Cog):
                 row = await cursor.fetchone()
                 await cursor.close()
                 if not row:
+                    logger.warning(f"User {interaction.user} has no registered Steam account")
                     return await interaction.followup.send(
                         "❌ You have not registered a Steam account.\n"
                         "Use `/steam register <vanity_name>` first.\n"
@@ -87,59 +102,67 @@ class Steam(commands.Cog):
                         ephemeral=True
                     )
                 steam_id, user = row
+                logger.info(f"Found registered Steam ID {steam_id} for {interaction.user}")
 
         async with aiohttp.ClientSession() as session:
             # Resolve vanity URL if needed
             if user and not user.isdigit():
+                logger.info(f"Resolving Steam vanity URL for {user}")
                 resolve_url = f"https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key={STEAM_API_KEY}&vanityurl={user}"
                 async with session.get(resolve_url) as resp:
                     data = await resp.json()
                     if data.get("response", {}).get("success") != 1:
+                        logger.warning(f"Could not resolve Steam user {user}")
                         return await interaction.followup.send(
-                            f"❌ Could not find Steam user `{user}`.\n"
-                            "Double-check your SteamID64 or vanity name.",
+                            f"❌ Could not find Steam user `{user}`.\nDouble-check your SteamID64 or vanity name.",
                             ephemeral=True
                         )
                     steam_id = data["response"]["steamid"]
+                    logger.info(f"Resolved SteamID: {steam_id}")
 
-            # Get player summary
+            # Player summary
+            logger.info(f"Fetching player summary for SteamID {steam_id}")
             profile_url = f"https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={STEAM_API_KEY}&steamids={steam_id}"
             async with session.get(profile_url) as resp:
                 data = await resp.json()
                 players = data.get("response", {}).get("players", [])
                 if not players:
+                    logger.error(f"No profile data found for SteamID {steam_id}")
                     return await interaction.followup.send("❌ No profile data found.", ephemeral=True)
                 player = players[0]
 
             # Steam level
+            logger.info(f"Fetching Steam level for SteamID {steam_id}")
             level_url = f"https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/?key={STEAM_API_KEY}&steamid={steam_id}"
             async with session.get(level_url) as resp:
                 level_data = await resp.json()
                 level = level_data.get("response", {}).get("player_level", 0)
 
             # Recently played games
+            logger.info(f"Fetching recently played games for SteamID {steam_id}")
             recent_url = f"https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={STEAM_API_KEY}&steamid={steam_id}&count=5"
             async with session.get(recent_url) as resp:
                 recent_data = await resp.json()
                 recent_games = recent_data.get("response", {}).get("games", [])
 
             # Owned games (top 5 by playtime)
+            logger.info(f"Fetching owned games for SteamID {steam_id}")
             owned_url = f"https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={STEAM_API_KEY}&steamid={steam_id}&include_appinfo=1&include_played_free_games=1"
             async with session.get(owned_url) as resp:
                 owned_data = await resp.json()
                 total_games = owned_data.get("response", {}).get("game_count", 0)
                 owned_games = owned_data.get("response", {}).get("games", [])
-
-                # Sort by playtime_forever descending
                 top_games = sorted(owned_games, key=lambda g: g.get("playtime_forever", 0), reverse=True)[:5]
 
             # Friends count
+            logger.info(f"Fetching friends list for SteamID {steam_id}")
             friends_url = f"https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key={STEAM_API_KEY}&steamid={steam_id}&relationship=all"
             async with session.get(friends_url) as resp:
                 friends_data = await resp.json()
                 friends_count = len(friends_data.get("friendslist", {}).get("friends", []))
 
-        # Embed
+        logger.info(f"Building embed for {interaction.user}")
+        # Base embed
         embed = discord.Embed(
             title=player.get("personaname", "Unknown"),
             url=player.get("profileurl"),
@@ -163,20 +186,66 @@ class Steam(commands.Cog):
         embed.add_field(name="Total Games Owned", value=str(total_games), inline=True)
         embed.add_field(name="Friends Count", value=str(friends_count), inline=True)
 
-        # Recently played
+        view = discord.ui.View(timeout=120)
+
+        # Recently Played Button
         if recent_games:
-            recent_list = "\n".join(f"[{g['name']}](https://store.steampowered.com/app/{g['appid']})" for g in recent_games)
-            embed.add_field(name="🎮 Recently Played (Top 5)", value=recent_list, inline=False)
+            logger.info(f"Adding Recently Played button for {interaction.user}")
+            recent_btn = discord.ui.Button(label="🎮 Recently Played", style=discord.ButtonStyle.primary)
 
-        # Most played
+            async def recent_callback(interaction_btn: discord.Interaction):
+                logger.info(f"Recently Played button pressed by {interaction_btn.user}")
+                recent_list = "\n".join(
+                    f"[{g['name']}](https://store.steampowered.com/app/{g['appid']}) - {g.get('playtime_2weeks',0)//60}h (last 2 weeks)"
+                    for g in recent_games
+                ) or "No recently played games."
+
+                # New embed with Recently Played only
+                new_embed = discord.Embed(
+                    title=embed.title,
+                    url=embed.url,
+                    color=embed.color
+                )
+                new_embed.set_thumbnail(url=player.get("avatarfull"))
+                for field in embed.fields[:9]:
+                    new_embed.add_field(name=field.name, value=field.value, inline=field.inline)
+                new_embed.add_field(name="🎮 Recently Played (Top 5)", value=recent_list, inline=False)
+
+                await interaction_btn.response.edit_message(embed=new_embed, view=view)
+
+            recent_btn.callback = recent_callback
+            view.add_item(recent_btn)
+
+        # Most Played Button
         if top_games:
-            top_list = "\n".join(
-                f"[{g['name']}](https://store.steampowered.com/app/{g['appid']}) - {g.get('playtime_forever', 0)//60}h played"
-                for g in top_games
-            )
-            embed.add_field(name="🏆 Most Played Games (Top 5)", value=top_list, inline=False)
+            logger.info(f"Adding Most Played button for {interaction.user}")
+            top_btn = discord.ui.Button(label="🏆 Most Played", style=discord.ButtonStyle.success)
 
-        await interaction.followup.send(embed=embed)
+            async def top_callback(interaction_btn: discord.Interaction):
+                logger.info(f"Most Played button pressed by {interaction_btn.user}")
+                top_list = "\n".join(
+                    f"[{g['name']}](https://store.steampowered.com/app/{g['appid']}) - {g.get('playtime_forever',0)//60}h played"
+                    for g in top_games
+                ) or "No games owned."
+
+                # New embed with Most Played only
+                new_embed = discord.Embed(
+                    title=embed.title,
+                    url=embed.url,
+                    color=embed.color
+                )
+                new_embed.set_thumbnail(url=player.get("avatarfull"))
+                for field in embed.fields[:9]:
+                    new_embed.add_field(name=field.name, value=field.value, inline=field.inline)
+                new_embed.add_field(name="🏆 Most Played Games (Top 5 by playtime)", value=top_list, inline=False)
+
+                await interaction_btn.response.edit_message(embed=new_embed, view=view)
+
+            top_btn.callback = top_callback
+            view.add_item(top_btn)
+
+        logger.info(f"Sending initial profile embed for {interaction.user}")
+        await interaction.followup.send(embed=embed, view=view)
 
     # ------------------- GAME -------------------
     @steam_group.command(
