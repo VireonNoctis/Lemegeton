@@ -66,10 +66,15 @@ class BrowseCog(commands.Cog):
 
         query = """
         query($userName: String, $mediaId: Int, $type: MediaType) {
-        MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
-            progress
-            score
-        }
+            User(name: $userName) {
+                mediaListOptions {
+                    scoreFormat
+                }
+            }
+            MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
+                progress
+                score
+            }
         }
         """
         variables = {"userName": anilist_username, "mediaId": media_id, "type": media_type}
@@ -77,10 +82,7 @@ class BrowseCog(commands.Cog):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(API_URL, json={"query": query, "variables": variables}) as resp:
-                    if resp.status == 404:
-                        # ❌ User doesn’t have this media in their list
-                        return None
-                    elif resp.status != 200:
+                    if resp.status != 200:
                         logger.warning(f"AniList fetch failed ({resp.status}) for {anilist_username=} {media_id=}")
                         return None
                     payload = await resp.json()
@@ -88,25 +90,35 @@ class BrowseCog(commands.Cog):
             logger.exception("Error requesting AniList user progress")
             return None
 
+        user_opts = payload.get("data", {}).get("User", {}).get("mediaListOptions", {})
+        score_format = user_opts.get("scoreFormat", "POINT_100")
+
         entry = payload.get("data", {}).get("MediaList")
         if not entry:
-            # ❌ No entry → skip
             return None
 
         progress = entry.get("progress")
         score = entry.get("score")
 
-        # Normalize AniList’s 100-point scale into 10-point if needed
-        rating10: Optional[float]
-        if score is None:
-            rating10 = None
-        else:
+        # 🔄 Normalize based on score format
+        rating10: Optional[float] = None
+        if score is not None:
             try:
-                rating10 = float(score) if float(score) <= 10 else round(float(score) / 10.0, 1)
+                if score_format == "POINT_100":
+                    rating10 = round(score / 10.0, 1)
+                elif score_format in ("POINT_10", "POINT_10_DECIMAL"):
+                    rating10 = float(score)
+                elif score_format == "POINT_5":
+                    rating10 = round((score / 5) * 10, 1)
+                elif score_format == "POINT_3":
+                    # 1=Bad, 2=Average, 3=Good → map roughly to 3, 6, 9 out of 10
+                    mapping = {1: 3.0, 2: 6.0, 3: 9.0}
+                    rating10 = mapping.get(score, None)
             except Exception:
                 rating10 = None
 
         return {"progress": progress, "rating10": rating10}
+
 
     # --------------------------------------------------
     # /Browse Command
@@ -282,18 +294,16 @@ class BrowseCog(commands.Cog):
             class PageView(View):
                 def __init__(self, embed1, embed2):
                     super().__init__(timeout=120)
-                    self.embeds = [embed1, embed2]
-                    self.current = 0
+                    self.embed1 = embed1
+                    self.embed2 = embed2
 
-                @discord.ui.button(label="◀️ Prev", style=discord.ButtonStyle.blurple)
-                async def prev_button(self, interaction: discord.Interaction, button: Button):
-                    self.current = (self.current - 1) % len(self.embeds)
-                    await interaction.response.edit_message(embed=self.embeds[self.current], view=self)
+                @discord.ui.button(label="📖 Manga Info", style=discord.ButtonStyle.blurple)
+                async def manga_info_button(self, interaction: discord.Interaction, button: Button):
+                    await interaction.response.edit_message(embed=self.embed1, view=self)
 
-                @discord.ui.button(label="Next ▶️", style=discord.ButtonStyle.blurple)
-                async def next_button(self, interaction: discord.Interaction, button: Button):
-                    self.current = (self.current + 1) % len(self.embeds)
-                    await interaction.response.edit_message(embed=self.embeds[self.current], view=self)
+                @discord.ui.button(label="👥 User Progress", style=discord.ButtonStyle.green)
+                async def user_progress_button(self, interaction: discord.Interaction, button: Button):
+                    await interaction.response.edit_message(embed=self.embed2, view=self)
 
             view = PageView(embed, progress_embed)
             await interaction.followup.send(embed=embed, view=view)
