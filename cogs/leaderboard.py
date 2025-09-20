@@ -17,11 +17,12 @@ PAGE_SIZE = 5  # 5 users per page
 
 
 class LeaderboardView(discord.ui.View):
-    def __init__(self, leaderboard_data: List[Tuple[str, int, int, float]]):
+    def __init__(self, leaderboard_data: List[Tuple[str, int, int, float]], medium: str = "manga"):
         super().__init__(timeout=300)
         self.leaderboard_data = leaderboard_data
         self.current_page = 0
         self.max_page = (len(leaderboard_data) - 1) // PAGE_SIZE
+        self.medium = medium.lower()
 
         # Disable buttons if not needed
         self.prev_button.disabled = self.current_page == 0
@@ -32,16 +33,23 @@ class LeaderboardView(discord.ui.View):
         end = start + PAGE_SIZE
         page_data = self.leaderboard_data[start:end]
 
+        title = "🏆 Golden Ratio"
+        desc_medium = "manga"
+        stat_label = "Average Chapters per Manga"
+        if self.medium == "anime":
+            desc_medium = "anime"
+            stat_label = "Average Episodes per Anime"
+
         embed = discord.Embed(
-            title="🏆 Golden Ratio",
-            description=f"Users ranked by average chapters read per manga (Page {self.current_page + 1}/{self.max_page + 1})",
+            title=title,
+            description=f"Users ranked by {stat_label} (Page {self.current_page + 1}/{self.max_page + 1}) — showing {desc_medium}",
             color=discord.Color.random()
         )
 
-        for idx, (username, total_manga, total_chapters, avg_chapters) in enumerate(page_data, start=start + 1):
+        for idx, (username, total_media, total_units, avg_units) in enumerate(page_data, start=start + 1):
             embed.add_field(
                 name=f"{idx}. {username}",
-                value=f"Total Manga: {total_manga}\nTotal Chapters: {total_chapters}\nAverage Chapters per Manga: {avg_chapters:.2f}",
+                value=f"Total {desc_medium.title()}: {total_media}\nTotal {'Chapters' if self.medium=='manga' else 'Episodes'}: {total_units}\n{stat_label}: {avg_units:.2f}",
                 inline=False
             )
 
@@ -90,9 +98,12 @@ class Leaderboard(commands.Cog):
                 manga_stats = user_data.get("statistics", {}).get("manga", {})
                 total_manga = manga_stats.get("count") or 0
                 total_chapters = manga_stats.get("chaptersRead") or 0
-                total_anime = user_data.get("statistics", {}).get("anime", {}).get("count") or 0
+                anime_stats = user_data.get("statistics", {}).get("anime", {})
+                total_anime = anime_stats.get("count") or 0
+                # try to read episodes/units if available (field name may vary depending on your AniList query)
+                total_episodes = anime_stats.get("chaptersRead") or anime_stats.get("episodesWatched") or 0
                 avg_manga_score = manga_stats.get("meanScore") or 0
-                avg_anime_score = user_data.get("statistics", {}).get("anime", {}).get("meanScore") or 0
+                avg_anime_score = anime_stats.get("meanScore") or 0
 
                 await upsert_user_stats(
                     discord_id,
@@ -101,23 +112,33 @@ class Leaderboard(commands.Cog):
                     total_anime,
                     avg_manga_score,
                     avg_anime_score,
-                    total_chapters
+                    total_chapters,
+                    total_episodes
                 )
                 last_fetch[discord_id] = now
 
     @app_commands.guilds(discord.Object(id=GUILD_ID))
+    @app_commands.choices(medium=[
+        app_commands.Choice(name="Manga", value="manga"),
+        app_commands.Choice(name="Anime", value="anime"),
+    ])
     @app_commands.command(
         name="leaderboard",
-        description="📊 Show leaderboard: highest average chapters per manga read"
+        description="📊 Show leaderboard: highest average chapters per manga or episodes per anime"
     )
-    async def leaderboard(self, interaction: discord.Interaction):
+    async def leaderboard(self, interaction: discord.Interaction, medium: app_commands.Choice[str]):
         await interaction.response.defer()
+        chosen = (medium.value if isinstance(medium, app_commands.Choice) else str(medium)).lower()
         await self.fetch_and_cache_stats()
 
+        # Choose columns based on medium
+        if chosen == "anime":
+            sql = "SELECT username, total_anime, total_episodes FROM user_stats"
+        else:
+            sql = "SELECT username, total_manga, total_chapters FROM user_stats"
+
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute(
-                "SELECT username, total_manga, total_chapters FROM user_stats"
-            )
+            cursor = await db.execute(sql)
             rows = await cursor.fetchall()
             await cursor.close()
 
@@ -126,28 +147,30 @@ class Leaderboard(commands.Cog):
             return
 
         leaderboard_data = []
-        for username, total_manga, total_chapters in rows:
-            if total_manga and total_chapters is not None:
-                avg_chapters = total_chapters / total_manga
-                leaderboard_data.append((username, total_manga, total_chapters, avg_chapters))
+        for username, total_media, total_units in rows:
+            # guard against zero/None divisions
+            total_media = total_media or 0
+            total_units = total_units if total_units is not None else 0
+            if total_media and total_units is not None:
+                avg_units = total_units / total_media if total_media else 0
+                leaderboard_data.append((username, total_media, total_units, avg_units))
 
         if not leaderboard_data:
-            await interaction.followup.send("⚠️ No manga progress data found.", ephemeral=True)
+            await interaction.followup.send("⚠️ No progress data found for the selected medium.", ephemeral=True)
             return
-        
-        # Sort all users by average chapters per manga in descending order
+
+        # Sort all users by average units per media in descending order
         leaderboard_data.sort(key=lambda x: x[3], reverse=True)
 
-        # Create the view
-        view = LeaderboardView(leaderboard_data)
+        # Create the view with medium awareness
+        view = LeaderboardView(leaderboard_data, medium=chosen)
 
         # Send an empty embed first and get the message object
-        msg = await interaction.followup.send(embed=discord.Embed(title="Loading leaderboard..."), view=view)
+        loading_title = f"Loading {chosen} leaderboard..."
+        msg = await interaction.followup.send(embed=discord.Embed(title=loading_title), view=view)
 
         # Update the embed with actual content
         await view.update_embed(msg)
-
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Leaderboard(bot))
