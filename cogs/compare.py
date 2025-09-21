@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiohttp
-import random
 from config import GUILD_ID
 
 API_URL = "https://graphql.anilist.co"
@@ -26,7 +25,6 @@ class Compare(commands.Cog):
                     averageScore
                     popularity
                     favourites
-                    rankings { rank type context year season allTime }
                     siteUrl
                     status
                     episodes
@@ -34,11 +32,7 @@ class Compare(commands.Cog):
                     volumes
                     duration
                     genres
-                    startDate { year month day }
-                    endDate { year month day }
                     coverImage { large medium color }
-                    studios(isMain: true) { nodes { name } }
-                    format
                 }
             }
             """,
@@ -53,15 +47,10 @@ class Compare(commands.Cog):
                 return data.get("data", {}).get("Media")
 
     # ---------------------------------------------------------
-    # Utility helpers
+    # Helpers
     # ---------------------------------------------------------
     def safe(self, val, fallback="?"):
         return val if val else fallback
-
-    def date_str(self, d):
-        if not d or not d.get("year"):
-            return "?"
-        return f"{d.get('year', '?')}-{d.get('month', '?')}-{d.get('day', '?')}"
 
     def calculate_watch_time(self, episodes, duration):
         if not episodes or not duration:
@@ -72,11 +61,15 @@ class Compare(commands.Cog):
     def calculate_read_time(self, chapters):
         if not chapters:
             return "?"
-        hours = (chapters * 15) / 60  # Assuming ~15 minutes per chapter
+        hours = (chapters * 15) / 60  # ~15 min per chapter
         return f"~{hours:.1f} hrs"
 
+    def format_vs(self, val1, val2, crown_func):
+        """Format values in left vs right style with crowns"""
+        return f"{val1} {crown_func(val1, val2)}  🆚  {crown_func(val2, val1)} {val2}"
+
     # ---------------------------------------------------------
-    # Build enhanced embed
+    # Build Embed
     # ---------------------------------------------------------
     def build_compare_embed(self, media1: dict, media2: dict, media_type: str) -> discord.Embed:
         title1 = media1["title"].get("english") or media1["title"].get("romaji")
@@ -85,7 +78,7 @@ class Compare(commands.Cog):
         score1 = media1.get("averageScore") or 0
         score2 = media2.get("averageScore") or 0
 
-        # Dynamic color: blue if close, green if tied, purple if one dominates
+        # Color logic
         score_diff = abs(score1 - score2)
         if score_diff < 5:
             color = discord.Color.green()
@@ -97,23 +90,21 @@ class Compare(commands.Cog):
             color = discord.Color.red()
 
         embed = discord.Embed(
-            title=f"⚔️ Comparing\n{title1} 🆚 {title2}",
-            description="Here’s a **side-by-side comparison** powered by AniList:",
+            title=f"⚔️ Comparing",
+            description=f"**{title1}** 🆚 **{title2}**\n\nHere’s a **side-by-side comparison** powered by AniList:",
             color=color,
         )
 
-        # Winner highlight helper
+        # Crown helper
         def crown(val1, val2):
             if val1 == val2:
                 return "🤝"
             return "🏆" if val1 > val2 else ""
 
-        # ------------------------
-        # Key stats comparison
-        # ------------------------
+        # Stats
         embed.add_field(
             name="⭐ Average Score",
-            value=f"{score1}% {crown(score1, score2)} 🆚 {crown(score2, score1)} {score2}%",
+            value=self.format_vs(f"{score1}%", f"{score2}%", crown),
             inline=False,
         )
 
@@ -121,7 +112,7 @@ class Compare(commands.Cog):
         pop2 = media2.get("popularity") or 0
         embed.add_field(
             name="🔥 Popularity",
-            value=f"{pop1:,} {crown(pop1, pop2)} 🆚 {crown(pop2, pop1)} {pop2:,}",
+            value=self.format_vs(f"{pop1:,}", f"{pop2:,}", crown),
             inline=False,
         )
 
@@ -129,74 +120,62 @@ class Compare(commands.Cog):
         fav2 = media2.get("favourites") or 0
         embed.add_field(
             name="❤️ Favourites",
-            value=f"{fav1:,} {crown(fav1, fav2)} 🆚 {crown(fav2, fav1)} {fav2:,}",
+            value=self.format_vs(f"{fav1:,}", f"{fav2:,}", crown),
             inline=False,
         )
 
-        # ------------------------
-        # Episodes / Chapters / Volumes
-        # ------------------------
+        # Episodes / Chapters
         if media_type == "ANIME":
-            episodes1 = media1.get("episodes")
-            episodes2 = media2.get("episodes")
-            duration1 = media1.get("duration")
-            duration2 = media2.get("duration")
+            e1, e2 = media1.get("episodes"), media2.get("episodes")
+            d1, d2 = media1.get("duration"), media2.get("duration")
             embed.add_field(
                 name="📺 Episodes",
-                value=f"{self.safe(episodes1)} 🆚 {self.safe(episodes2)}",
+                value=self.format_vs(self.safe(e1), self.safe(e2), crown),
                 inline=True,
             )
             embed.add_field(
                 name="⏱ Estimated Watch Time",
-                value=f"{self.calculate_watch_time(episodes1, duration1)} 🆚 {self.calculate_watch_time(episodes2, duration2)}",
+                value=self.format_vs(
+                    self.calculate_watch_time(e1, d1),
+                    self.calculate_watch_time(e2, d2),
+                    crown,
+                ),
                 inline=True,
             )
         else:
-            chapters1 = media1.get("chapters")
-            chapters2 = media2.get("chapters")
-            volumes1 = media1.get("volumes")
-            volumes2 = media2.get("volumes")
+            c1, c2 = media1.get("chapters"), media2.get("chapters")
+            v1, v2 = media1.get("volumes"), media2.get("volumes")
             embed.add_field(
                 name="📖 Chapters",
-                value=f"{self.safe(chapters1)} 🆚 {self.safe(chapters2)}",
+                value=self.format_vs(self.safe(c1), self.safe(c2), crown),
                 inline=True,
             )
             embed.add_field(
                 name="📚 Volumes",
-                value=f"{self.safe(volumes1)} 🆚 {self.safe(volumes2)}",
+                value=self.format_vs(self.safe(v1), self.safe(v2), crown),
                 inline=True,
             )
             embed.add_field(
                 name="⏱ Estimated Read Time",
-                value=f"{self.calculate_read_time(chapters1)} 🆚 {self.calculate_read_time(chapters2)}",
+                value=self.format_vs(self.calculate_read_time(c1), self.calculate_read_time(c2), crown),
                 inline=False,
             )
 
-        # ------------------------
-        # Shared & unique genres
-        # ------------------------
-        genres1 = set(media1.get("genres", []))
-        genres2 = set(media2.get("genres", []))
+        # Genres
+        genres1, genres2 = set(media1.get("genres", [])), set(media2.get("genres", []))
+        embed.add_field(name="🎭 Shared Genres", value=", ".join(genres1 & genres2) or "None", inline=False)
+        embed.add_field(name=f"🎭 Unique to {title1}", value=", ".join(genres1 - genres2) or "None", inline=True)
+        embed.add_field(name=f"🎭 Unique to {title2}", value=", ".join(genres2 - genres1) or "None", inline=True)
 
-        shared_genres = ", ".join(genres1 & genres2) or "None"
-        unique1 = ", ".join(genres1 - genres2) or "None"
-        unique2 = ", ".join(genres2 - genres1) or "None"
-
-        embed.add_field(name="🎭 Shared Genres", value=shared_genres, inline=False)
-        embed.add_field(name=f"🎭 Unique to {title1}", value=unique1, inline=True)
-        embed.add_field(name=f"🎭 Unique to {title2}", value=unique2, inline=True)
-
-        # ------------------------
-        # Cover Images
-        # ------------------------
-        embed.set_thumbnail(url=media1.get("coverImage", {}).get("large"))
-        embed.set_image(url=media2.get("coverImage", {}).get("large"))
+        # Covers side by side
+        embed.set_thumbnail(url=media1["coverImage"]["large"])  # left
+        embed.set_image(url=media2["coverImage"]["large"])      # right (large image below)
 
         embed.set_footer(text="📊 Powered by AniList API")
         return embed
 
     # ---------------------------------------------------------
-    # View with buttons
+    # Buttons
     # ---------------------------------------------------------
     class CompareView(discord.ui.View):
         def __init__(self, url1: str, url2: str):
@@ -205,7 +184,7 @@ class Compare(commands.Cog):
             self.add_item(discord.ui.Button(label="🔗 AniList Title 2", url=url2))
 
     # ---------------------------------------------------------
-    # Slash Command: /compare
+    # Slash Command
     # ---------------------------------------------------------
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
@@ -232,19 +211,15 @@ class Compare(commands.Cog):
     ):
         await interaction.response.defer()
 
-        # Fetch data for both titles
         media1 = await self.fetch_anilist(title1, media_type.value)
         media2 = await self.fetch_anilist(title2, media_type.value)
 
         if not media1 or not media2:
-            await interaction.followup.send(
-                "❌ One or both titles were not found on AniList.", ephemeral=True
-            )
+            await interaction.followup.send("❌ One or both titles were not found on AniList.", ephemeral=True)
             return
 
         embed = self.build_compare_embed(media1, media2, media_type.value)
         view = self.CompareView(media1["siteUrl"], media2["siteUrl"])
-
         await interaction.followup.send(embed=embed, view=view)
 
 
