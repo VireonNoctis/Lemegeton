@@ -240,25 +240,29 @@ async def upsert_user_stats(
     total_anime: int,
     avg_manga_score: float,
     avg_anime_score: float,
-    total_chapters: int = 0
+    total_chapters: int = 0,
+    total_episodes: int = 0 
 ):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             INSERT INTO user_stats (
                 discord_id, username, total_manga, total_anime,
-                avg_manga_score, avg_anime_score, total_chapters
+                avg_manga_score, avg_anime_score, total_chapters, total_episodes
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
                 username=excluded.username,
                 total_manga=excluded.total_manga,
                 total_anime=excluded.total_anime,
                 avg_manga_score=excluded.avg_manga_score,
                 avg_anime_score=excluded.avg_anime_score,
-                total_chapters=excluded.total_chapters
-        """, (discord_id, username, total_manga, total_anime, avg_manga_score, avg_anime_score, total_chapters))
+                total_chapters=excluded.total_chapters,
+                total_episodes=excluded.total_episodes
+        """, (
+            discord_id, username, total_manga, total_anime,
+            avg_manga_score, avg_anime_score, total_chapters, total_episodes
+        ))
         await db.commit()
-
 
 # Save or update a user
 async def save_user(discord_id: int, username: str):
