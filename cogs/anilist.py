@@ -1,4 +1,5 @@
 # anilist.py
+
 import re
 import json
 import os
@@ -8,12 +9,15 @@ from discord.ext import commands
 from discord import ui
 import math
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 logger = logging.getLogger("AniListCog")
 
 ANILIST_API = "https://graphql.anilist.co"
 ACTIVITY_URL_RE = re.compile(r"https?://anilist\.co/activity/(\d+)", re.IGNORECASE)
+ANIME_URL_RE = re.compile(r"https?://anilist\.co/anime/(\d+)", re.IGNORECASE)
+MANGA_URL_RE = re.compile(r"https?://anilist\.co/manga/(\d+)", re.IGNORECASE)
+
 REPLIES_PER_PAGE = 5
 STATE_FILE = "anilist_paginator_state.json"
 
@@ -28,17 +32,17 @@ class AniListCog(commands.Cog):
         await self.session.close()
 
     # -------------------------
-    # Persistence helpers
+    # Persistence helpers (single JSON file contains both activity + media message state)
     # -------------------------
     def _load_state(self) -> Dict[str, Any]:
         try:
             if not os.path.exists(STATE_FILE):
-                return {"messages": {}}
+                return {"messages": {}, "media_messages": {}}
             with open(STATE_FILE, "r", encoding="utf-8") as fh:
                 return json.load(fh)
         except Exception:
             logger.exception("Failed to load paginator state file, starting fresh.")
-            return {"messages": {}}
+            return {"messages": {}, "media_messages": {}}
 
     def _save_state(self, state: Dict[str, Any]):
         try:
@@ -49,6 +53,7 @@ class AniListCog(commands.Cog):
         except Exception:
             logger.exception("Failed to save paginator state file.")
 
+    # Activity persistence (existing)
     async def _add_paginator_persistence(self, message_id: int, channel_id: int, activity_id: int, total_pages: int, current_page: int = 1):
         state = self._load_state()
         state.setdefault("messages", {})
@@ -60,11 +65,9 @@ class AniListCog(commands.Cog):
         }
         self._save_state(state)
 
-        # Create view instance and register it as persistent (tied to message_id)
         view = self.Paginator(self, message_id, channel_id, activity_id, total_pages, current_page)
         try:
-            # Register persistent view for the specific message
-            self.bot.add_view(view, message_id=int(message_id))
+            self.bot.add_view(view, message_id=message_id)
         except Exception:
             logger.exception("Failed to add_view for new paginator (non-fatal).")
         return view
@@ -75,11 +78,38 @@ class AniListCog(commands.Cog):
             del state["messages"][str(message_id)]
             self._save_state(state)
 
-    async def restore_persistent_views(self):
-        # Called on_ready to re-register views for existing persisted messages
+    # Media persistence (anime/manga)
+    async def _add_media_persistence(self, message_id: int, channel_id: int, media_id: int, media_type: str, total_pages: int, current_page: int = 1):
         state = self._load_state()
-        msgs = state.get("messages", {})
-        for mid, info in list(msgs.items()):
+        state.setdefault("media_messages", {})
+        state["media_messages"][str(message_id)] = {
+            "channel_id": int(channel_id),
+            "media_id": int(media_id),
+            "media_type": media_type,
+            "total_pages": int(total_pages),
+            "current_page": int(current_page),
+        }
+        self._save_state(state)
+
+        view = self.MediaPaginator(self, message_id, channel_id, media_id, media_type, total_pages, current_page)
+        try:
+            self.bot.add_view(view, message_id=message_id)
+        except Exception:
+            logger.exception("Failed to add_view for new media paginator (non-fatal).")
+        return view
+
+    async def _remove_media_persistence(self, message_id: int):
+        state = self._load_state()
+        if "media_messages" in state and str(message_id) in state["media_messages"]:
+            del state["media_messages"][str(message_id)]
+            self._save_state(state)
+
+    async def restore_persistent_views(self):
+        # Called on ready: re-register persistent views with message_id
+        state = self._load_state()
+
+        # restore activity paginators
+        for mid, info in list(state.get("messages", {}).items()):
             try:
                 view = self.Paginator(
                     self,
@@ -89,10 +119,25 @@ class AniListCog(commands.Cog):
                     int(info.get("total_pages", 1)),
                     int(info.get("current_page", 1)),
                 )
-                # tie view back to its message id
                 self.bot.add_view(view, message_id=int(mid))
             except Exception:
                 logger.exception("Failed to restore persistent paginator for message %s", mid)
+
+        # restore media paginators
+        for mid, info in list(state.get("media_messages", {}).items()):
+            try:
+                view = self.MediaPaginator(
+                    self,
+                    int(mid),
+                    int(info.get("channel_id", 0)),
+                    int(info.get("media_id", 0)),
+                    info.get("media_type", "ANIME"),
+                    int(info.get("total_pages", 1)),
+                    int(info.get("current_page", 1)),
+                )
+                self.bot.add_view(view, message_id=int(mid))
+            except Exception:
+                logger.exception("Failed to restore persistent media paginator for message %s", mid)
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -101,64 +146,60 @@ class AniListCog(commands.Cog):
             self._views_restored = True
 
     # -------------------------
-    # Text cleaning / media extraction
+    # Text cleaning / media extraction (kept from before)
     # -------------------------
-    def clean_text(self, text: str) -> str:
+    def clean_text(self, text: Optional[str]) -> str:
         if not text:
             return ""
+        # Remove HTML tags if AniList returned any (description can include HTML) — basic cleanup
+        # remove <br> and tags
+        text = re.sub(r"<br\s*/?>", "\n", text)
+        text = re.sub(r"<[^>]+>", "", text)
 
-        # ~~~text~~~ → text (any content inside triple tildes)
+        # ~~~text~~~ → text (any content in triple tildes)
         text = re.sub(r"~{3}(.*?)~{3}", r"\1", text, flags=re.DOTALL)
 
         # Remove wrapping ~ around img/vid placeholders
         text = re.sub(r"~+imgx?\((https?://[^\s)]+)\)~+", r"img(\1)", text)
         text = re.sub(r"~+vid\((https?://[^\s)]+)\)~+", r"vid(\1)", text)
 
-        # Remove media placeholders and raw media links (keep inline non-media links)
+        # Remove media placeholders and raw media links (leave other links)
         text = re.sub(r"(?:imgx?|vid)\((https?://[^\s)]+)\)", "", text)
         text = re.sub(r"https?://[^\s]+(?:\.png|\.jpg|\.jpeg|\.gif|\.mp4|\.webm|\.webp)", "", text)
 
-        # Spoilers: ~!text!~ → Discord spoilers
+        # Spoilers
         text = re.sub(r"~!(.*?)!~", r"||\1||", text)
 
-        # Headers (#, ##, ###)
+        # Headers mapping
         text = re.sub(r"^# (.+)$", r"__**\1**__", text, flags=re.MULTILINE)
         text = re.sub(r"^## (.+)$", r"**\1**", text, flags=re.MULTILINE)
         text = re.sub(r"^### (.+)$", r"_\1_", text, flags=re.MULTILINE)
 
+        # Trim long whitespace
         return text.strip()
 
-    def extract_media(self, text: str):
+    def extract_media(self, text: Optional[str]):
         if not text:
-            return [], text
-
+            return [], ""
         media_links = []
-
-        # wrapped media: img(...), imgx(...), vid(...)
         for m in re.finditer(r"(?:imgx?|vid)\((https?://[^\s)]+)\)", text):
             media_links.append(m.group(1))
-
-        # direct media links
         for m in re.finditer(r"(https?://[^\s]+(?:\.png|\.jpg|\.jpeg|\.gif|\.webp|\.mp4|\.webm))", text):
             url = m.group(1)
             if url not in media_links:
                 media_links.append(url)
-
-        # remove media placeholders & links from text
         cleaned = re.sub(r"(?:imgx?|vid)\((https?://[^\s)]+)\)", "", text)
         cleaned = re.sub(r"https?://[^\s]+(?:\.png|\.jpg|\.jpeg|\.gif|\.mp4|\.webm|\.webp)", "", cleaned)
-        cleaned = cleaned.strip()
-
-        return media_links, cleaned
+        return media_links, cleaned.strip()
 
     # -------------------------
-    # Embed building
+    # Activity/embed builders (kept mostly as before)
     # -------------------------
     def build_embed(self, activity: dict, activity_type: str, user: dict, text: str, media_links: list, likes: int, comments: int = 0):
         embed = discord.Embed(color=discord.Color.blurple())
         clean = self.clean_text(text)
 
-        # TextActivity: author + description = content
+        # TextActivity
         if activity_type == "TextActivity":
             embed.set_author(
                 name=(user or {}).get("name", "Unknown"),
@@ -167,41 +208,44 @@ class AniListCog(commands.Cog):
             )
             embed.description = clean or "*No content*"
 
-        # MessageActivity: messenger as author, show recipient + message in description
+        # MessageActivity
         elif activity_type == "MessageActivity":
             recipient = activity.get("recipient") or {}
-            rec_name = recipient.get("name", "Unknown")
+            rec_name = (recipient or {}).get("name", "Unknown")
             embed.set_author(
                 name=(user or {}).get("name", "Unknown"),
                 url=(user or {}).get("siteUrl", ""),
                 icon_url=((user or {}).get("avatar") or {}).get("large")
             )
-            # show as: "Recipient\n\nmessage body" (messenger shown as author)
             embed.description = f"To **{rec_name}**\n\n{clean or '*No message text*'}"
 
-        # ListActivity: author shown, description should be "Read Chapter <progress> <title>"
+        # ListActivity (improved)
         elif activity_type == "ListActivity":
             media = activity.get("media") or {}
             progress = activity.get("progress") or activity.get("status") or ""
             title = (media.get("title") or {}).get("romaji", "Unknown")
             cover = (media.get("coverImage") or {}).get("large")
-
+            url = media.get("siteUrl")
             embed.set_author(
                 name=(user or {}).get("name", "Unknown"),
                 url=(user or {}).get("siteUrl", ""),
                 icon_url=((user or {}).get("avatar") or {}).get("large")
             )
-
-            # Put the readable activity into the description (user is in author)
             if progress:
-                embed.description = f"Read Chapter {progress} {title}"
+                embed.title = f"Read Chapter {progress} of {title}"
             else:
-                embed.description = f"{title}"
-
+                embed.title = f"{title}"
+            if url:
+                embed.url = url
+            # description becomes the human-readable one (keep the activity text if present)
+            if clean:
+                embed.description = clean
+            else:
+                embed.description = f"Read Chapter {progress} {title}" if progress else title
             if cover:
                 embed.set_thumbnail(url=cover)
 
-        # Reply: show as reply embed (author is replier)
+        # Reply
         elif activity_type == "Reply":
             embed.set_author(
                 name=f"💬 {(user or {}).get('name', 'Unknown')}",
@@ -210,7 +254,6 @@ class AniListCog(commands.Cog):
             )
             embed.description = clean or "*No reply text*"
 
-        # Fallback generic
         else:
             embed.set_author(
                 name=(user or {}).get("name", "Unknown"),
@@ -219,13 +262,12 @@ class AniListCog(commands.Cog):
             )
             embed.description = clean or "*No content*"
 
-        # Compact stats
         stats = f"❤️ {likes or 0}"
         if comments:
             stats += f" | 💬 {comments}"
         embed.add_field(name="Stats", value=stats, inline=True)
 
-        # Media handling (attach first image as embed image)
+        # Media attachments
         if media_links:
             first = media_links[0]
             if any(first.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".gif", ".webp")):
@@ -239,7 +281,7 @@ class AniListCog(commands.Cog):
         return embed
 
     # -------------------------
-    # Fetch activity from AniList (robust)
+    # Fetch activity (robust)
     # -------------------------
     async def fetch_activity(self, activity_id: int) -> Optional[dict]:
         query = """
@@ -276,7 +318,7 @@ class AniListCog(commands.Cog):
               replyCount
               siteUrl
               user { id name siteUrl avatar { large } }
-              media { id siteUrl title { romaji } coverImage { large } }
+              media { id siteUrl title { romaji } coverImage { large } bannerImage }
               replies { id text likeCount user { id name siteUrl avatar { large } } }
             }
           }
@@ -304,10 +346,10 @@ class AniListCog(commands.Cog):
             return None
 
     # -------------------------
-    # Render page
+    # Render page (activity) — page1 main only, page 2+ replies only
     # -------------------------
     async def render_page(self, activity: Optional[dict], page: int):
-        embeds = []
+        embeds: List[discord.Embed] = []
         if not activity:
             e = discord.Embed(
                 title="❌ Activity not found",
@@ -318,8 +360,6 @@ class AniListCog(commands.Cog):
             return embeds
 
         activity_type = activity.get("__typename", "Unknown")
-
-        # select correct user & text field per type
         if activity_type == "MessageActivity":
             user = activity.get("messenger") or {}
             text = activity.get("message") or ""
@@ -327,7 +367,7 @@ class AniListCog(commands.Cog):
             user = activity.get("user") or {}
             text = activity.get("text") or activity.get("status") or ""
 
-        # Page 1: show only the main activity/message/text
+        # Page 1: main activity only
         if page == 1:
             media, _ = self.extract_media(text)
             likes = activity.get("likeCount", 0)
@@ -336,9 +376,8 @@ class AniListCog(commands.Cog):
             embeds.append(embed)
             return embeds
 
-        # Page >=2: show replies pages (page 2 => first batch of replies)
+        # Page >=2: replies
         replies = activity.get("replies") or []
-        # page 2 should show replies[0:REPLIES_PER_PAGE], page 3 -> replies[REPLIES_PER_PAGE:2*REPLIES_PER_PAGE], etc.
         start = (page - 2) * REPLIES_PER_PAGE
         end = start + REPLIES_PER_PAGE
         sliced = replies[start:end]
@@ -351,18 +390,16 @@ class AniListCog(commands.Cog):
             reply_embed = self.build_embed(activity, "Reply", r_user, r_text, media, r_likes)
             embeds.append(reply_embed)
 
-        # If no replies on this page, show a notice
         if not embeds:
             embeds.append(discord.Embed(description="No replies on this page.", color=discord.Color.greyple()))
-
         return embeds
 
     # -------------------------
-    # Persistent paginator view
+    # Persistent paginator view for activities
     # -------------------------
     class Paginator(ui.View):
         def __init__(self, cog: "AniListCog", message_id: int, channel_id: int, activity_id: int, total_pages: int, current_page: int = 1):
-            super().__init__(timeout=None)  # persistent view
+            super().__init__(timeout=None)
             self.cog = cog
             self.message_id = str(message_id)
             self.channel_id = int(channel_id)
@@ -370,7 +407,6 @@ class AniListCog(commands.Cog):
             self.total_pages = max(1, int(total_pages))
             self.current_page = max(1, int(current_page))
 
-            # Buttons: custom_id includes message id so Discord recognizes them per-message
             self.prev_btn = ui.Button(label="⬅ Prev", style=discord.ButtonStyle.primary, custom_id=f"anilist:prev:{self.message_id}")
             self.next_btn = ui.Button(label="Next ➡", style=discord.ButtonStyle.primary, custom_id=f"anilist:next:{self.message_id}")
 
@@ -401,7 +437,7 @@ class AniListCog(commands.Cog):
             try:
                 msg_state = await self._load_message_state()
                 if not msg_state:
-                    await interaction.response.send_message("⚠️ Paginator state missing (cannot change page).", ephemeral=True)
+                    await interaction.response.send_message("⚠️ Paginator state missing.", ephemeral=True)
                     return
 
                 current = int(msg_state.get("current_page", self.current_page))
@@ -416,19 +452,15 @@ class AniListCog(commands.Cog):
                     return
 
                 embeds = await self.cog.render_page(activity, new_page)
-
-                # persist new page
                 msg_state["current_page"] = new_page
                 await self._save_message_state(msg_state)
 
-                # update local state & button states
                 self.current_page = new_page
                 self._update_buttons_disabled()
 
                 try:
                     await interaction.response.edit_message(embeds=embeds, view=self)
                 except discord.HTTPException:
-                    # message deleted or not editable
                     await interaction.response.send_message("⚠️ Could not update the message (it may have been deleted).", ephemeral=True)
                     await self.cog._remove_paginator_persistence(int(self.message_id))
             except Exception:
@@ -442,7 +474,7 @@ class AniListCog(commands.Cog):
             try:
                 msg_state = await self._load_message_state()
                 if not msg_state:
-                    await interaction.response.send_message("⚠️ Paginator state missing (cannot change page).", ephemeral=True)
+                    await interaction.response.send_message("⚠️ Paginator state missing.", ephemeral=True)
                     return
 
                 current = int(msg_state.get("current_page", self.current_page))
@@ -457,12 +489,9 @@ class AniListCog(commands.Cog):
                     return
 
                 embeds = await self.cog.render_page(activity, new_page)
-
-                # persist new page
                 msg_state["current_page"] = new_page
                 await self._save_message_state(msg_state)
 
-                # update local state & button states
                 self.current_page = new_page
                 self._update_buttons_disabled()
 
@@ -479,50 +508,620 @@ class AniListCog(commands.Cog):
                     pass
 
     # -------------------------
-    # Listener for AniList links
+    # MEDIA: fetching, rendering and persistent paginator with dropdown
+    # -------------------------
+    async def fetch_media(self, media_id: int, media_type: str) -> Optional[dict]:
+        # media_type should be "ANIME" or "MANGA"
+        query = """
+        query($id: Int, $type: MediaType) {
+          Media(id: $id, type: $type) {
+            id
+            siteUrl
+            title { romaji english native }
+            description(asHtml: false)
+            coverImage { large medium color }
+            bannerImage
+            type
+            status
+            episodes
+            chapters
+            volumes
+            startDate { year month day }
+            endDate { year month day }
+            studios { nodes { id name } }
+            popularity
+            favourites
+            source
+            tags { id name rank isMediaSpoiler }
+            relations { edges { relationType node { id siteUrl title { romaji english native } coverImage { large } type status } } }
+            characters(page:1, perPage:50) { edges { id role node { id name { full native } image { large } } } }
+            staff(page:1, perPage:50) { edges { id staffRole node { id name { full } language image { large } } } }
+            stats { scoreDistribution { score amount } statusDistribution { status amount } }
+            recommendations { edges { node { mediaRecommendation { id title { romaji english } coverImage { large } siteUrl } } } }
+          }
+        }
+        """
+        try:
+            async with self.session.post(ANILIST_API, json={"query": query, "variables": {"id": media_id, "type": media_type}}) as resp:
+                text = await resp.text()
+                try:
+                    js = await resp.json()
+                except Exception:
+                    js = None
+
+                if resp.status != 200:
+                    logger.error("AniList media API error %s: %s", resp.status, text)
+                    return None
+
+                if not js or "data" not in js or js["data"].get("Media") is None:
+                    logger.warning("AniList returned no Media for id %s. Response: %s", media_id, text)
+                    return None
+
+                return js["data"]["Media"]
+        except Exception:
+            logger.exception("AniList media fetch failed.")
+            return None
+
+    def _fmt_date(self, d: Dict[str, Any]) -> str:
+        if not d:
+            return "Unknown"
+        y = d.get("year")
+        m = d.get("month")
+        day = d.get("day")
+        if not y:
+            return "Unknown"
+        if not m:
+            return f"{y}"
+        if not day:
+            return f"{y}-{m:02d}"
+        return f"{y}-{m:02d}-{day:02d}"
+
+    def build_media_embed(self, media: dict) -> discord.Embed:
+        # Summary embed — title, cover thumbnail, banner (image), small synopsis snippet, main characters
+        title_romaji = (media.get("title") or {}).get("romaji")
+        title_eng = (media.get("title") or {}).get("english")
+        title_native = (media.get("title") or {}).get("native")
+        title_line = title_romaji or title_eng or title_native or "Unknown Title"
+        if title_eng and title_eng != title_romaji:
+            title_line += f" ({title_eng})"
+        if title_native and title_native not in (title_romaji, title_eng):
+            title_line += f" | {title_native}"
+
+        desc_raw = media.get("description") or ""
+        desc = self.clean_text(desc_raw)
+        short_desc = desc[:800].rstrip()
+        if len(desc) > 800:
+            short_desc += "..."
+
+        embed = discord.Embed(title=title_line, url=media.get("siteUrl"), description=short_desc or "*No synopsis available*", color=discord.Color.blurple())
+
+        # thumbnail = cover, banner = image
+        cover = (media.get("coverImage") or {}).get("large")
+        if cover:
+            embed.set_thumbnail(url=cover)
+
+        banner = media.get("bannerImage")
+        if banner:
+            embed.set_image(url=banner)  # banner as main image (appears below embed fields)
+
+        # Basic meta
+        meta_lines = []
+        if media.get("type"):
+            meta_lines.append(f"**Type:** {media['type']}")
+        if media.get("status"):
+            meta_lines.append(f"**Status:** {media['status']}")
+        if media.get("episodes") is not None:
+            meta_lines.append(f"**Episodes:** {media.get('episodes')}")
+        if media.get("chapters") is not None:
+            meta_lines.append(f"**Chapters:** {media.get('chapters')}")
+        if media.get("volumes") is not None:
+            meta_lines.append(f"**Volumes:** {media.get('volumes')}")
+        if media.get("startDate"):
+            meta_lines.append(f"**Start:** {self._fmt_date(media.get('startDate'))}")
+        if media.get("endDate"):
+            meta_lines.append(f"**End:** {self._fmt_date(media.get('endDate'))}")
+
+        if meta_lines:
+            embed.add_field(name="Info", value="\n".join(meta_lines), inline=False)
+
+        # Studios
+        studios_nodes = (media.get("studios") or {}).get("nodes") or []
+        if studios_nodes:
+            studios_str = ", ".join(n.get("name") for n in studios_nodes if n.get("name"))
+            embed.add_field(name="Studio", value=studios_str or "—", inline=True)
+
+        # Stats popularity/favourites/source
+        stats_lines = []
+        if media.get("popularity") is not None:
+            stats_lines.append(f"🔥 Popularity: {media['popularity']}")
+        if media.get("favourites") is not None:
+            stats_lines.append(f"❤️ Favourites: {media['favourites']}")
+        if media.get("source"):
+            stats_lines.append(f"🔗 Source: {media['source']}")
+        if stats_lines:
+            embed.add_field(name="Stats", value="\n".join(stats_lines), inline=True)
+
+        # Main characters: show up to 6 main characters
+        char_edges = (media.get("characters") or {}).get("edges") or []
+        main_chars = [e for e in char_edges if (e.get("role") or "").upper() == "MAIN"] or char_edges
+        if main_chars:
+            lines = []
+            for e in main_chars[:6]:
+                node = e.get("node") or {}
+                name = (node.get("name") or {}).get("full") or "Unknown"
+                cid = node.get("id")
+                # character URL
+                char_url = f"https://anilist.co/character/{cid}" if cid else ""
+                lines.append(f"[{name}]({char_url})")
+            embed.add_field(name="Main Characters", value=" • ".join(lines), inline=False)
+
+        embed.set_footer(text="AniList Media")
+        return embed
+
+    # Relations embed
+    def build_relations_embed(self, media: dict) -> List[discord.Embed]:
+        relations = (media.get("relations") or {}).get("edges") or []
+        if not relations:
+            return [discord.Embed(description="No relations found.", color=discord.Color.greyple())]
+
+        embeds = []
+        # chunk relations into groups of 6 per embed for readability
+        chunk_size = 6
+        for i in range(0, len(relations), chunk_size):
+            chunk = relations[i:i + chunk_size]
+            em = discord.Embed(title="Relations", color=discord.Color.dark_blue())
+            for edge in chunk:
+                rel_type = edge.get("relationType") or ""
+                node = edge.get("node") or {}
+                node_title = (node.get("title") or {}).get("romaji") or (node.get("title") or {}).get("english") or "Unknown"
+                url = node.get("siteUrl") or f"https://anilist.co/{node.get('type', '').lower()}/{node.get('id')}" if node.get("id") else None
+                cover = (node.get("coverImage") or {}).get("large")
+                value = f"[{node_title}]({url})" if url else node_title
+                if rel_type:
+                    field_name = rel_type
+                else:
+                    field_name = node.get("type") or "Related"
+                em.add_field(name=field_name, value=value, inline=False)
+            # set thumbnail as first cover if present
+            first_cover = (chunk[0].get("node") or {}).get("coverImage", {}).get("large")
+            if first_cover:
+                em.set_thumbnail(url=first_cover)
+            embeds.append(em)
+        return embeds
+
+    # Characters embed (main or support)
+    def build_characters_embed(self, media: dict, support: bool = False) -> List[discord.Embed]:
+        char_edges = (media.get("characters") or {}).get("edges") or []
+        if not char_edges:
+            return [discord.Embed(description="No characters found.", color=discord.Color.greyple())]
+
+        # filter by support/main
+        if support:
+            selected = [e for e in char_edges if (e.get("role") or "").upper() != "MAIN"]
+            title = "Support Cast"
+        else:
+            selected = [e for e in char_edges if (e.get("role") or "").upper() == "MAIN"]
+            title = "Main Characters"
+        if not selected:
+            # fallback to some characters if none match
+            selected = char_edges[:10]
+
+        embeds = []
+        chunk_size = 6
+        for i in range(0, len(selected), chunk_size):
+            chunk = selected[i:i + chunk_size]
+            em = discord.Embed(title=title, color=discord.Color.blurple())
+            for e in chunk:
+                node = e.get("node") or {}
+                name = (node.get("name") or {}).get("full") or "Unknown"
+                cid = node.get("id")
+                url = f"https://anilist.co/character/{cid}" if cid else None
+                image = (node.get("image") or {}).get("large")
+                value = f"[AniList]({url})" if url else "—"
+                em.add_field(name=name, value=value, inline=False)
+            # thumbnail of first character if exists
+            first_img = (chunk[0].get("node") or {}).get("image", {}).get("large")
+            if first_img:
+                em.set_thumbnail(url=first_img)
+            embeds.append(em)
+        return embeds
+
+    # Staff embed
+    def build_staff_embed(self, media: dict) -> List[discord.Embed]:
+        staff_edges = (media.get("staff") or {}).get("edges") or []
+        if not staff_edges:
+            return [discord.Embed(description="No staff info found.", color=discord.Color.greyple())]
+        embeds = []
+        chunk_size = 8
+        for i in range(0, len(staff_edges), chunk_size):
+            chunk = staff_edges[i:i + chunk_size]
+            em = discord.Embed(title="Staff", color=discord.Color.dark_teal())
+            for edge in chunk:
+                role = edge.get("staffRole") or "Staff"
+                node = edge.get("node") or {}
+                name = (node.get("name") or {}).get("full") or "Unknown"
+                sid = node.get("id")
+                url = f"https://anilist.co/staff/{sid}" if sid else None
+                value = f"{role}\n" + (f"[AniList]({url})" if url else "")
+                em.add_field(name=name, value=value, inline=False)
+            first_img = (chunk[0].get("node") or {}).get("image", {}).get("large")
+            if first_img:
+                em.set_thumbnail(url=first_img)
+            embeds.append(em)
+        return embeds
+
+    # Stats distribution embed
+    def build_stats_embed(self, media: dict) -> discord.Embed:
+        stats = media.get("stats") or {}
+        em = discord.Embed(title="Stats Distribution", color=discord.Color.green())
+        # statusDistribution: statuses like CURRENT, PLANNING, DROPPED, PAUSED, COMPLETED
+        status_dist = stats.get("statusDistribution") or []
+        if status_dist:
+            lines = []
+            for s in status_dist:
+                st = s.get("status") or "Unknown"
+                amt = s.get("amount") or 0
+                lines.append(f"**{st.title()}** — {amt} users")
+            em.add_field(name="Status Distribution", value="\n".join(lines), inline=False)
+        # scoreDistribution
+        score_dist = stats.get("scoreDistribution") or []
+        if score_dist:
+            # show top buckets
+            sd_lines = []
+            for s in sorted(score_dist, key=lambda x: int(x.get("score", 0))):
+                sc = s.get("score")
+                amt = s.get("amount")
+                sd_lines.append(f"{sc}: {amt}")
+            em.add_field(name="Score Distribution", value=" | ".join(sd_lines), inline=False)
+        if not em.fields:
+            em.description = "No statistical distribution data available."
+        return em
+
+    # Recommendations embed (top N)
+    def build_recommendations_embed(self, media: dict, max_items: int = 5) -> discord.Embed:
+        recs = (media.get("recommendations") or {}).get("edges") or []
+        em = discord.Embed(title="🎯 Recommendations", description="Top recommendations from AniList", color=discord.Color.gold())
+        count = 0
+        for e in recs:
+            node = e.get("node") or {}
+            rec = node.get("mediaRecommendation") or {}
+            title = (rec.get("title") or {}).get("romaji") or (rec.get("title") or {}).get("english") or "Unknown"
+            url = rec.get("siteUrl") or ""
+            cover = (rec.get("coverImage") or {}).get("large")
+            em.add_field(name=title, value=f"[AniList]({url})", inline=False)
+            # set thumbnail of embed to the last recommendation's cover (Discord only supports one image per embed)
+            if cover:
+                em.set_thumbnail(url=cover)
+            count += 1
+            if count >= max_items:
+                break
+        if count == 0:
+            em.description = "No recommendations found."
+        em.set_footer(text="AniList Recommendations")
+        return em
+
+    # Tags embed (spoiler each tag with rank/percent if available)
+    def build_tags_embed(self, media: dict) -> discord.Embed:
+        tags = media.get("tags") or []
+        if not tags:
+            return discord.Embed(description="No tags found.", color=discord.Color.greyple())
+        em = discord.Embed(title="Tags", color=discord.Color.dark_purple())
+        # Show tags inline as spoiler: ||tag|| — rank
+        lines = []
+        for t in tags:
+            name = t.get("name") or "Unknown"
+            rank = t.get("rank")
+            is_spoiler = t.get("isMediaSpoiler")
+            disp = f"||{name}||"
+            if rank is not None:
+                disp += f" — #{rank}"
+            lines.append(disp)
+        em.description = "  \n".join(lines)  # newlines between tags
+        return em
+
+    # -------------------------
+    # Media page renderer (pages: summary page=1, description page(s)=2..N)
+    # -------------------------
+    def render_media_pages(self, media: dict, page: int, total_pages: int) -> List[discord.Embed]:
+        embeds: List[discord.Embed] = []
+        if not media:
+            return [discord.Embed(description="Media not found.", color=discord.Color.red())]
+        if page == 1:
+            embeds.append(self.build_media_embed(media))
+        else:
+            # full description split into chunks of ~1000 chars
+            raw = self.clean_text(media.get("description") or "")
+            if not raw:
+                embeds.append(discord.Embed(description="No description available.", color=discord.Color.greyple()))
+                return embeds
+            chunk_size = 1000
+            chunks = [raw[i:i+chunk_size] for i in range(0, len(raw), chunk_size)]
+            for idx, c in enumerate(chunks, start=1):
+                em = discord.Embed(title=f"{(media.get('title') or {}).get('romaji', 'Description')} — Part {idx}", description=c, url=media.get("siteUrl"), color=discord.Color.green())
+                embeds.append(em)
+        return embeds
+
+    # -------------------------
+    # Media paginator (persistent) with select (dropdown) and recommendations button
+    # -------------------------
+    class MediaPaginator(ui.View):
+        def __init__(self, cog: "AniListCog", message_id: int, channel_id: int, media_id: int, media_type: str, total_pages: int, current_page: int = 1):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.message_id = str(message_id)
+            self.channel_id = int(channel_id)
+            self.media_id = int(media_id)
+            self.media_type = media_type
+            self.total_pages = max(1, int(total_pages))
+            self.current_page = max(1, int(current_page))
+
+            # Buttons
+            self.prev_button = ui.Button(label="⬅ Prev", style=discord.ButtonStyle.primary, custom_id=f"media_prev:{self.message_id}")
+            self.next_button = ui.Button(label="Next ➡", style=discord.ButtonStyle.primary, custom_id=f"media_next:{self.message_id}")
+            self.rec_button = ui.Button(label="🎯 Recommendations", style=discord.ButtonStyle.success, custom_id=f"media_rec:{self.message_id}")
+            self.more_button = ui.Button(label="More details", style=discord.ButtonStyle.secondary, custom_id=f"media_more:{self.message_id}")
+
+            self.prev_button.callback = self.prev_page
+            self.next_button.callback = self.next_page
+            self.rec_button.callback = self.show_recommendations
+            self.more_button.callback = self.show_dropdown  # show dropdown ephemeral or open UI
+
+            self.add_item(self.prev_button)
+            self.add_item(self.next_button)
+            self.add_item(self.rec_button)
+            self.add_item(self.more_button)
+
+            # A persistent Select component for "More details" options
+            options = [
+                discord.SelectOption(label="Relations", value="relations", description="Show related media"),
+                discord.SelectOption(label="Characters (Main)", value="characters_main", description="Main characters"),
+                discord.SelectOption(label="Support Cast", value="characters_support", description="Support characters"),
+                discord.SelectOption(label="Staff", value="staff", description="All staff"),
+                discord.SelectOption(label="Stats Distribution", value="stats", description="Status & score distribution"),
+                discord.SelectOption(label="Recommendations", value="recommendations", description="Top recommendations"),
+                discord.SelectOption(label="Tags", value="tags", description="All tags (spoilered)"),
+            ]
+            select = ui.Select(placeholder="Choose details...", min_values=1, max_values=1, options=options, custom_id=f"media_select:{self.message_id}")
+            select.callback = self.select_callback
+            # Important: add select but keep it disabled by default for first page? We'll keep enabled
+            self.add_item(select)
+
+            self._update_buttons()
+
+        def _update_buttons(self):
+            self.prev_button.disabled = self.current_page <= 1
+            self.next_button.disabled = self.current_page >= self.total_pages
+
+        async def _load_media_state(self):
+            state = self.cog._load_state()
+            return state.get("media_messages", {}).get(self.message_id)
+
+        async def _save_media_state(self, new_state: Dict[str, Any]):
+            state = self.cog._load_state()
+            state.setdefault("media_messages", {})
+            state["media_messages"][self.message_id] = new_state
+            self.cog._save_state(state)
+
+        async def prev_page(self, interaction: discord.Interaction):
+            try:
+                state = await self._load_media_state()
+                if not state:
+                    await interaction.response.send_message("⚠️ Media paginator state missing.", ephemeral=True)
+                    return
+                current = int(state.get("current_page", self.current_page))
+                if current <= 1:
+                    await interaction.response.send_message("Already on first page.", ephemeral=True)
+                    return
+                new_page = current - 1
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("⚠️ Could not fetch media.", ephemeral=True)
+                    return
+                embeds = self.cog.render_media_pages(media, new_page, self.total_pages)
+                state["current_page"] = new_page
+                await self._save_media_state(state)
+                self.current_page = new_page
+                self._update_buttons()
+                await interaction.response.edit_message(embeds=embeds, view=self)
+            except Exception:
+                logger.exception("MediaPaginator prev_page failed")
+                try:
+                    await interaction.response.send_message("⚠️ Failed to change page.", ephemeral=True)
+                except Exception:
+                    pass
+
+        async def next_page(self, interaction: discord.Interaction):
+            try:
+                state = await self._load_media_state()
+                if not state:
+                    await interaction.response.send_message("⚠️ Media paginator state missing.", ephemeral=True)
+                    return
+                current = int(state.get("current_page", self.current_page))
+                if current >= int(state.get("total_pages", self.total_pages)):
+                    await interaction.response.send_message("Already on last page.", ephemeral=True)
+                    return
+                new_page = current + 1
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("⚠️ Could not fetch media.", ephemeral=True)
+                    return
+                embeds = self.cog.render_media_pages(media, new_page, self.total_pages)
+                state["current_page"] = new_page
+                await self._save_media_state(state)
+                self.current_page = new_page
+                self._update_buttons()
+                await interaction.response.edit_message(embeds=embeds, view=self)
+            except Exception:
+                logger.exception("MediaPaginator next_page failed")
+                try:
+                    await interaction.response.send_message("⚠️ Failed to change page.", ephemeral=True)
+                except Exception:
+                    pass
+
+        async def show_recommendations(self, interaction: discord.Interaction):
+            try:
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("❌ Could not fetch recommendations.", ephemeral=True)
+                    return
+                embed = self.cog.build_recommendations_embed(media)
+                await interaction.response.edit_message(embeds=[embed], view=self)
+            except Exception:
+                logger.exception("show_recommendations failed")
+                try:
+                    await interaction.response.send_message("⚠️ Failed to fetch recommendations.", ephemeral=True)
+                except Exception:
+                    pass
+
+        async def show_dropdown(self, interaction: discord.Interaction):
+            # Instead of trying to open a UI, reply ephemeral with a small select menu if needed.
+            # But our select is persistent and already present; inform user how to use it.
+            try:
+                await interaction.response.send_message("Use the dropdown (More details) to choose a section. If you can't see it, ensure you have permissions.", ephemeral=True)
+            except Exception:
+                pass
+
+        async def select_callback(self, interaction: discord.Interaction):
+            try:
+                value = interaction.data.get("values", [None])[0]
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("❌ Could not fetch media details.", ephemeral=True)
+                    return
+
+                if value == "relations":
+                    embeds = self.cog.build_relations_embed(media)
+                    await interaction.response.edit_message(embeds=embeds, view=self)
+                    return
+                if value == "characters_main":
+                    embeds = self.cog.build_characters_embed(media, support=False)
+                    await interaction.response.edit_message(embeds=embeds, view=self)
+                    return
+                if value == "characters_support":
+                    embeds = self.cog.build_characters_embed(media, support=True)
+                    await interaction.response.edit_message(embeds=embeds, view=self)
+                    return
+                if value == "staff":
+                    embeds = self.cog.build_staff_embed(media)
+                    await interaction.response.edit_message(embeds=embeds, view=self)
+                    return
+                if value == "stats":
+                    embed = self.cog.build_stats_embed(media)
+                    await interaction.response.edit_message(embeds=[embed], view=self)
+                    return
+                if value == "recommendations":
+                    embed = self.cog.build_recommendations_embed(media)
+                    await interaction.response.edit_message(embeds=[embed], view=self)
+                    return
+                if value == "tags":
+                    embed = self.cog.build_tags_embed(media)
+                    await interaction.response.edit_message(embeds=[embed], view=self)
+                    return
+
+                await interaction.response.send_message("Unknown option.", ephemeral=True)
+            except Exception:
+                logger.exception("Media select callback failed")
+                try:
+                    await interaction.response.send_message("⚠️ Failed to show details.", ephemeral=True)
+                except Exception:
+                    pass
+
+    # -------------------------
+    # Listener (integrates activity + anime + manga handling)
     # -------------------------
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        # ignore bots (including ourselves)
+        # ignore bots
         if message.author.bot:
             return
 
+        # check activity link first
         m = ACTIVITY_URL_RE.search(message.content)
-        if not m:
-            return
+        if m:
+            activity_id = int(m.group(1))
+            activity = await self.fetch_activity(activity_id)
+            if not activity:
+                await message.channel.send("❌ Failed to fetch activity.")
+                return
 
-        activity_id = int(m.group(1))
-        activity = await self.fetch_activity(activity_id)
-        if not activity:
-            await message.channel.send("❌ Failed to fetch activity (it may be deleted or AniList returned an error).")
-            return
+            total_replies = len(activity.get("replies") or [])
+            total_pages = 1 + math.ceil(max(0, total_replies) / REPLIES_PER_PAGE)
 
-        total_replies = len(activity.get("replies") or [])
-        total_pages = 1 + math.ceil(max(0, total_replies) / REPLIES_PER_PAGE)
-
-        # Render page 1 (main activity only)
-        embeds = await self.render_page(activity, page=1)
-
-        # Send message first (we need the message id for per-message custom_id)
-        try:
-            sent = await message.channel.send(embeds=embeds)
-        except Exception:
-            logger.exception("Failed to send AniList message")
-            return
-
-        # Persist paginator state and register view for this message
-        try:
-            view = await self._add_paginator_persistence(sent.id, sent.channel.id, activity_id, total_pages, current_page=1)
+            embeds = await self.render_page(activity, page=1)
             try:
-                await sent.edit(view=view)
+                sent = await message.channel.send(embeds=embeds)
             except Exception:
-                # editing view might fail if missing permissions - state is still persisted
-                logger.exception("Failed to attach paginator view to message (message.edit failed).")
-        except Exception:
-            logger.exception("Failed to create/attach persistent paginator view.")
+                logger.exception("Failed to send activity message")
+                return
 
+            try:
+                view = await self._add_paginator_persistence(sent.id, sent.channel.id, activity_id, total_pages, current_page=1)
+                try:
+                    await sent.edit(view=view)
+                except Exception:
+                    logger.exception("Failed to attach paginator view to message (message.edit failed).")
+            except Exception:
+                logger.exception("Failed to persist activity paginator.")
+            return
 
-# setup entrypoint for cogs
+        # check anime link
+        m = ANIME_URL_RE.search(message.content)
+        if m:
+            media_id = int(m.group(1))
+            media = await self.fetch_media(media_id, "ANIME")
+            if not media:
+                await message.channel.send("❌ Failed to fetch anime info.")
+                return
+
+            # default total_pages = 2 (summary + description) — description may span multiple embeds when long
+            total_pages = 2
+            embeds = self.render_media_pages(media, page=1, total_pages=total_pages)
+            try:
+                sent = await message.channel.send(embeds=embeds)
+            except Exception:
+                logger.exception("Failed to send anime message")
+                return
+
+            try:
+                view = await self._add_media_persistence(sent.id, sent.channel.id, media_id, "ANIME", total_pages, current_page=1)
+                try:
+                    await sent.edit(view=view)
+                except Exception:
+                    logger.exception("Failed to attach media view to message (message.edit failed).")
+            except Exception:
+                logger.exception("Failed to persist media paginator.")
+            return
+
+        # check manga link
+        m = MANGA_URL_RE.search(message.content)
+        if m:
+            media_id = int(m.group(1))
+            media = await self.fetch_media(media_id, "MANGA")
+            if not media:
+                await message.channel.send("❌ Failed to fetch manga info.")
+                return
+
+            total_pages = 2
+            embeds = self.render_media_pages(media, page=1, total_pages=total_pages)
+            try:
+                sent = await message.channel.send(embeds=embeds)
+            except Exception:
+                logger.exception("Failed to send manga message")
+                return
+
+            try:
+                view = await self._add_media_persistence(sent.id, sent.channel.id, media_id, "MANGA", total_pages, current_page=1)
+                try:
+                    await sent.edit(view=view)
+                except Exception:
+                    logger.exception("Failed to attach media view to message (message.edit failed).")
+            except Exception:
+                logger.exception("Failed to persist media paginator.")
+            return
+
+    # -------------------------
+    # Cog setup/unload
+    # -------------------------
 async def setup(bot: commands.Bot):
     cog = AniListCog(bot)
     await bot.add_cog(cog)
