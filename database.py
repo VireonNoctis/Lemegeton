@@ -3,121 +3,501 @@ from pathlib import Path
 import aiohttp
 import asyncio
 import logging
+import os
+import time
 from typing import List, Dict, Optional
 from datetime import datetime
 
 # ------------------------------------------------------
-# Logging Setup
+# Logging Setup with File-based System
 # ------------------------------------------------------
-logging.basicConfig(
-    level=logging.INFO,
-    format="[%(levelname)s] %(message)s"
+# Configuration constants
+LOG_DIR = "logs"
+LOG_FILE = "database.log"
+LOG_MAX_SIZE = 50 * 1024 * 1024  # 50MB max log file size
+DB_TIMEOUT = 30.0  # Database operation timeout in seconds
+CONNECTION_RETRIES = 3  # Number of retry attempts for database connections
+RETRY_DELAY = 1.0  # Delay between retries in seconds
+
+# Ensure logs directory exists
+os.makedirs(LOG_DIR, exist_ok=True)
+
+# Configure comprehensive file-based logging
+log_file_path = os.path.join(LOG_DIR, LOG_FILE)
+
+# Clear existing log file if it's too large
+if os.path.exists(log_file_path) and os.path.getsize(log_file_path) > LOG_MAX_SIZE:
+    open(log_file_path, 'w').close()
+
+# Setup file handler with detailed formatting
+file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+
+# Setup console handler
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# Create formatter
+formatter = logging.Formatter(
+    '[%(asctime)s] [%(levelname)s] [%(name)s] %(funcName)s:%(lineno)d - %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
 )
+
+file_handler.setFormatter(formatter)
+console_handler.setFormatter(formatter)
+
+# Configure logger
 logger = logging.getLogger("Database")
+logger.setLevel(logging.DEBUG)
+logger.handlers.clear()  # Remove any existing handlers
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
+
+# Prevent propagation to avoid duplicate logs
+logger.propagate = False
+
+logger.info("="*50)
+logger.info("Database logging system initialized")
+logger.info(f"Log file: {log_file_path}")
+logger.info("="*50)
 
 # ------------------------------------------------------
-# Database Configuration
+# Database Configuration with Enhanced Connection Management
 # ------------------------------------------------------
 DB_NAME = "database.db"
 DB_PATH = Path(DB_NAME).resolve()
-logger.info(f"Using database file at: {DB_PATH}")
+
+logger.info(f"Database configuration initialized")
+logger.info(f"Database file path: {DB_PATH}")
+logger.info(f"Database file exists: {DB_PATH.exists()}")
+if DB_PATH.exists():
+    file_size = DB_PATH.stat().st_size
+    logger.info(f"Database file size: {file_size:,} bytes ({file_size / (1024*1024):.2f} MB)")
+
+async def get_db_connection():
+    """
+    Get database connection with comprehensive logging and retry logic.
+    """
+    for attempt in range(CONNECTION_RETRIES):
+        try:
+            logger.debug(f"Attempting database connection (attempt {attempt + 1}/{CONNECTION_RETRIES})")
+            
+            connection = await aiosqlite.connect(
+                DB_PATH, 
+                timeout=DB_TIMEOUT,
+                check_same_thread=False
+            )
+            
+            # Enable foreign key constraints
+            await connection.execute("PRAGMA foreign_keys = ON")
+            
+            logger.debug(f"Database connection established successfully")
+            return connection
+            
+        except aiosqlite.Error as db_error:
+            logger.warning(f"Database connection attempt {attempt + 1} failed: {db_error}")
+            if attempt < CONNECTION_RETRIES - 1:
+                logger.debug(f"Retrying in {RETRY_DELAY} seconds...")
+                await asyncio.sleep(RETRY_DELAY)
+            else:
+                logger.error(f"All database connection attempts failed")
+                raise
+        except Exception as e:
+            logger.error(f"Unexpected error during database connection: {e}", exc_info=True)
+            raise
+
+async def execute_db_operation(operation_name: str, query: str, params=None, fetch_type=None):
+    """
+    Execute database operation with comprehensive logging and error handling.
+    
+    Args:
+        operation_name: Human-readable name for the operation
+        query: SQL query to execute
+        params: Query parameters
+        fetch_type: 'one', 'all', or None for no fetch
+    """
+    logger.debug(f"Executing {operation_name}")
+    logger.debug(f"Query: {query}")
+    if params:
+        logger.debug(f"Parameters: {params}")
+    
+    start_time = time.time()
+    
+    try:
+        async with await get_db_connection() as db:
+            cursor = await db.execute(query, params or ())
+            
+            result = None
+            if fetch_type == 'one':
+                result = await cursor.fetchone()
+            elif fetch_type == 'all':
+                result = await cursor.fetchall()
+            elif fetch_type == 'lastrowid':
+                result = cursor.lastrowid
+            
+            await cursor.close()
+            await db.commit()
+            
+            execution_time = time.time() - start_time
+            logger.debug(f"{operation_name} completed in {execution_time:.3f}s")
+            
+            if result is not None:
+                if fetch_type == 'one':
+                    logger.debug(f"Query returned 1 row")
+                elif fetch_type == 'all':
+                    logger.debug(f"Query returned {len(result)} rows")
+                elif fetch_type == 'lastrowid':
+                    logger.debug(f"Last inserted row ID: {result}")
+            
+            return result
+            
+    except aiosqlite.Error as db_error:
+        execution_time = time.time() - start_time
+        logger.error(f"{operation_name} failed after {execution_time:.3f}s: {db_error}")
+        raise
+    except Exception as e:
+        execution_time = time.time() - start_time
+        logger.error(f"Unexpected error in {operation_name} after {execution_time:.3f}s: {e}", exc_info=True)
+        raise
 
 # ------------------------------------------------------
-# USERS TABLE FUNCTIONS
+# USERS TABLE FUNCTIONS with Enhanced Logging
 # ------------------------------------------------------
 async def init_users_table():
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
+    """Initialize users table with comprehensive logging and error handling."""
+    logger.info("Initializing users table")
+    
+    try:
+        create_query = """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                discord_id INTEGER UNIQUE,
-                username TEXT NOT NULL
+                discord_id INTEGER UNIQUE NOT NULL,
+                username TEXT NOT NULL,
+                anilist_username TEXT,
+                anilist_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """)
-        await db.commit()
-        logger.info("Users table is ready.")
+        """
+        
+        await execute_db_operation("users table creation", create_query)
+        
+        # Add missing columns if they don't exist
+        columns_to_add = [
+            ("anilist_username", "TEXT"),
+            ("anilist_id", "INTEGER"),
+            ("created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP")
+        ]
+        
+        for column_name, column_type in columns_to_add:
+            try:
+                alter_query = f"ALTER TABLE users ADD COLUMN {column_name} {column_type}"
+                await execute_db_operation(f"add {column_name} column to users", alter_query)
+                logger.debug(f"Added missing column '{column_name}' to users table")
+            except aiosqlite.OperationalError as e:
+                if "duplicate column name" in str(e).lower():
+                    logger.debug(f"Column '{column_name}' already exists in users table")
+                else:
+                    logger.warning(f"Error adding column '{column_name}' to users table: {e}")
+        
+        # Verify table structure
+        schema_query = "PRAGMA table_info(users)"
+        schema = await execute_db_operation("users table schema check", schema_query, fetch_type='all')
+        logger.debug(f"Users table schema: {len(schema)} columns")
+        for column in schema:
+            logger.debug(f"  Column: {column[1]} ({column[2]})")
+        
+        logger.info("✅ Users table initialization completed successfully")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize users table: {e}", exc_info=True)
+        raise
 
 async def add_user(discord_id: int, username: str, anilist_username: str = None, anilist_id: int = None):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            """
+    """Add new user with comprehensive logging and validation."""
+    logger.info(f"Adding new user: {username} (Discord ID: {discord_id})")
+    
+    try:
+        # Validate input
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(username, str) or not username.strip():
+            raise ValueError(f"Invalid username: {username}")
+        
+        logger.debug(f"User data - Discord ID: {discord_id}, Username: {username}")
+        if anilist_username:
+            logger.debug(f"AniList data - Username: {anilist_username}, ID: {anilist_id}")
+        
+        query = """
             INSERT INTO users (discord_id, username, anilist_username, anilist_id)
             VALUES (?, ?, ?, ?)
-            """,
-            (discord_id, username, anilist_username, anilist_id)
+        """
+        
+        await execute_db_operation(
+            f"add user {username}",
+            query,
+            (discord_id, username.strip(), anilist_username, anilist_id)
         )
-        await db.commit()
+        
+        logger.info(f"✅ Successfully added user {username} (Discord ID: {discord_id})")
+        
+    except aiosqlite.IntegrityError as integrity_error:
+        if "UNIQUE constraint failed" in str(integrity_error):
+            logger.warning(f"User {discord_id} already exists, cannot add duplicate")
+        else:
+            logger.error(f"Database integrity error adding user {discord_id}: {integrity_error}")
+        raise
+    except ValueError as validation_error:
+        logger.error(f"Validation error adding user: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Unexpected error adding user {discord_id}: {e}", exc_info=True)
+        raise
 
 
 async def get_user(discord_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute("SELECT * FROM users WHERE discord_id = ?", (discord_id,))
-        user = await cursor.fetchone()
-        await cursor.close()
+    """Get user by Discord ID with comprehensive logging."""
+    logger.debug(f"Retrieving user data for Discord ID: {discord_id}")
+    
+    try:
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        
+        query = "SELECT * FROM users WHERE discord_id = ?"
+        user = await execute_db_operation(
+            f"get user {discord_id}",
+            query,
+            (discord_id,),
+            fetch_type='one'
+        )
+        
+        if user:
+            logger.debug(f"✅ Found user: {user[2]} (ID: {user[0]})")  # username at index 2, id at index 0
+        else:
+            logger.debug(f"No user found for Discord ID: {discord_id}")
+        
         return user
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error getting user: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error retrieving user {discord_id}: {e}", exc_info=True)
+        raise
 
 async def get_all_users():
-    async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute("SELECT * FROM users")
-        users = await cursor.fetchall()
-        await cursor.close()
+    """Get all users with comprehensive logging."""
+    logger.debug("Retrieving all users from database")
+    
+    try:
+        query = "SELECT * FROM users ORDER BY username"
+        users = await execute_db_operation(
+            "get all users",
+            query,
+            fetch_type='all'
+        )
+        
+        logger.info(f"✅ Retrieved {len(users)} users from database")
         return users
+        
+    except Exception as e:
+        logger.error(f"❌ Error retrieving all users: {e}", exc_info=True)
+        raise
 
 async def update_username(discord_id: int, username: str):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("UPDATE users SET username = ? WHERE discord_id = ?", (username, discord_id))
-        await db.commit()
-        logger.info(f"Updated username for {discord_id} to {username}")
+    """Update username with comprehensive logging and validation."""
+    logger.info(f"Updating username for Discord ID {discord_id} to '{username}'")
+    
+    try:
+        # Validate input
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(username, str) or not username.strip():
+            raise ValueError(f"Invalid username: {username}")
+        
+        # Check if user exists first
+        existing_user = await get_user(discord_id)
+        if not existing_user:
+            logger.warning(f"Cannot update username - user {discord_id} not found")
+            return False
+        
+        old_username = existing_user[2]  # username at index 2
+        
+        query = "UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?"
+        await execute_db_operation(
+            f"update username for {discord_id}",
+            query,
+            (username.strip(), discord_id)
+        )
+        
+        logger.info(f"✅ Updated username for {discord_id}: '{old_username}' → '{username}'")
+        return True
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error updating username: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error updating username for {discord_id}: {e}", exc_info=True)
+        raise
 
 async def remove_user(discord_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("DELETE FROM users WHERE discord_id = ?", (discord_id,))
-        await db.commit()
-        logger.info(f"Removed user {discord_id}")
+    """Remove user with comprehensive logging and validation."""
+    logger.info(f"Removing user with Discord ID: {discord_id}")
+    
+    try:
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        
+        # Check if user exists first
+        existing_user = await get_user(discord_id)
+        if not existing_user:
+            logger.warning(f"Cannot remove user - user {discord_id} not found")
+            return False
+        
+        username = existing_user[2]  # username at index 2
+        
+        query = "DELETE FROM users WHERE discord_id = ?"
+        await execute_db_operation(
+            f"remove user {discord_id}",
+            query,
+            (discord_id,)
+        )
+        
+        logger.info(f"✅ Successfully removed user: {username} (Discord ID: {discord_id})")
+        return True
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error removing user: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error removing user {discord_id}: {e}", exc_info=True)
+        raise
 
 async def update_anilist_info(discord_id: int, anilist_username: str, anilist_id: int):
-    """Update the anilist_username and anilist_id for a user in the database."""
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            """
+    """Update AniList information with comprehensive logging and validation."""
+    logger.info(f"Updating AniList info for Discord ID {discord_id}")
+    logger.debug(f"AniList data - Username: {anilist_username}, ID: {anilist_id}")
+    
+    try:
+        # Validate input
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(anilist_username, str) or not anilist_username.strip():
+            raise ValueError(f"Invalid anilist_username: {anilist_username}")
+        if not isinstance(anilist_id, int) or anilist_id <= 0:
+            raise ValueError(f"Invalid anilist_id: {anilist_id}")
+        
+        # Check if user exists
+        existing_user = await get_user(discord_id)
+        if not existing_user:
+            logger.error(f"Cannot update AniList info - user {discord_id} not found")
+            return False
+        
+        query = """
             UPDATE users
-            SET anilist_username = ?, anilist_id = ?
+            SET anilist_username = ?, anilist_id = ?, updated_at = CURRENT_TIMESTAMP
             WHERE discord_id = ?
-            """,
-            (anilist_username, anilist_id, discord_id)
+        """
+        
+        await execute_db_operation(
+            f"update AniList info for {discord_id}",
+            query,
+            (anilist_username.strip(), anilist_id, discord_id)
         )
-        await db.commit()
+        
+        logger.info(f"✅ Updated AniList info for {discord_id}: {anilist_username} (ID: {anilist_id})")
+        return True
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error updating AniList info: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error updating AniList info for {discord_id}: {e}", exc_info=True)
+        raise
 
 # ------------------------------------------------------
-# CHALLENGE RULES TABLE FUNCTIONS
+# CHALLENGE RULES TABLE FUNCTIONS with Enhanced Logging
 # ------------------------------------------------------
 async def init_challenge_rules_table():
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
+    """Initialize challenge rules table with comprehensive logging."""
+    logger.info("Initializing challenge rules table")
+    
+    try:
+        create_query = """
             CREATE TABLE IF NOT EXISTS challenge_rules (
                 id INTEGER PRIMARY KEY,
-                rules TEXT
+                rules TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """)
-        await db.commit()
-        logger.info("Challenge rules table is ready.")
+        """
+        
+        await execute_db_operation("challenge rules table creation", create_query)
+        
+        # Add missing timestamp columns if they don't exist
+        for column_name, column_type in [("created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP"), ("updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP")]:
+            try:
+                alter_query = f"ALTER TABLE challenge_rules ADD COLUMN {column_name} {column_type}"
+                await execute_db_operation(f"add {column_name} to challenge_rules", alter_query)
+                logger.debug(f"Added missing column '{column_name}' to challenge_rules table")
+            except aiosqlite.OperationalError as e:
+                if "duplicate column name" in str(e).lower():
+                    logger.debug(f"Column '{column_name}' already exists in challenge_rules table")
+        
+        logger.info("✅ Challenge rules table initialization completed")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize challenge rules table: {e}", exc_info=True)
+        raise
 
 async def set_challenge_rules(rules: str):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            INSERT INTO challenge_rules (id, rules)
-            VALUES (1, ?)
-            ON CONFLICT(id) DO UPDATE SET rules=excluded.rules
-        """, (rules,))
-        await db.commit()
-        logger.info("Challenge rules updated.")
+    """Set challenge rules with comprehensive logging and validation."""
+    logger.info("Setting challenge rules")
+    
+    try:
+        if not isinstance(rules, str) or not rules.strip():
+            raise ValueError("Rules must be a non-empty string")
+        
+        logger.debug(f"Rules length: {len(rules)} characters")
+        
+        query = """
+            INSERT INTO challenge_rules (id, rules, updated_at)
+            VALUES (1, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(id) DO UPDATE SET 
+                rules=excluded.rules,
+                updated_at=CURRENT_TIMESTAMP
+        """
+        
+        await execute_db_operation("set challenge rules", query, (rules.strip(),))
+        logger.info("✅ Challenge rules updated successfully")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error setting challenge rules: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error setting challenge rules: {e}", exc_info=True)
+        raise
 
 async def get_challenge_rules() -> Optional[str]:
-    async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute("SELECT rules FROM challenge_rules WHERE id = 1")
-        row = await cursor.fetchone()
-        await cursor.close()
-        return row[0] if row else None
+    """Get challenge rules with comprehensive logging."""
+    logger.debug("Retrieving challenge rules")
+    
+    try:
+        query = "SELECT rules FROM challenge_rules WHERE id = 1"
+        result = await execute_db_operation("get challenge rules", query, fetch_type='one')
+        
+        if result:
+            rules = result[0]
+            logger.debug(f"Retrieved challenge rules ({len(rules)} characters)")
+            return rules
+        else:
+            logger.debug("No challenge rules found")
+            return None
+            
+    except Exception as e:
+        logger.error(f"❌ Error retrieving challenge rules: {e}", exc_info=True)
+        raise
 
 # ------------------------------------------------------
 # MANGA RECOMMENDATION VOTES TABLE
@@ -208,30 +588,145 @@ async def init_user_manga_progress_table():
 
 
 async def set_user_manga_progress(discord_id: int, manga_id: int, chapter: int, rating: float):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating)
-            VALUES (?, ?, ?, ?)
+    """Set user manga progress with comprehensive logging and validation."""
+    logger.info(f"Setting manga progress for user {discord_id}, manga {manga_id}")
+    
+    try:
+        # Validate input
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(manga_id, int) or manga_id <= 0:
+            raise ValueError(f"Invalid manga_id: {manga_id}")
+        if not isinstance(chapter, int) or chapter < 0:
+            raise ValueError(f"Invalid chapter: {chapter}")
+        if not isinstance(rating, (int, float)) or not (0 <= rating <= 10):
+            logger.warning(f"Invalid rating {rating}, clamping to 0-10 range")
+            rating = max(0, min(10, float(rating)))
+        
+        logger.debug(f"Progress data - Chapter: {chapter}, Rating: {rating}")
+        
+        query = """
+            INSERT INTO user_manga_progress (discord_id, manga_id, current_chapter, rating, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(discord_id, manga_id) DO UPDATE SET
                 current_chapter=excluded.current_chapter,
-                rating=excluded.rating
-        """, (discord_id, manga_id, chapter, rating))
-        await db.commit()
+                rating=excluded.rating,
+                updated_at=CURRENT_TIMESTAMP
+        """
+        
+        await execute_db_operation(
+            f"set manga progress for user {discord_id}",
+            query,
+            (discord_id, manga_id, chapter, rating)
+        )
+        
+        logger.info(f"✅ Set manga {manga_id} progress for user {discord_id}: Chapter {chapter}, Rating {rating}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error setting manga progress: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error setting manga progress for user {discord_id}: {e}", exc_info=True)
+        raise
 
 async def get_user_manga_progress(discord_id: int, manga_id: int):
-    async with aiosqlite.connect(DB_PATH) as db:
-        cursor = await db.execute("""
+    """Get user manga progress with comprehensive logging and validation."""
+    logger.debug(f"Getting manga progress for user {discord_id}, manga {manga_id}")
+    
+    try:
+        # Validate input
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(manga_id, int) or manga_id <= 0:
+            raise ValueError(f"Invalid manga_id: {manga_id}")
+        
+        query = """
             SELECT current_chapter, rating, status, repeat FROM user_manga_progress
             WHERE discord_id = ? AND manga_id = ?
-        """, (discord_id, manga_id))
-        row = await cursor.fetchone()
-        await cursor.close()
-        return {
-            "current_chapter": row[0],
-            "rating": row[1],
-            "status": row[2],
-            "repeat": row[3]  
-        } if row else None
+        """
+        
+        result = await execute_db_operation(
+            f"get manga progress for user {discord_id}",
+            query,
+            (discord_id, manga_id),
+            fetch_type='one'
+        )
+        
+        if result:
+            progress_data = {
+                "current_chapter": result[0],
+                "rating": result[1],
+                "status": result[2],
+                "repeat": result[3]
+            }
+            logger.debug(f"✅ Retrieved manga progress: {progress_data}")
+            return progress_data
+        else:
+            logger.debug(f"No progress found for user {discord_id}, manga {manga_id}")
+            return None
+            
+    except ValueError as validation_error:
+        logger.error(f"Validation error getting manga progress: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error getting manga progress for user {discord_id}: {e}", exc_info=True)
+        raise
+
+async def upsert_user_manga_progress(discord_id, manga_id, title, chapters, points, status, repeat=0, started_at=None):
+    """Upsert user manga progress with comprehensive logging and validation."""
+    logger.info(f"Upserting manga progress for user {discord_id}: {title}")
+    
+    try:
+        # Validate input
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(manga_id, int) or manga_id <= 0:
+            raise ValueError(f"Invalid manga_id: {manga_id}")
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError(f"Invalid title: {title}")
+        if not isinstance(chapters, int) or chapters < 0:
+            logger.warning(f"Invalid chapters {chapters}, setting to 0")
+            chapters = 0
+        if not isinstance(points, int) or points < 0:
+            logger.warning(f"Invalid points {points}, setting to 0")
+            points = 0
+        if not isinstance(repeat, int) or repeat < 0:
+            logger.warning(f"Invalid repeat {repeat}, setting to 0")
+            repeat = 0
+        
+        logger.debug(f"Manga progress - Title: {title}, Chapters: {chapters}, Points: {points}, Status: {status}, Repeat: {repeat}")
+        
+        now = datetime.utcnow().isoformat()
+        
+        query = """
+            INSERT INTO user_manga_progress(
+                discord_id, manga_id, title, current_chapter, points, status, repeat, started_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
+                title=excluded.title,
+                current_chapter=excluded.current_chapter,
+                points=excluded.points,
+                status=excluded.status,
+                repeat=excluded.repeat,
+                started_at=excluded.started_at,
+                updated_at=excluded.updated_at
+        """
+        
+        await execute_db_operation(
+            f"upsert manga progress for user {discord_id}",
+            query,
+            (discord_id, manga_id, title.strip(), chapters, points, status, repeat, started_at, now)
+        )
+        
+        logger.info(f"✅ Upserted manga progress for user {discord_id}: {title} ({status})")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error upserting manga progress: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error upserting manga progress for user {discord_id}: {e}", exc_info=True)
+        raise
         
 async def upsert_user_stats(
     discord_id: int,
@@ -243,8 +738,35 @@ async def upsert_user_stats(
     total_chapters: int = 0,
     total_episodes: int = 0 
 ):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
+    """Upsert user stats with comprehensive logging and validation."""
+    logger.info(f"Upserting stats for user {username} (Discord ID: {discord_id})")
+    
+    try:
+        # Validate input data
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(username, str) or not username.strip():
+            raise ValueError(f"Invalid username: {username}")
+        
+        # Validate numeric fields
+        numeric_fields = {
+            'total_manga': total_manga,
+            'total_anime': total_anime,
+            'avg_manga_score': avg_manga_score,
+            'avg_anime_score': avg_anime_score,
+            'total_chapters': total_chapters,
+            'total_episodes': total_episodes
+        }
+        
+        for field_name, value in numeric_fields.items():
+            if not isinstance(value, (int, float)) or value < 0:
+                logger.warning(f"Invalid {field_name}: {value}, setting to 0")
+                numeric_fields[field_name] = 0
+        
+        logger.debug(f"User stats - Manga: {total_manga}, Anime: {total_anime}, Chapters: {total_chapters}, Episodes: {total_episodes}")
+        logger.debug(f"Average scores - Manga: {avg_manga_score:.2f}, Anime: {avg_anime_score:.2f}")
+        
+        query = """
             INSERT INTO user_stats (
                 discord_id, username, total_manga, total_anime,
                 avg_manga_score, avg_anime_score, total_chapters, total_episodes
@@ -258,22 +780,62 @@ async def upsert_user_stats(
                 avg_anime_score=excluded.avg_anime_score,
                 total_chapters=excluded.total_chapters,
                 total_episodes=excluded.total_episodes
-        """, (
-            discord_id, username, total_manga, total_anime,
-            avg_manga_score, avg_anime_score, total_chapters, total_episodes
-        ))
-        await db.commit()
+        """
+        
+        await execute_db_operation(
+            f"upsert user stats for {username}",
+            query,
+            (discord_id, username.strip(), numeric_fields['total_manga'], numeric_fields['total_anime'],
+             numeric_fields['avg_manga_score'], numeric_fields['avg_anime_score'], 
+             numeric_fields['total_chapters'], numeric_fields['total_episodes'])
+        )
+        
+        logger.info(f"✅ Successfully upserted stats for {username}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error upserting user stats: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error upserting stats for {discord_id}: {e}", exc_info=True)
+        raise
 
-# Save or update a user
+# Save or update a user with comprehensive logging
 async def save_user(discord_id: int, username: str):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            INSERT INTO users (discord_id, username)
-            VALUES (?, ?)
-            ON CONFLICT(discord_id) DO UPDATE SET username=excluded.username
-        """, (discord_id, username))
-        await db.commit()
-        logger.info(f"Saved user: {username} ({discord_id})")
+    """Save or update user with comprehensive logging and validation."""
+    logger.info(f"Saving user: {username} (Discord ID: {discord_id})")
+    
+    try:
+        if not isinstance(discord_id, int) or discord_id <= 0:
+            raise ValueError(f"Invalid discord_id: {discord_id}")
+        if not isinstance(username, str) or not username.strip():
+            raise ValueError(f"Invalid username: {username}")
+        
+        # Check if user already exists
+        existing_user = await get_user(discord_id)
+        operation_type = "update" if existing_user else "insert"
+        
+        query = """
+            INSERT INTO users (discord_id, username, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(discord_id) DO UPDATE SET 
+                username=excluded.username,
+                updated_at=CURRENT_TIMESTAMP
+        """
+        
+        await execute_db_operation(
+            f"save user {username} ({operation_type})",
+            query,
+            (discord_id, username.strip())
+        )
+        
+        logger.info(f"✅ Successfully saved user: {username} ({operation_type})")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error saving user: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error saving user {discord_id}: {e}", exc_info=True)
+        raise
 
 
 # ------------------------------------------------------
@@ -424,18 +986,77 @@ async def init_steam_users_table():
 
 
 # ------------------------------------------------------
-# INITIALIZE ALL DATABASE TABLES
+# INITIALIZE ALL DATABASE TABLES with Enhanced Logging
 # ------------------------------------------------------
 async def init_db():
-    await init_users_table()
-    await init_challenge_rules_table()
-    await init_recommendation_votes_table()
-    await init_user_stats_table()
-    await init_achievements_table()
-    await init_user_manga_progress_table()
-    await init_manga_challenges_table()
-    await init_user_progress_table()
-    await init_global_challenges_table()
-    await init_steam_users_table()
-    await init_challenge_manga_table()
-    logger.info("All database tables initialized.")
+    """Initialize all database tables with comprehensive logging and error handling."""
+    logger.info("="*60)
+    logger.info("STARTING DATABASE INITIALIZATION")
+    logger.info("="*60)
+    
+    # List of table initialization functions and their names
+    table_init_functions = [
+        ("Users", init_users_table),
+        ("Challenge Rules", init_challenge_rules_table),
+        ("Recommendation Votes", init_recommendation_votes_table),
+        ("User Stats", init_user_stats_table),
+        ("Achievements", init_achievements_table),
+        ("User Manga Progress", init_user_manga_progress_table),
+        ("Manga Challenges", init_manga_challenges_table),
+        ("User Progress", init_user_progress_table),
+        ("Global Challenges", init_global_challenges_table),
+        ("Steam Users", init_steam_users_table),
+        ("Challenge Manga", init_challenge_manga_table),
+    ]
+    
+    start_time = time.time()
+    success_count = 0
+    failure_count = 0
+    
+    try:
+        # Verify database connectivity first
+        logger.info("Verifying database connectivity...")
+        async with await get_db_connection() as test_db:
+            await test_db.execute("SELECT 1")
+        logger.info("✅ Database connectivity verified")
+        
+        # Initialize each table
+        for table_name, init_function in table_init_functions:
+            try:
+                logger.debug(f"Initializing {table_name} table...")
+                await init_function()
+                success_count += 1
+                logger.debug(f"✅ {table_name} table initialized successfully")
+                
+            except Exception as table_error:
+                failure_count += 1
+                logger.error(f"❌ Failed to initialize {table_name} table: {table_error}", exc_info=True)
+                # Continue with other tables instead of failing completely
+        
+        # Log final statistics
+        total_time = time.time() - start_time
+        total_tables = len(table_init_functions)
+        
+        logger.info("="*60)
+        logger.info("DATABASE INITIALIZATION SUMMARY")
+        logger.info(f"Total tables: {total_tables}")
+        logger.info(f"Successfully initialized: {success_count}")
+        logger.info(f"Failed to initialize: {failure_count}")
+        logger.info(f"Total time: {total_time:.2f} seconds")
+        
+        if failure_count > 0:
+            logger.warning(f"⚠️  {failure_count} tables failed to initialize - some functionality may be limited")
+        else:
+            logger.info("✅ All database tables initialized successfully")
+        
+        logger.info("="*60)
+        
+        # Log database file statistics
+        if DB_PATH.exists():
+            file_size = DB_PATH.stat().st_size
+            logger.info(f"Final database file size: {file_size:,} bytes ({file_size / (1024*1024):.2f} MB)")
+        
+    except Exception as e:
+        total_time = time.time() - start_time
+        logger.error(f"❌ Fatal error during database initialization after {total_time:.2f}s: {e}", exc_info=True)
+        raise
