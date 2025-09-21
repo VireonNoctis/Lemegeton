@@ -296,19 +296,49 @@ class BrowseCog(commands.Cog):
                     super().__init__(timeout=120)
                     self.embed1 = embed1
                     self.embed2 = embed2
+                    self.current = "info" 
+                    self.rebuild_buttons()
 
-                @discord.ui.button(label="📖 Manga Info", style=discord.ButtonStyle.blurple)
-                async def manga_info_button(self, interaction: discord.Interaction, button: Button):
-                    await interaction.response.edit_message(embed=self.embed1, view=self)
+                def rebuild_buttons(self):
+                    self.clear_items()
 
-                @discord.ui.button(label="👥 User Progress", style=discord.ButtonStyle.green)
-                async def user_progress_button(self, interaction: discord.Interaction, button: Button):
-                    await interaction.response.edit_message(embed=self.embed2, view=self)
+                    if self.current == "info":
+                        btn = Button(
+                            label="👥 User Progress",
+                            style=discord.ButtonStyle.green
+                        )
 
+                        async def user_progress_callback(interaction: discord.Interaction):
+                            self.current = "progress"
+                            self.rebuild_buttons()
+                            await interaction.response.edit_message(embed=self.embed2, view=self)
+
+                        btn.callback = user_progress_callback
+                        self.add_item(btn)
+
+                    else:
+                        btn = Button(
+                            label="📖 Manga Info",
+                            style=discord.ButtonStyle.blurple
+                        )
+
+                        async def manga_info_callback(interaction: discord.Interaction):
+                            self.current = "info"
+                            self.rebuild_buttons()
+                            await interaction.response.edit_message(embed=self.embed1, view=self)
+
+                        btn.callback = manga_info_callback
+                        self.add_item(btn)
+
+                async def on_timeout(self):
+                    self.clear_items()
+
+            # Start with manga info
             view = PageView(embed, progress_embed)
             await interaction.followup.send(embed=embed, view=view)
         else:
             await interaction.followup.send(embed=embed)
+
 
     # --------------------------------------------------
     # Autocomplete
