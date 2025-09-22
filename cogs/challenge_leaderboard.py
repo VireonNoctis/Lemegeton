@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 
 from config import GUILD_ID
+from database import get_guild_challenge_leaderboard_data
 
 # ------------------------------------------------------
 # Logging Setup - Clears on each bot run
@@ -177,27 +178,17 @@ class ChallengeLeaderboard(commands.Cog):
         self.bot = bot
         logger.info("Challenge Leaderboard cog initialized")
 
-    async def _fetch_leaderboard_data(self) -> list[tuple[int, int]]:
-        """Fetch leaderboard data from database with error handling."""
+    async def _fetch_leaderboard_data(self, guild_id: int) -> list[tuple[int, int]]:
+        """Fetch guild-specific leaderboard data from database with error handling."""
         try:
-            async with aiosqlite.connect(DB_PATH) as db:
-                logger.debug("Fetching challenge leaderboard data from database")
-                cursor = await db.execute("""
-                    SELECT u.discord_id, COALESCE(SUM(ump.points), 0) AS total_points
-                    FROM users u
-                    LEFT JOIN user_manga_progress ump ON u.discord_id = ump.discord_id
-                    GROUP BY u.discord_id
-                    HAVING total_points > 0
-                    ORDER BY total_points DESC
-                """)
-                rows = await cursor.fetchall()
-                await cursor.close()
-                
-            logger.info(f"Retrieved {len(rows)} leaderboard entries from database")
-            return rows
+            logger.debug(f"Fetching challenge leaderboard data for guild {guild_id}")
+            leaderboard_data = await get_guild_challenge_leaderboard_data(guild_id)
+            
+            logger.info(f"Retrieved {len(leaderboard_data)} leaderboard entries for guild {guild_id}")
+            return leaderboard_data
             
         except Exception as e:
-            logger.error(f"Database error fetching leaderboard data: {e}", exc_info=True)
+            logger.error(f"Database error fetching leaderboard data for guild {guild_id}: {e}", exc_info=True)
             return []
 
     @app_commands.guilds(discord.Object(id=GUILD_ID))
@@ -213,8 +204,8 @@ class ChallengeLeaderboard(commands.Cog):
             
             await interaction.response.defer()
             
-            # Fetch leaderboard data
-            leaderboard_data = await self._fetch_leaderboard_data()
+            # Fetch guild-specific leaderboard data
+            leaderboard_data = await self._fetch_leaderboard_data(interaction.guild.id)
             
             if not leaderboard_data:
                 logger.warning("No leaderboard data available to display")

@@ -276,14 +276,21 @@ class InviteTracker(commands.Cog):
         join_message = f"{message_template.format(joiner=member.mention, inviter=inviter.display_name)}\n"
         join_message += f"{inviter.display_name} {recruitment_action} **{recruit_count}** disciples."
         
-        # Find system channel or general channel
+        # Find the configured announcement channel
         channel = await self._get_announcement_channel(guild)
         if channel:
             try:
                 await channel.send(join_message)
-                logger.info(f"Sent join message for {member} invited by {inviter}")
+                logger.info(f"Sent join message for {member} invited by {inviter} to #{channel.name}")
             except discord.Forbidden:
-                logger.warning(f"Cannot send join message in {channel}")
+                logger.warning(f"Cannot send join message in {channel} - missing permissions")
+            except Exception as e:
+                logger.error(f"Error sending join message: {e}")
+        else:
+            logger.info(f"No announcement channel configured for {guild.name} - join message not sent. Use /set_invite_channel to configure.")  
+        
+        # Log the successful recruitment tracking
+        logger.info(f"Tracked recruitment: {inviter.display_name} invited {member.display_name} (total recruits: {recruit_count})")
         
     async def _handle_unknown_join(self, member: discord.Member):
         """Handle when someone joins but we can't determine the inviter"""
@@ -303,9 +310,13 @@ class InviteTracker(commands.Cog):
         if channel:
             try:
                 await channel.send(join_message)
-                logger.info(f"Sent generic join message for {member}")
+                logger.info(f"Sent generic join message for {member} to #{channel.name}")
             except discord.Forbidden:
-                logger.warning(f"Cannot send join message in {channel}")
+                logger.warning(f"Cannot send join message in {channel} - missing permissions")
+            except Exception as e:
+                logger.error(f"Error sending generic join message: {e}")
+        else:
+            logger.info(f"No announcement channel configured for {guild.name} - generic join message not sent. Use /set_invite_channel to configure.")
     
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -355,44 +366,35 @@ class InviteTracker(commands.Cog):
         if channel:
             try:
                 await channel.send(leave_message)
-                logger.info(f"Sent leave message for {member}")
+                logger.info(f"Sent leave message for {member} to #{channel.name}")
             except discord.Forbidden:
-                logger.warning(f"Cannot send leave message in {channel}")
+                logger.warning(f"Cannot send leave message in {channel} - missing permissions")
+            except Exception as e:
+                logger.error(f"Error sending leave message: {e}")
+        else:
+            logger.info(f"No announcement channel configured for {guild.name} - leave message not sent. Use /set_invite_channel to configure.")
     
     async def _get_announcement_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
-        """Get the best channel for announcements"""
-        # Check if a specific channel is configured for this guild
+        """Get the configured announcement channel for invite messages"""
+        # First priority: Check if a specific channel is configured for this guild
         if guild.id in self.announcement_channels:
-            configured_channel = guild.get_channel(self.announcement_channels[guild.id])
+            channel_id = self.announcement_channels[guild.id]
+            configured_channel = guild.get_channel(channel_id)
+            
             if configured_channel and isinstance(configured_channel, discord.TextChannel):
                 permissions = configured_channel.permissions_for(guild.me)
                 if permissions.send_messages:
+                    logger.debug(f"Using configured announcement channel: {configured_channel.name}")
                     return configured_channel
                 else:
-                    logger.warning(f"No send permissions in configured channel {configured_channel.name}")
+                    logger.warning(f"No send permissions in configured channel {configured_channel.name} (ID: {channel_id})")
+                    return None
             else:
-                logger.warning(f"Configured channel {self.announcement_channels[guild.id]} not found, falling back to auto-detection")
+                logger.warning(f"Configured channel {channel_id} not found or is not a text channel")
+                return None
         
-        # Try system channel first
-        if guild.system_channel:
-            return guild.system_channel
-        
-        # Look for common announcement channel names
-        channel_names = ["general", "welcome", "announcements", "lobby", "main"]
-        
-        for channel in guild.text_channels:
-            if any(name in channel.name.lower() for name in channel_names):
-                # Check if we can send messages
-                permissions = channel.permissions_for(guild.me)
-                if permissions.send_messages:
-                    return channel
-        
-        # Fallback to first channel we can send messages to
-        for channel in guild.text_channels:
-            permissions = channel.permissions_for(guild.me)
-            if permissions.send_messages:
-                return channel
-        
+        # No configured channel - don't send messages to avoid spam
+        logger.debug(f"No announcement channel configured for guild {guild.name}. Use /set_invite_channel to configure one.")
         return None
     
     @commands.Cog.listener()
@@ -428,12 +430,22 @@ class InviteTracker(commands.Cog):
         channel: discord.TextChannel
     ):
         """Set the announcement channel for invite tracking"""
+        # Defer immediately to prevent timeout
+        try:
+            await interaction.response.defer()
+        except discord.errors.NotFound:
+            logger.error(f"Interaction token expired for set_invite_channel command")
+            return
+        except Exception as e:
+            logger.error(f"Failed to defer interaction for set_invite_channel: {e}")
+            return
+        
         guild_id = interaction.guild.id
         
         # Check if bot has permission to send messages in the channel
         permissions = channel.permissions_for(interaction.guild.me)
         if not permissions.send_messages:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ I don't have permission to send messages in {channel.mention}.",
                 ephemeral=True
             )
@@ -456,27 +468,36 @@ class InviteTracker(commands.Cog):
             
             embed = discord.Embed(
                 title="🔧 Invite Channel Configuration",
-                description=f"Invite tracking messages will now be sent to {channel.mention}",
+                description=f"✅ **Successfully configured invite tracking!**\n\nInvite tracking messages will now be sent to {channel.mention}",
                 color=0x00FF00
             )
             
             embed.add_field(
                 name="Channel Settings",
-                value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nPermissions: ✅ Send Messages```",
+                value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nPermissions: ✅ Send Messages\nStatus: ✅ Saved to Database```",
                 inline=False
             )
             
-            embed.set_footer(text="Use /invite_channel_info to view current settings")
+            embed.add_field(
+                name="What happens next?",
+                value="• New members joining will trigger themed messages\n• Members leaving will trigger departure messages\n• All messages will only be sent to this channel",
+                inline=False
+            )
             
-            await interaction.response.send_message(embed=embed)
+            embed.set_footer(text="Use /invite_channel_info to view current settings • Messages will only appear in the configured channel")
+            
+            await interaction.followup.send(embed=embed)
             logger.info(f"Set invite channel to #{channel.name} for guild {interaction.guild.name}")
             
         except Exception as e:
             logger.error(f"Error setting invite channel: {e}")
-            await interaction.response.send_message(
-                "❌ An error occurred while setting the invite channel.",
-                ephemeral=True
-            )
+            try:
+                await interaction.followup.send(
+                    "❌ An error occurred while setting the invite channel.",
+                    ephemeral=True
+                )
+            except:
+                logger.error("Failed to send error message - interaction may have expired")
     
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
@@ -488,7 +509,7 @@ class InviteTracker(commands.Cog):
         guild_id = interaction.guild.id
         
         embed = discord.Embed(
-            title="ℹ️ Invite Channel Configuration",
+            title="ℹ️ Invite Tracking Channel Status",
             color=0x3498DB
         )
         
@@ -498,33 +519,54 @@ class InviteTracker(commands.Cog):
             
             if channel:
                 permissions = channel.permissions_for(interaction.guild.me)
-                permission_status = "✅" if permissions.send_messages else "❌"
+                permission_status = "✅ Working" if permissions.send_messages else "❌ No Permission"
+                
+                embed.description = f"✅ **Invite tracking is active!**\nMessages will be sent to {channel.mention}"
+                embed.color = 0x00FF00
                 
                 embed.add_field(
-                    name="Configured Channel",
-                    value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nPermissions: {permission_status} Send Messages```",
+                    name="Current Configuration",
+                    value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nBot Permissions: {permission_status}```",
                     inline=False
                 )
                 
-                embed.description = f"Invite messages are configured to be sent to {channel.mention}"
+                embed.add_field(
+                    name="What gets tracked?",
+                    value="• Member joins (with inviter credit)\n• Member departures\n• Recruitment statistics",
+                    inline=True
+                )
             else:
+                embed.description = "⚠️ **Configured channel is missing!**\nThe configured channel was deleted or is no longer accessible."
+                embed.color = 0xFF6B35
+                
                 embed.add_field(
                     name="⚠️ Configuration Issue",
                     value=f"```\nConfigured Channel ID: {channel_id}\nStatus: Channel not found or deleted```",
                     inline=False
                 )
                 
-                embed.description = "Configured channel is no longer available. Auto-detection will be used."
-                embed.color = 0xFF6B35
+                embed.add_field(
+                    name="Action Required",
+                    value="Use `/set_invite_channel` to configure a new channel",
+                    inline=False
+                )
         else:
-            embed.description = "No specific channel configured. Using auto-detection."
+            embed.description = "❌ **No invite tracking channel configured**\nInvite messages are currently disabled."
+            embed.color = 0xE74C3C
+            
             embed.add_field(
-                name="Auto-Detection Priority",
-                value="```\n1. Server System Channel\n2. #general, #welcome, #announcements\n3. First available channel```",
+                name="Current Status",
+                value="```\nChannel: Not configured\nMessages: Disabled\nTracking: Data only (no notifications)```",
+                inline=False
+            )
+            
+            embed.add_field(
+                name="To Enable Messages",
+                value="Use `/set_invite_channel` to configure a channel for invite notifications",
                 inline=False
             )
         
-        embed.set_footer(text="Use /set_invite_channel to configure a specific channel")
+        embed.set_footer(text="Invite data is always tracked regardless of channel configuration")
         await interaction.response.send_message(embed=embed)
     
     @app_commands.guilds(discord.Object(id=GUILD_ID))
@@ -541,6 +583,16 @@ class InviteTracker(commands.Cog):
         user: discord.Member = None
     ):
         """Check recruitment statistics"""
+        # Defer immediately to prevent timeout
+        try:
+            await interaction.response.defer()
+        except discord.errors.NotFound:
+            logger.error(f"Interaction token expired for recruitment_stats command")
+            return
+        except Exception as e:
+            logger.error(f"Failed to defer interaction for recruitment_stats: {e}")
+            return
+            
         guild_id = interaction.guild.id
         
         try:
@@ -632,11 +684,14 @@ class InviteTracker(commands.Cog):
                 else:
                     embed.description = "No recruitment data available yet."
             
-            await interaction.response.send_message(embed=embed)
+            await interaction.followup.send(embed=embed)
             
         except Exception as e:
             logger.error(f"Error in recruitment_stats command: {e}")
-            await interaction.response.send_message("An error occurred while retrieving recruitment statistics.", ephemeral=True)
+            try:
+                await interaction.followup.send("An error occurred while retrieving recruitment statistics.", ephemeral=True)
+            except:
+                logger.error("Failed to send error message - interaction may have expired")
     
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
@@ -645,6 +700,16 @@ class InviteTracker(commands.Cog):
     )
     async def sect_analytics(self, interaction: discord.Interaction):
         """View detailed analytics about the sect"""
+        # Defer immediately to prevent timeout
+        try:
+            await interaction.response.defer()
+        except discord.errors.NotFound:
+            logger.error(f"Interaction token expired for sect_analytics command")
+            return
+        except Exception as e:
+            logger.error(f"Failed to defer interaction for sect_analytics: {e}")
+            return
+            
         guild_id = interaction.guild.id
         
         try:
@@ -715,7 +780,7 @@ class InviteTracker(commands.Cog):
             
         except Exception as e:
             logger.error(f"Error getting analytics data: {e}")
-            await interaction.response.send_message("An error occurred while retrieving analytics data.", ephemeral=True)
+            await interaction.followup.send("An error occurred while retrieving analytics data.", ephemeral=True)
             return
         
         embed = discord.Embed(
@@ -754,7 +819,7 @@ class InviteTracker(commands.Cog):
         
         embed.set_footer(text="Use /recruitment_stats for detailed recruitment information")
         
-        await interaction.response.send_message(embed=embed)
+        await interaction.followup.send(embed=embed)
     
     async def cog_unload(self):
         """Clean up when cog is unloaded"""

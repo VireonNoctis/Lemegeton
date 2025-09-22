@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Optional
 
 from config import GUILD_ID
-from database import add_user, get_user, update_username, remove_user
+from database import (
+    add_user, get_user, update_username, remove_user,
+    # New guild-aware functions
+    add_user_guild_aware, get_user_guild_aware, register_user_guild_aware, 
+    is_user_registered_in_guild
+)
 
 # Configuration constants
 LOG_DIR = Path("logs")
@@ -142,8 +147,16 @@ class RegistrationModal(discord.ui.Modal):
 
     async def on_submit(self, interaction: discord.Interaction):
         """Handle modal submission and process registration."""
+        if not interaction.guild:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a server!", 
+                ephemeral=True
+            )
+            return
+            
+        guild_id = interaction.guild.id
         logger.info(f"Registration modal submitted by {interaction.user.display_name} "
-                   f"(ID: {interaction.user.id}) with username: {self.username_input.value}")
+                   f"(ID: {interaction.user.id}) in guild {guild_id} with username: {self.username_input.value}")
         
         await interaction.response.defer(ephemeral=True)
         
@@ -151,6 +164,7 @@ class RegistrationModal(discord.ui.Modal):
         if login_cog:
             result = await login_cog.handle_register(
                 interaction.user.id,
+                guild_id,
                 str(interaction.user),
                 self.username_input.value.strip()
             )
@@ -276,51 +290,52 @@ class Login(commands.Cog):
             logger.error(f"Unexpected error while fetching AniList ID for {anilist_username}: {e}", exc_info=True)
             return None
 
-    async def handle_register(self, user_id: int, discord_user: str, anilist_username: str) -> str:
+    async def handle_register(self, user_id: int, guild_id: int, discord_user: str, anilist_username: str) -> str:
         """Handle user registration with comprehensive validation and logging."""
-        logger.info(f"Registration attempt by {discord_user} (ID: {user_id}) with AniList username: {anilist_username}")
+        logger.info(f"Registration attempt by {discord_user} (ID: {user_id}) in guild {guild_id} with AniList username: {anilist_username}")
         
         # Input validation
         anilist_username = anilist_username.strip()
         if not anilist_username:
-            logger.warning(f"Empty username provided by {discord_user} (ID: {user_id})")
+            logger.warning(f"Empty username provided by {discord_user} (ID: {user_id}) in guild {guild_id}")
             return "❌ AniList username cannot be empty."
             
         if len(anilist_username) > MAX_USERNAME_LENGTH:
-            logger.warning(f"Username too long ({len(anilist_username)} chars) by {discord_user} (ID: {user_id})")
+            logger.warning(f"Username too long ({len(anilist_username)} chars) by {discord_user} (ID: {user_id}) in guild {guild_id}")
             return f"❌ Username too long. Maximum {MAX_USERNAME_LENGTH} characters allowed."
             
         if not self._is_valid_username(anilist_username):
-            logger.warning(f"Invalid username format '{anilist_username}' by {discord_user} (ID: {user_id})")
+            logger.warning(f"Invalid username format '{anilist_username}' by {discord_user} (ID: {user_id}) in guild {guild_id}")
             return "❌ Invalid username. Only letters, numbers, underscores, and hyphens are allowed."
 
         # Fetch and validate AniList ID
         anilist_id = await self._fetch_anilist_id(anilist_username)
         if not anilist_id:
-            logger.warning(f"AniList user '{anilist_username}' not found for {discord_user} (ID: {user_id})")
+            logger.warning(f"AniList user '{anilist_username}' not found for {discord_user} (ID: {user_id}) in guild {guild_id}")
             return f"❌ Could not find AniList user **{anilist_username}**. Please check the spelling and try again."
 
         # Database operations
         try:
-            existing_user = await get_user(user_id)
+            existing_user = await get_user_guild_aware(user_id, guild_id)
             
             if existing_user:
                 # Update existing user
-                await self._update_existing_user(user_id, discord_user, anilist_username, anilist_id)
-                logger.info(f"Updated registration for {discord_user} (ID: {user_id}) -> AniList: {anilist_username} (ID: {anilist_id})")
-                return f"✅ Your AniList username has been updated to **{anilist_username}**!"
+                await self._update_existing_user_guild_aware(user_id, guild_id, discord_user, anilist_username, anilist_id)
+                logger.info(f"Updated registration for {discord_user} (ID: {user_id}) in guild {guild_id} -> AniList: {anilist_username} (ID: {anilist_id})")
+                return f"✅ Your AniList username has been updated to **{anilist_username}** in this server!"
             else:
                 # Register new user
-                await self._register_new_user(user_id, discord_user, anilist_username, anilist_id)
-                logger.info(f"Successfully registered new user {discord_user} (ID: {user_id}) -> AniList: {anilist_username} (ID: {anilist_id})")
-                return f"🎉 Successfully registered with AniList username **{anilist_username}**!"
+                await self._register_new_user_guild_aware(user_id, guild_id, discord_user, anilist_username, anilist_id)
+                logger.info(f"Successfully registered new user {discord_user} (ID: {user_id}) in guild {guild_id} -> AniList: {anilist_username} (ID: {anilist_id})")
+                return f"🎉 Successfully registered with AniList username **{anilist_username}** in this server!"
                 
         except Exception as e:
-            logger.error(f"Database error during registration for {discord_user} (ID: {user_id}): {e}", exc_info=True)
+            logger.error(f"Database error during registration for {discord_user} (ID: {user_id}) in guild {guild_id}: {e}", exc_info=True)
             return "❌ An error occurred while registering you. Please try again later."
 
     async def _update_existing_user(self, user_id: int, discord_user: str, anilist_username: str, anilist_id: int):
-        """Update existing user's AniList information."""
+        """Update existing user's AniList information. (DEPRECATED: Use _update_existing_user_guild_aware)"""
+        logger.warning("Using deprecated _update_existing_user method. Consider using guild-aware version.")
         try:
             from database import update_anilist_info
             await update_anilist_info(user_id, anilist_username, anilist_id)
@@ -331,10 +346,26 @@ class Login(commands.Cog):
             await update_username(user_id, anilist_username)
             logger.info(f"Fallback: Updated username only for {discord_user} (ID: {user_id})")
 
+    async def _update_existing_user_guild_aware(self, user_id: int, guild_id: int, discord_user: str, anilist_username: str, anilist_id: int):
+        """Update existing user's AniList information for a specific guild."""
+        try:
+            # Use the guild-aware registration function which handles updates via INSERT OR REPLACE
+            await register_user_guild_aware(user_id, guild_id, discord_user, anilist_username, anilist_id)
+            logger.info(f"Updated AniList info for existing user {discord_user} (ID: {user_id}) in guild {guild_id}")
+        except Exception as e:
+            logger.error(f"Failed to update existing user {discord_user} (ID: {user_id}) in guild {guild_id}: {e}")
+            raise
+
     async def _register_new_user(self, user_id: int, discord_user: str, anilist_username: str, anilist_id: int):
-        """Register a completely new user."""
+        """Register a completely new user. (DEPRECATED: Use _register_new_user_guild_aware)"""
+        logger.warning("Using deprecated _register_new_user method. Consider using guild-aware version.")
         await add_user(user_id, discord_user, anilist_username, anilist_id)
         logger.info(f"Added new user to database: {discord_user} (ID: {user_id})")
+
+    async def _register_new_user_guild_aware(self, user_id: int, guild_id: int, discord_user: str, anilist_username: str, anilist_id: int):
+        """Register a completely new user in a specific guild."""
+        await register_user_guild_aware(user_id, guild_id, discord_user, anilist_username, anilist_id)
+        logger.info(f"Added new user to database: {discord_user} (ID: {user_id}) in guild {guild_id}")
 
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
@@ -344,22 +375,31 @@ class Login(commands.Cog):
     async def login(self, interaction: discord.Interaction):
         """Smart login command that adapts based on user's registration status."""
         try:
+            # Ensure command is used in a guild
+            if not interaction.guild:
+                await interaction.response.send_message(
+                    "❌ This command can only be used in a server!", 
+                    ephemeral=True
+                )
+                return
+            
+            guild_id = interaction.guild.id
             logger.info(f"Login command invoked by {interaction.user.display_name} "
-                       f"({interaction.user.id}) in {interaction.guild.name}")
+                       f"({interaction.user.id}) in {interaction.guild.name} (Guild ID: {guild_id})")
             
-            # Check if user is already registered
-            user = await get_user(interaction.user.id)
+            # Check if user is already registered in this guild
+            user = await get_user_guild_aware(interaction.user.id, guild_id)
             is_registered = user is not None
-            anilist_username = user[2] if user else None  # Assuming username is at index 2
+            anilist_username = user[4] if user else None  # anilist_username is now at index 4 in new schema
             
-            logger.debug(f"User {interaction.user.display_name} registration status: {is_registered}")
+            logger.debug(f"User {interaction.user.display_name} registration status in guild {guild_id}: {is_registered}")
             
             # Create appropriate embed based on registration status
             if is_registered:
                 embed = discord.Embed(
                     title="🔐 Account Management",
                     description=f"Welcome back, **{interaction.user.display_name}**!\n\n"
-                               f"✅ **Status**: Registered\n"
+                               f"✅ **Status**: Registered in **{interaction.guild.name}**\n"
                                f"🔗 **AniList**: {anilist_username or 'Unknown'}\n\n"
                                f"Use the buttons below to manage your account:",
                     color=discord.Color.green()
@@ -367,7 +407,7 @@ class Login(commands.Cog):
                 embed.add_field(
                     name="Available Actions",
                     value="📝 **Register/Update** - Change your AniList username\n"
-                          "🗑️ **Unregister** - Remove your account and data\n"
+                          "🗑️ **Unregister** - Remove your account and data from this server\n"
                           "ℹ️ **Status** - View detailed account information",
                     inline=False
                 )
@@ -375,8 +415,8 @@ class Login(commands.Cog):
                 embed = discord.Embed(
                     title="🔐 Welcome to the Bot!",
                     description=f"Hello **{interaction.user.display_name}**!\n\n"
-                               f"❌ **Status**: Not Registered\n\n"
-                               f"To use this bot's features, you need to register with your AniList username.\n\n"
+                               f"❌ **Status**: Not Registered in **{interaction.guild.name}**\n\n"
+                               f"To use this bot's features in this server, you need to register with your AniList username.\n\n"
                                f"Use the buttons below to get started:",
                     color=discord.Color.orange()
                 )

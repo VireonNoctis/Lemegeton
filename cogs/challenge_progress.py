@@ -5,7 +5,13 @@ from discord.ext import commands
 from discord import app_commands
 import aiosqlite
 from config import CHALLENGE_ROLE_IDS, GUILD_ID
-from database import DB_PATH, set_user_manga_progress, get_challenge_rules, upsert_user_manga_progress
+from database import (
+    DB_PATH, get_challenge_rules,
+    # Guild-aware functions
+    set_user_manga_progress_guild_aware, 
+    upsert_user_manga_progress_guild_aware,
+    get_user_manga_progress_guild_aware
+)
 import aiohttp
 import os
 import logging
@@ -230,16 +236,14 @@ class MangaChallenges(commands.Cog):
                                 chapters_read = cache["chapters_read"]
                                 status = cache["status"]
                         else:
-                            cursor = await db.execute(
-                                "SELECT current_chapter, rating, status FROM user_manga_progress WHERE discord_id = ? AND manga_id = ?",
-                                (target_id, manga_id)
+                            # Use guild-aware function to get user progress
+                            progress_data = await get_user_manga_progress_guild_aware(
+                                target_id, manga_id, interaction.guild.id
                             )
-                            result = await cursor.fetchone()
-                            await cursor.close()
-
-                            if result:
-                                chapters_read = result[0]
-                                status = result[2] if result[2] else ("Not Started" if chapters_read == 0 else "In Progress")
+                            
+                            if progress_data:
+                                chapters_read = progress_data['current_chapter']
+                                status = progress_data['status'] if progress_data['status'] else ("Not Started" if chapters_read == 0 else "In Progress")
                             else:
                                 chapters_read = 0
                                 status = "Not Started"
@@ -398,20 +402,16 @@ class MangaChallenges(commands.Cog):
                         difficulty = await get_manga_difficulty(total_chapters, medium_type)
                         points = calculate_manga_points(total_chapters, ani_progress, status, difficulty, ani_repeat)
 
-                        # Update database
-                        await db.execute(
-                            """
-                            INSERT INTO user_manga_progress (discord_id, manga_id, title, current_chapter, status, points, started_at, updated_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
-                                title=excluded.title,
-                                current_chapter=excluded.current_chapter,
-                                status=excluded.status,
-                                points=excluded.points,
-                                started_at=excluded.started_at,
-                                updated_at=excluded.updated_at
-                            """,
-                            (self.target_id, manga_id, manga_title, ani_progress, status, points, ani_started_at, datetime.utcnow().isoformat())
+                        # Update database using guild-aware function
+                        await upsert_user_manga_progress_guild_aware(
+                            discord_id=self.target_id,
+                            guild_id=interaction.guild.id,
+                            manga_id=manga_id,
+                            title=manga_title,
+                            current_chapter=ani_progress,
+                            status=status,
+                            points=points,
+                            started_at=ani_started_at
                         )
 
                         # Update cache

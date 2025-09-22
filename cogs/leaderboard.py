@@ -9,7 +9,12 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
-from database import get_all_users, upsert_user_stats, DB_PATH
+from database import (
+    get_all_users, upsert_user_stats, DB_PATH,
+    # Guild-aware functions
+    get_guild_leaderboard_data, get_all_users_guild_aware,
+    upsert_user_stats_guild_aware
+)
 from helpers.media_helper import fetch_user_stats
 from config import GUILD_ID
 
@@ -993,6 +998,16 @@ class Leaderboard(commands.Cog):
         """
         logger.info(f"Leaderboard command invoked by {interaction.user} ({interaction.user.id}) for {medium.value}")
         
+        # Check if command is used in a guild
+        if not interaction.guild:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a server!",
+                ephemeral=True
+            )
+            return
+        
+        guild_id = interaction.guild.id
+        
         try:
             await interaction.response.defer()
             
@@ -1002,12 +1017,12 @@ class Leaderboard(commands.Cog):
             # Clean up any duplicate entries first
             await self.cleanup_duplicate_user_stats()
             
-            # Fetch and cache latest stats
-            logger.info(f"Fetching and caching stats for {chosen_medium} leaderboard")
-            await self.fetch_and_cache_stats()
+            # Fetch and cache latest stats for users in this guild
+            logger.info(f"Fetching and caching stats for {chosen_medium} leaderboard in guild {guild_id}")
+            await self.fetch_and_cache_stats_guild_aware(guild_id)
 
-            # Get leaderboard data
-            leaderboard_data = await self._get_leaderboard_data(chosen_medium)
+            # Get guild-specific leaderboard data
+            leaderboard_data = await self._get_leaderboard_data_guild_aware(chosen_medium, guild_id)
             
             if not leaderboard_data:
                 error_embed = discord.Embed(
@@ -1049,6 +1064,175 @@ class Leaderboard(commands.Cog):
                 await interaction.response.send_message(embed=error_embed, ephemeral=True)
             else:
                 await interaction.followup.send(embed=error_embed, ephemeral=True)
+
+
+    async def _get_leaderboard_data_guild_aware(self, medium: str, guild_id: int) -> List[Tuple]:
+        """Get guild-specific leaderboard data from database for specified medium."""
+        try:
+            logger.info(f"Getting {medium} leaderboard data for guild {guild_id}")
+            
+            # Use the new guild-aware leaderboard function
+            leaderboard_entries = await get_guild_leaderboard_data(guild_id, medium)
+            
+            if not leaderboard_entries:
+                logger.warning(f"No leaderboard entries found for {medium} in guild {guild_id}")
+                return []
+
+            leaderboard_data = []
+            
+            if medium == "combined":
+                # Combined leaderboard: calculate origin-weighted activity score
+                for entry in leaderboard_entries:
+                    username = entry['username']
+                    total_manga = entry['total_manga']
+                    total_chapters = entry['total_chapters'] 
+                    total_anime = entry['total_anime']
+                    total_episodes = entry['total_episodes']
+                    
+                    # Calculate origin-weighted activity score
+                    activity_score, breakdown = self._calculate_origin_weighted_score(
+                        total_manga, total_anime, total_chapters, total_episodes
+                    )
+                    
+                    if activity_score > 0:  # Only include users with activity
+                        # Store breakdown data for enhanced display
+                        leaderboard_data.append((
+                            username, total_manga, total_chapters, 
+                            total_anime, total_episodes, activity_score, breakdown
+                        ))
+                
+                # Sort by activity score in descending order
+                leaderboard_data.sort(key=lambda x: x[5], reverse=True)
+                
+            else:
+                # Regular medium leaderboard (manga or anime)
+                for entry in leaderboard_entries:
+                    username = entry['username']
+                    
+                    if medium == "manga":
+                        primary_count = entry['total_manga'] 
+                        secondary_count = entry['total_chapters']
+                    else:  # anime
+                        primary_count = entry['total_anime']
+                        secondary_count = entry['total_episodes']
+                    
+                    if primary_count > 0:  # Only include users with activity
+                        leaderboard_data.append((username, primary_count, secondary_count))
+                
+                # Sort by primary count, then secondary count
+                leaderboard_data.sort(key=lambda x: (x[1], x[2]), reverse=True)
+            
+            logger.info(f"✅ Generated {len(leaderboard_data)} entries for {medium} leaderboard in guild {guild_id}")
+            return leaderboard_data
+            
+        except Exception as e:
+            logger.error(f"Error getting guild leaderboard data for {medium} in guild {guild_id}: {e}", exc_info=True)
+            return []
+
+
+    async def fetch_and_cache_stats_guild_aware(self, guild_id: int):
+        """Fetch and cache AniList stats for all users in a specific guild."""
+        logger.info(f"Starting to fetch and cache stats for guild {guild_id}")
+        
+        try:
+            # Get all users in this guild
+            guild_users = await get_all_users_guild_aware(guild_id)
+            
+            if not guild_users:
+                logger.info(f"No users found in guild {guild_id}")
+                return
+            
+            logger.info(f"Found {len(guild_users)} users to process in guild {guild_id}")
+            
+            successful_updates = 0
+            failed_updates = 0
+            
+            for user_record in guild_users:
+                try:
+                    # Extract user info from record (id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at)
+                    discord_id = user_record[1]
+                    anilist_username = user_record[4] 
+                    
+                    if not anilist_username:
+                        logger.debug(f"User {discord_id} in guild {guild_id} has no AniList username, skipping")
+                        continue
+                    
+                    logger.info(f"Processing user {anilist_username} (Discord: {discord_id}) in guild {guild_id}")
+                    
+                    # Fetch stats from AniList API
+                    updated = await self._update_user_stats_guild_aware(anilist_username, discord_id, guild_id)
+                    
+                    if updated:
+                        successful_updates += 1
+                    else:
+                        failed_updates += 1
+                    
+                    # Small delay to avoid rate limiting
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing user {user_record}: {e}")
+                    failed_updates += 1
+            
+            logger.info(f"✅ Completed guild {guild_id} stats update: {successful_updates} successful, {failed_updates} failed")
+            
+        except Exception as e:
+            logger.error(f"Error in fetch_and_cache_stats_guild_aware for guild {guild_id}: {e}", exc_info=True)
+
+
+    async def _update_user_stats_guild_aware(self, username: str, discord_id: int, guild_id: int) -> bool:
+        """Update user stats for a specific guild context."""
+        try:
+            # Fetch user stats from AniList
+            user_data = await fetch_user_stats(username)
+            if not user_data:
+                logger.warning(f"No AniList data found for {username}")
+                return False
+            
+            stats_anime = user_data["statistics"]["anime"]
+            stats_manga = user_data["statistics"]["manga"]
+            
+            total_manga = stats_manga.get("count", 0)
+            total_anime = stats_anime.get("count", 0)
+            
+            # Calculate weighted averages from score distribution
+            manga_avg = self._calc_weighted_avg(stats_manga.get("scores", []))
+            anime_avg = self._calc_weighted_avg(stats_anime.get("scores", []))
+            
+            # Update database with guild context
+            await upsert_user_stats_guild_aware(
+                discord_id=discord_id,
+                guild_id=guild_id,
+                username=user_data["name"],
+                total_manga=total_manga,
+                total_anime=total_anime,
+                avg_manga_score=manga_avg,
+                avg_anime_score=anime_avg
+            )
+            
+            logger.info(f"Successfully updated stats for {username} (Guild: {guild_id}): {total_manga} manga, {total_anime} anime")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error updating stats for {username} in guild {guild_id}: {e}")
+            return False
+
+
+    def _calc_weighted_avg(self, scores: List[Dict]) -> float:
+        """Calculate weighted average from AniList score distribution."""
+        if not scores:
+            return 0.0
+        
+        total_weighted = 0
+        total_count = 0
+        
+        for score_entry in scores:
+            score = score_entry.get("score", 0)
+            count = score_entry.get("count", 0)
+            total_weighted += score * count
+            total_count += count
+        
+        return round(total_weighted / total_count, 2) if total_count > 0 else 0.0
 
 
 async def setup(bot: commands.Bot):

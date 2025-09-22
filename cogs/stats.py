@@ -6,7 +6,11 @@ import random
 import logging
 import aiohttp
 
-from database import get_user, save_user, upsert_user_stats
+from database import (
+    get_user, save_user, upsert_user_stats,
+    # Guild-aware functions
+    get_user_guild_aware, save_user_guild_aware, upsert_user_stats_guild_aware
+)
 from config import GUILD_ID
 
 # -----------------------------
@@ -28,11 +32,13 @@ class Stats(commands.Cog):
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(name="stats", description="Show AniList stats if you are registered")
     async def stats(self, interaction: discord.Interaction):
-        logger.info(f"Fetching stats for Discord user: {interaction.user.id}")
-        user_record = await get_user(interaction.user.id)
+        logger.info(f"Fetching stats for Discord user: {interaction.user.id} in guild: {interaction.guild.id}")
+        
+        # Use guild-aware function to get user
+        user_record = await get_user_guild_aware(interaction.user.id, interaction.guild.id)
         if not user_record:
             view = discord.ui.View()
-            view.add_item(RegisterButton(interaction.user.id))
+            view.add_item(RegisterButton(interaction.user.id, interaction.guild.id))
             await interaction.response.send_message(
                 "❌ You are not registered with AniList.\nClick below to register:",
                 view=view,
@@ -40,7 +46,7 @@ class Stats(commands.Cog):
             )
             return
 
-        username = user_record[2]  # DB schema: (id, discord_id, username)
+        username = user_record[4]  # Guild-aware schema: (id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at)
         await interaction.response.defer(ephemeral=False)
         await self.send_stats(interaction, username)
 
@@ -183,24 +189,28 @@ class Stats(commands.Cog):
 # Registration Button and Modal
 # -----------------------------
 class RegisterButton(discord.ui.Button):
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, guild_id: int):
         super().__init__(label="Register AniList", style=discord.ButtonStyle.primary)
         self.user_id = user_id
+        self.guild_id = guild_id
 
     async def callback(self, interaction: discord.Interaction):
-        await interaction.response.send_modal(AniListRegisterModal(self.user_id))
+        await interaction.response.send_modal(AniListRegisterModal(self.user_id, self.guild_id))
 
 
 class AniListRegisterModal(discord.ui.Modal, title="Register AniList"):
     username = discord.ui.TextInput(label="AniList Username", placeholder="e.g. yourusername", required=True)
 
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, guild_id: int):
         super().__init__()
         self.user_id = user_id
+        self.guild_id = guild_id
 
     async def on_submit(self, interaction: discord.Interaction):
         anilist_name = str(self.username.value).strip()
-        await save_user(self.user_id, anilist_name)
+        
+        # Use guild-aware function to save user
+        await save_user_guild_aware(self.user_id, self.guild_id, anilist_name)
 
         # Fetch stats immediately after registering
         cog: Stats = interaction.client.get_cog("Stats")

@@ -6,7 +6,12 @@ import aiohttp
 import logging
 from typing import Optional, List, Dict, Tuple
 
-from database import get_user, save_user, upsert_user_stats
+from database import (
+    get_user, save_user, upsert_user_stats,
+    # New guild-aware functions
+    get_user_guild_aware, get_user_achievements_guild_aware,
+    save_user_guild_aware, upsert_user_stats_guild_aware
+)
 from config import GUILD_ID
 
 ANILIST_API_URL = "https://graphql.anilist.co"
@@ -556,14 +561,23 @@ class Profile(commands.Cog):
     @app_commands.command(name="profile", description="View your AniList profile (with stats & achievements) or another user's.")
     @app_commands.describe(user="Optional: Discord user whose profile to view")
     async def profile(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
+        # Ensure command is used in a guild
+        if not interaction.guild:
+            await interaction.response.send_message(
+                "❌ This command can only be used in a server!", 
+                ephemeral=True
+            )
+            return
+            
         target = user or interaction.user
+        guild_id = interaction.guild.id
 
-        # fetch AniList username from DB
-        record = await get_user(target.id)  # schema: (id, discord_id, username)
+        # fetch AniList username from DB for this guild
+        record = await get_user_guild_aware(target.id, guild_id)  # schema: (id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at)
         if not record:
             # Not registered → present registration
             view = discord.ui.View()
-            view.add_item(RegisterButton(target.id))
+            view.add_item(RegisterButton(target.id, guild_id))
             await interaction.response.send_message(
                 f"❌ {target.mention} hasn’t registered an AniList username.\nClick below to register:",
                 view=view,
@@ -571,7 +585,7 @@ class Profile(commands.Cog):
             )
             return
 
-        username = record[2]
+        username = record[4]  # anilist_username from guild-aware schema
         await interaction.response.defer(ephemeral=False)
 
         data = await fetch_user_stats(username)
@@ -592,8 +606,9 @@ class Profile(commands.Cog):
         manga_avg = calc_weighted_avg(stats_manga.get("scores", []))
 
         # Persist headline stats
-        await upsert_user_stats(
+        await upsert_user_stats_guild_aware(
             discord_id=target.id,
+            guild_id=guild_id,
             username=user_data["name"],
             total_manga=stats_manga.get("count", 0),
             total_anime=stats_anime.get("count", 0),
@@ -1137,28 +1152,30 @@ class Pager(discord.ui.View):
 # Registration UI
 # -----------------------------
 class RegisterButton(discord.ui.Button):
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, guild_id: int):
         super().__init__(label="Register AniList", style=discord.ButtonStyle.primary)
         self.user_id = user_id
+        self.guild_id = guild_id
 
     async def callback(self, interaction: discord.Interaction):
         # Only allow the intended user to register themselves
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("You can’t register for someone else.", ephemeral=True)
             return
-        await interaction.response.send_modal(AniListRegisterModal(self.user_id))
+        await interaction.response.send_modal(AniListRegisterModal(self.user_id, self.guild_id))
 
 
 class AniListRegisterModal(discord.ui.Modal, title="Register AniList"):
     username = discord.ui.TextInput(label="AniList Username", placeholder="e.g. yourusername", required=True)
 
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, guild_id: int):
         super().__init__()
         self.user_id = user_id
+        self.guild_id = guild_id
 
     async def on_submit(self, interaction: discord.Interaction):
         anilist_name = str(self.username.value).strip()
-        await save_user(self.user_id, anilist_name)
+        await save_user_guild_aware(self.user_id, self.guild_id, anilist_name)
 
         # After registering, immediately show the new profile
         cog: Profile = interaction.client.get_cog("Profile")
