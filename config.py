@@ -4,11 +4,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = int(os.getenv("GUILD_ID", 0))
-BOT_ID = int(os.getenv("BOT_ID", 0))
-CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
+GUILD_ID = int(os.getenv("GUILD_ID"))
+BOT_ID = int(os.getenv("BOT_ID"))
+CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
-DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
+ADMIN_DISCORD_ID = int(os.getenv("ADMIN_DISCORD_ID"))
+
+# Database path - Railway compatible
+DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "database.db"))
 CHALLENGE_ROLE_IDS = {
     # challenge_id: {threshold: role_id}
     1: {  # Challenge ID 1
