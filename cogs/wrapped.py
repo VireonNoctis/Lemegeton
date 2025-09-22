@@ -109,16 +109,15 @@ class WrappedView(discord.ui.View):
     def _overview_embed(self) -> discord.Embed:
         """Create overview statistics embed with enhanced styling"""
         stats = self.user_data.get("stats", {})
-        period_text = f"{self.period.title()}" if self.period != "all_time" else "All Time"
         
         # Use a dark theme color similar to AniList
         embed = discord.Embed(
-            title=f"🎊 ANILIST WRAPPED {period_text.upper()}",
+            title=f"🎊 ANILIST WRAPPED - ALL TIME",
             color=0x2B2D42  # Dark blue-gray like the image
         )
         
         # Add user info in description with better formatting
-        embed.description = f"## **{self.username}**\n*Your anime & manga journey*"
+        embed.description = f"## **{self.username}**\n*Your complete anime & manga journey*\n\n⚠️ *Note: AniList only provides all-time statistics*"
         
         # Main stats with bigger numbers and better formatting
         total_anime = stats.get("anime", {}).get("count", 0)
@@ -180,7 +179,7 @@ class WrappedView(discord.ui.View):
             )
         
         embed.set_footer(
-            text=f"Page 1/{self.total_pages} • {self.username}'s {period_text} Wrapped",
+            text=f"Page 1/{self.total_pages} • {self.username}'s All-Time Wrapped",
             icon_url="https://anilist.co/img/icons/android-chrome-512x512.png"
         )
         return embed
@@ -188,14 +187,13 @@ class WrappedView(discord.ui.View):
     def _anime_embed(self) -> discord.Embed:
         """Create anime-specific statistics embed with enhanced styling"""
         anime_stats = self.user_data.get("stats", {}).get("anime", {})
-        period_text = f"{self.period.title()}" if self.period != "all_time" else "All Time"
         
         embed = discord.Embed(
-            title=f"🎬 ANIME WRAPPED {period_text.upper()}",
+            title=f"🎬 ANIME WRAPPED - ALL TIME",
             color=0x02A9FF  # Bright blue for anime
         )
         
-        embed.description = f"## **{self.username}'s Anime Journey**\n*Your watching statistics*"
+        embed.description = f"## **{self.username}'s Anime Journey**\n*Your complete watching statistics*"
         
         # Status breakdown with visual bars
         status_counts = anime_stats.get("statuses", {})
@@ -293,14 +291,13 @@ class WrappedView(discord.ui.View):
     def _manga_embed(self) -> discord.Embed:
         """Create manga-specific statistics embed with enhanced styling"""
         manga_stats = self.user_data.get("stats", {}).get("manga", {})
-        period_text = f"{self.period.title()}" if self.period != "all_time" else "All Time"
         
         embed = discord.Embed(
-            title=f"📖 MANGA WRAPPED {period_text.upper()}",
+            title=f"📖 MANGA WRAPPED - ALL TIME",
             color=0xFF6B96  # Pink for manga
         )
         
-        embed.description = f"## **{self.username}'s Manga Journey**\n*Your reading statistics*"
+        embed.description = f"## **{self.username}'s Manga Journey**\n*Your complete reading statistics*"
         
         # Status breakdown with visual formatting
         status_counts = manga_stats.get("statuses", {})
@@ -398,10 +395,9 @@ class WrappedView(discord.ui.View):
     
     def _achievements_embed(self) -> discord.Embed:
         """Create achievements and milestones embed with enhanced styling"""
-        period_text = f"{self.period.title()}" if self.period != "all_time" else "All Time"
         
         embed = discord.Embed(
-            title=f"🏆 ACHIEVEMENTS {period_text.upper()}",
+            title=f"🏆 ACHIEVEMENTS - ALL TIME",
             color=0xFFD700  # Gold color
         )
         
@@ -570,14 +566,13 @@ class WrappedView(discord.ui.View):
     
     def _year_review_embed(self) -> discord.Embed:
         """Create year in review embed with enhanced styling"""
-        period_text = f"{self.period.title()}" if self.period != "all_time" else "All Time"
         
         embed = discord.Embed(
-            title=f"📅 {period_text.upper()} YEAR IN REVIEW",
+            title=f"📅 ALL-TIME JOURNEY REVIEW",
             color=0x9146FF  # Purple theme for year review
         )
         
-        embed.description = f"## **{self.username}'s Journey**\n*A look back at your amazing year*"
+        embed.description = f"## **{self.username}'s Journey**\n*A look back at your complete anime & manga adventure*"
         
         stats = self.user_data.get("stats", {})
         
@@ -707,7 +702,7 @@ class WrappedView(discord.ui.View):
             )
         
         embed.set_footer(
-            text=f"Page 5/{self.total_pages} • What a year it's been!",
+            text=f"Page 5/{self.total_pages} • Your complete journey so far!",
             icon_url="https://anilist.co/img/icons/android-chrome-512x512.png"
         )
         return embed
@@ -820,19 +815,15 @@ class Wrapped(commands.Cog):
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="wrapped",
-        description="🎊 Get your anime & manga Wrapped - yearly or monthly statistics!"
+        description="🎊 Get your anime & manga Wrapped - comprehensive all-time statistics from AniList!"
     )
     @app_commands.describe(
-        period="Choose the time period for your wrapped statistics",
+        period="AniList only provides all-time statistics (API limitation)",
         user="View another user's wrapped (if they're registered)"
     )
     @app_commands.choices(
         period=[
-            app_commands.Choice(name="2024 📅", value="2024"),
-            app_commands.Choice(name="2023 📅", value="2023"),
-            app_commands.Choice(name="This Month 📆", value="current_month"),
-            app_commands.Choice(name="Last Month 📆", value="last_month"),
-            app_commands.Choice(name="All Time 🌟", value="all_time")
+            app_commands.Choice(name="All Time 🌟 (AniList Limitation)", value="all_time")
         ]
     )
     async def wrapped(
