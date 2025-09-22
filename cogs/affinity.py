@@ -6,6 +6,7 @@ import aiosqlite
 import asyncio
 import logging
 import os
+import math
 from pathlib import Path
 from config import GUILD_ID
 
@@ -114,29 +115,110 @@ class Affinity(commands.Cog):
         return None
 
     # ---------------------------------------------------------
-    # Calculate affinity between two users
+    # Advanced Affinity Calculation System
     # ---------------------------------------------------------
-    def calculate_affinity(self, user1: dict, user2: dict) -> float:
-        """Calculate comprehensive affinity score between two users."""
-        logger.debug(f"Calculating affinity between {user1.get('name')} and {user2.get('name')}")
+    def calculate_affinity(self, user1: dict, user2: dict, return_breakdown=False) -> float:
+        """Calculate ultra-comprehensive affinity score using advanced weighting systems."""
+        logger.debug(f"Calculating advanced affinity between {user1.get('name')} and {user2.get('name')}")
         
-        def weighted_overlap(set1, set2, weight=1.0):
-            """Calculate weighted overlap between two sets."""
-            shared = set1 & set2
-            if not shared:
+        # ===== UTILITY FUNCTIONS =====
+        def weighted_jaccard(set1, set2, rarity_weights=None):
+            """Advanced Jaccard similarity with rarity weighting."""
+            if not set1 or not set2:
                 return 0.0
-                
-            # Simplified scoring without complex rarity calculations
-            overlap_ratio = len(shared) / max(len(set1 | set2), 1)
-            return weight * overlap_ratio
+            
+            intersection = set1 & set2
+            union = set1 | set2
+            
+            if not intersection:
+                return 0.0
+            
+            if rarity_weights:
+                # Weight by inverse rarity (rare items count more)
+                intersection_weight = sum(rarity_weights.get(item, 1.0) for item in intersection)
+                union_weight = sum(rarity_weights.get(item, 1.0) for item in union)
+                return intersection_weight / max(union_weight, 1)
+            
+            return len(intersection) / len(union)
 
-        def similarity_score(a, b):
-            """Calculate similarity between two numeric values."""
+        def gaussian_similarity(a, b, sigma=1.0):
+            """Gaussian similarity function for numeric values."""
             if a == 0 and b == 0:
                 return 1.0
-            return 1 - abs(a - b) / max(abs(a), abs(b), 1)
+            diff = abs(a - b)
+            max_val = max(abs(a), abs(b), 1)
+            normalized_diff = diff / max_val
+            return math.exp(-(normalized_diff ** 2) / (2 * sigma ** 2))
 
-        # Extract favorites
+        def log_similarity(a, b):
+            """Logarithmic similarity for highly variable numeric data."""
+            if a == 0 and b == 0:
+                return 1.0
+            log_a = math.log(max(a, 1))
+            log_b = math.log(max(b, 1))
+            return 1 / (1 + abs(log_a - log_b))
+
+        def experience_weight(count):
+            """Weight based on user experience level."""
+            if count == 0:
+                return 0.1
+            elif count < 10:
+                return 0.3
+            elif count < 50:
+                return 0.6
+            elif count < 100:
+                return 0.8
+            elif count < 500:
+                return 1.0
+            else:
+                return 1.2  # Bonus for very experienced users
+
+        def diversity_score(genres_list, formats_list):
+            """Calculate diversity bonus based on genre/format variety."""
+            total_items = len(genres_list) + len(formats_list)
+            if total_items == 0:
+                return 0.0
+            unique_genres = len(set(g.get("genre", "") for g in genres_list))
+            unique_formats = len(set(f.get("format", "") for f in formats_list))
+            return (unique_genres + unique_formats) / max(total_items, 1) * 0.5
+
+        def scoring_pattern_similarity(stats1, stats2):
+            """Analyze scoring patterns and tendencies."""
+            score1 = stats1.get("meanScore", 0)
+            score2 = stats2.get("meanScore", 0)
+            
+            # Classify scoring tendencies
+            def score_tendency(score):
+                if score == 0:
+                    return "unrated"
+                elif score < 4:
+                    return "harsh"
+                elif score < 6:
+                    return "critical"
+                elif score < 7.5:
+                    return "moderate"
+                elif score < 8.5:
+                    return "generous"
+                else:
+                    return "very_generous"
+            
+            tendency1 = score_tendency(score1)
+            tendency2 = score_tendency(score2)
+            
+            # Award points for similar scoring patterns
+            if tendency1 == tendency2:
+                return 1.0
+            elif abs(score1 - score2) <= 0.5:
+                return 0.8
+            elif abs(score1 - score2) <= 1.0:
+                return 0.6
+            elif abs(score1 - score2) <= 1.5:
+                return 0.4
+            else:
+                return 0.2
+
+        # ===== DATA EXTRACTION =====
+        # Extract favorites with enhanced structure
         fav_anime1 = {a["id"] for a in user1.get("favourites", {}).get("anime", {}).get("nodes", [])}
         fav_anime2 = {a["id"] for a in user2.get("favourites", {}).get("anime", {}).get("nodes", [])}
         fav_manga1 = {m["id"] for m in user1.get("favourites", {}).get("manga", {}).get("nodes", [])}
@@ -144,90 +226,287 @@ class Affinity(commands.Cog):
         fav_char1 = {c["id"] for c in user1.get("favourites", {}).get("characters", {}).get("nodes", [])}
         fav_char2 = {c["id"] for c in user2.get("favourites", {}).get("characters", {}).get("nodes", [])}
 
-        # Calculate favorite overlaps
-        fav_score = (
-            weighted_overlap(fav_anime1, fav_anime2, 1.5) +
-            weighted_overlap(fav_manga1, fav_manga2, 1.2) +
-            weighted_overlap(fav_char1, fav_char2, 1.0)
-        )
-
-        # Extract statistics
+        # Extract comprehensive statistics
         anime_stats1 = user1.get("statistics", {}).get("anime", {})
         anime_stats2 = user2.get("statistics", {}).get("anime", {})
         manga_stats1 = user1.get("statistics", {}).get("manga", {})
         manga_stats2 = user2.get("statistics", {}).get("manga", {})
 
-        # Calculate statistical similarities
-        anime_count_score = similarity_score(anime_stats1.get("count", 0), anime_stats2.get("count", 0))
-        anime_score_score = similarity_score(anime_stats1.get("meanScore", 0), anime_stats2.get("meanScore", 0))
-        anime_episodes_score = similarity_score(anime_stats1.get("episodesWatched", 0), anime_stats2.get("episodesWatched", 0))
+        # ===== SCORING COMPONENTS =====
+        
+        # 1. FAVORITES AFFINITY (25% weight)
+        anime_fav_score = weighted_jaccard(fav_anime1, fav_anime2) * 2.0  # High weight for anime favorites
+        manga_fav_score = weighted_jaccard(fav_manga1, fav_manga2) * 1.8  # High weight for manga favorites
+        char_fav_score = weighted_jaccard(fav_char1, fav_char2) * 1.5   # Character favorites
+        
+        # Bonus for having any shared favorites at all
+        shared_favorites_bonus = 0
+        if fav_anime1 & fav_anime2 or fav_manga1 & fav_manga2 or fav_char1 & fav_char2:
+            shared_favorites_bonus = 0.3
+        
+        favorites_score = (anime_fav_score + manga_fav_score + char_fav_score + shared_favorites_bonus) * 6.25
 
-        manga_count_score = similarity_score(manga_stats1.get("count", 0), manga_stats2.get("count", 0))
-        manga_score_score = similarity_score(manga_stats1.get("meanScore", 0), manga_stats2.get("meanScore", 0))
-        manga_chapters_score = similarity_score(manga_stats1.get("chaptersRead", 0), manga_stats2.get("chaptersRead", 0))
+        # 2. CONSUMPTION PATTERNS (20% weight)
+        anime_count1 = anime_stats1.get("count", 0)
+        anime_count2 = anime_stats2.get("count", 0)
+        manga_count1 = manga_stats1.get("count", 0)  
+        manga_count2 = manga_stats2.get("count", 0)
+        
+        # Experience-weighted consumption similarity
+        anime_exp_weight1 = experience_weight(anime_count1)
+        anime_exp_weight2 = experience_weight(anime_count2)
+        manga_exp_weight1 = experience_weight(manga_count1)
+        manga_exp_weight2 = experience_weight(manga_count2)
+        
+        avg_anime_weight = (anime_exp_weight1 + anime_exp_weight2) / 2
+        avg_manga_weight = (manga_exp_weight1 + manga_exp_weight2) / 2
+        
+        anime_count_sim = gaussian_similarity(anime_count1, anime_count2, sigma=0.8) * avg_anime_weight
+        manga_count_sim = gaussian_similarity(manga_count1, manga_count2, sigma=0.8) * avg_manga_weight
+        
+        # Episode/Chapter consumption patterns
+        episodes1 = anime_stats1.get("episodesWatched", 0)
+        episodes2 = anime_stats2.get("episodesWatched", 0)
+        chapters1 = manga_stats1.get("chaptersRead", 0)
+        chapters2 = manga_stats2.get("chaptersRead", 0)
+        
+        episode_sim = log_similarity(episodes1, episodes2)
+        chapter_sim = log_similarity(chapters1, chapters2)
+        
+        consumption_score = (anime_count_sim * 0.3 + manga_count_sim * 0.25 + 
+                           episode_sim * 0.25 + chapter_sim * 0.2) * 20
 
-        # Genre and format overlap
-        genres1 = {g["genre"] for g in anime_stats1.get("genres", [])} | {g["genre"] for g in manga_stats1.get("genres", [])}
-        genres2 = {g["genre"] for g in anime_stats2.get("genres", [])} | {g["genre"] for g in manga_stats2.get("genres", [])}
-        genre_score = len(genres1 & genres2) / max(len(genres1 | genres2), 1)
+        # 3. SCORING COMPATIBILITY (15% weight)
+        anime_scoring_sim = scoring_pattern_similarity(anime_stats1, anime_stats2)
+        manga_scoring_sim = scoring_pattern_similarity(manga_stats1, manga_stats2)
+        
+        # Additional scoring analysis
+        anime_score_sim = gaussian_similarity(anime_stats1.get("meanScore", 0), 
+                                            anime_stats2.get("meanScore", 0), sigma=0.6)
+        manga_score_sim = gaussian_similarity(manga_stats1.get("meanScore", 0), 
+                                            manga_stats2.get("meanScore", 0), sigma=0.6)
+        
+        scoring_score = (anime_scoring_sim * 0.4 + manga_scoring_sim * 0.35 + 
+                        anime_score_sim * 0.15 + manga_score_sim * 0.1) * 15
 
-        formats1 = {f["format"] for f in anime_stats1.get("formats", [])} | {f["format"] for f in manga_stats1.get("formats", [])}
-        formats2 = {f["format"] for f in anime_stats2.get("formats", [])} | {f["format"] for f in manga_stats2.get("formats", [])}
-        format_score = len(formats1 & formats2) / max(len(formats1 | formats2), 1)
+        # 4. GENRE AFFINITY WITH WEIGHTED PREFERENCES (15% weight)
+        anime_genres1 = anime_stats1.get("genres", [])
+        anime_genres2 = anime_stats2.get("genres", [])
+        manga_genres1 = manga_stats1.get("genres", [])
+        manga_genres2 = manga_stats2.get("genres", [])
+        
+        # Create weighted genre sets (weight by count)
+        def create_weighted_genre_dict(genre_list):
+            return {g["genre"]: g["count"] for g in genre_list if g.get("genre") and g.get("count", 0) > 0}
+        
+        anime_genre_weights1 = create_weighted_genre_dict(anime_genres1)
+        anime_genre_weights2 = create_weighted_genre_dict(anime_genres2)
+        manga_genre_weights1 = create_weighted_genre_dict(manga_genres1)
+        manga_genre_weights2 = create_weighted_genre_dict(manga_genres2)
+        
+        def weighted_genre_similarity(weights1, weights2):
+            if not weights1 or not weights2:
+                return 0.0
+            
+            common_genres = set(weights1.keys()) & set(weights2.keys())
+            if not common_genres:
+                return 0.0
+            
+            # Calculate weighted cosine similarity
+            dot_product = sum(weights1[g] * weights2[g] for g in common_genres)
+            norm1 = math.sqrt(sum(w**2 for w in weights1.values()))
+            norm2 = math.sqrt(sum(w**2 for w in weights2.values()))
+            
+            if norm1 == 0 or norm2 == 0:
+                return 0.0
+                
+            return dot_product / (norm1 * norm2)
+        
+        anime_genre_sim = weighted_genre_similarity(anime_genre_weights1, anime_genre_weights2)
+        manga_genre_sim = weighted_genre_similarity(manga_genre_weights1, manga_genre_weights2)
+        
+        # Diversity bonus
+        diversity1 = diversity_score(anime_genres1 + manga_genres1, [])
+        diversity2 = diversity_score(anime_genres2 + manga_genres2, [])
+        diversity_bonus = gaussian_similarity(diversity1, diversity2, sigma=0.5) * 0.3
+        
+        genre_score = (anime_genre_sim * 0.5 + manga_genre_sim * 0.4 + diversity_bonus * 0.1) * 15
 
-        # Final weighted calculation
-        affinity_score = round(
-            fav_score * 35 +
-            (anime_count_score + anime_score_score + anime_episodes_score) / 3 * 15 +
-            (manga_count_score + manga_score_score + manga_chapters_score) / 3 * 15 +
-            genre_score * 10 +
-            format_score * 10 +
-            0.5 * 15,  # Base compatibility score
-            2
+        # 5. FORMAT PREFERENCES (10% weight)
+        anime_formats1 = anime_stats1.get("formats", [])
+        anime_formats2 = anime_stats2.get("formats", [])
+        manga_formats1 = manga_stats1.get("formats", [])
+        manga_formats2 = manga_stats2.get("formats", [])
+        
+        anime_format_weights1 = {f["format"]: f["count"] for f in anime_formats1 if f.get("format") and f.get("count", 0) > 0}
+        anime_format_weights2 = {f["format"]: f["count"] for f in anime_formats2 if f.get("format") and f.get("count", 0) > 0}
+        manga_format_weights1 = {f["format"]: f["count"] for f in manga_formats1 if f.get("format") and f.get("count", 0) > 0}
+        manga_format_weights2 = {f["format"]: f["count"] for f in manga_formats2 if f.get("format") and f.get("count", 0) > 0}
+        
+        anime_format_sim = weighted_genre_similarity(anime_format_weights1, anime_format_weights2)
+        manga_format_sim = weighted_genre_similarity(manga_format_weights1, manga_format_weights2)
+        
+        format_score = (anime_format_sim * 0.6 + manga_format_sim * 0.4) * 10
+
+        # 6. ACTIVITY LEVEL COMPATIBILITY (8% weight)
+        total_anime1 = anime_count1 + episodes1 / 12  # Normalize episodes to "series equivalent"
+        total_anime2 = anime_count2 + episodes2 / 12
+        total_manga1 = manga_count1 + chapters1 / 50   # Normalize chapters to "series equivalent"  
+        total_manga2 = manga_count2 + chapters2 / 50
+        
+        total_activity1 = total_anime1 + total_manga1
+        total_activity2 = total_anime2 + total_manga2
+        
+        activity_sim = gaussian_similarity(total_activity1, total_activity2, sigma=1.0)
+        
+        # Bonus for both being active users
+        if total_activity1 > 10 and total_activity2 > 10:
+            activity_sim *= 1.2
+            
+        activity_score = activity_sim * 8
+
+        # 7. BALANCE FACTOR (7% weight) - Anime vs Manga preference balance
+        def media_balance(anime_count, manga_count):
+            total = anime_count + manga_count
+            if total == 0:
+                return 0.5  # Neutral
+            return anime_count / total
+        
+        balance1 = media_balance(anime_count1, manga_count1)
+        balance2 = media_balance(anime_count2, manga_count2)
+        
+        balance_sim = gaussian_similarity(balance1, balance2, sigma=0.4)
+        balance_score = balance_sim * 7
+
+        # ===== FINAL CALCULATION =====
+        raw_score = (
+            favorites_score +      # 25%
+            consumption_score +    # 20%
+            scoring_score +        # 15%
+            genre_score +          # 15%
+            format_score +         # 10%
+            activity_score +       # 8%
+            balance_score          # 7%
         )
-
-        final_score = min(affinity_score, 100.0)
-        logger.debug(f"Affinity calculated: {final_score}%")
-        return final_score
+        
+        # Apply experience multiplier (bonus for comparing experienced users)
+        min_experience = min(avg_anime_weight, avg_manga_weight)
+        experience_multiplier = 0.9 + (min_experience * 0.2)  # 0.9 to 1.1 multiplier
+        
+        # Apply completion bonus (users who complete series vs droppers)
+        # This would need additional data, so we'll use a placeholder
+        completion_bonus = 1.0
+        
+        final_score = min(raw_score * experience_multiplier * completion_bonus, 100.0)
+        
+        logger.debug(f"Advanced affinity breakdown - Favorites: {favorites_score:.2f}, "
+                    f"Consumption: {consumption_score:.2f}, Scoring: {scoring_score:.2f}, "
+                    f"Genres: {genre_score:.2f}, Formats: {format_score:.2f}, "
+                    f"Activity: {activity_score:.2f}, Balance: {balance_score:.2f}")
+        logger.debug(f"Final affinity calculated: {final_score:.2f}%")
+        
+        if return_breakdown:
+            breakdown = {
+                'favorites': favorites_score,
+                'consumption': consumption_score,
+                'scoring': scoring_score,
+                'genres': genre_score,
+                'formats': format_score,
+                'activity': activity_score,
+                'balance': balance_score
+            }
+            return round(final_score, 2), breakdown
+        
+        return round(final_score, 2)
 
     # ---------------------------------------------------------
-    # Paginated Embed View
+    # Enhanced Paginated Embed View with Detailed Breakdowns
     # ---------------------------------------------------------
     class AffinityView(discord.ui.View):
-        def __init__(self, entries, user_name):
+        def __init__(self, entries, user_name, detailed_data=None):
             super().__init__(timeout=300)  # 5 minute timeout
             self.entries = entries
             self.page = 0
             self.user_name = user_name
-            self.per_page = 10
-            logger.debug(f"AffinityView created with {len(entries)} entries for {user_name}")
+            self.per_page = 8  # Reduced to allow for more detail
+            self.detailed_data = detailed_data or {}
+            self.show_details = False
+            logger.debug(f"Enhanced AffinityView created with {len(entries)} entries for {user_name}")
 
         def get_embed(self):
-            """Generate the current page embed."""
+            """Generate the current page embed with enhanced information."""
             start = self.page * self.per_page
             end = start + self.per_page
             current_entries = self.entries[start:end]
             total_pages = (len(self.entries) - 1) // self.per_page + 1
 
-            description = "\n".join(
-                f"{i}. `{score}%` — <@{discord_id}>"
-                for i, (discord_id, score) in enumerate(current_entries, start=start + 1)
-            )
+            if self.show_details:
+                # Detailed view with score breakdowns
+                description_parts = []
+                for i, (discord_id, score) in enumerate(current_entries, start=start + 1):
+                    base_info = f"{i}. `{score}%` — <@{discord_id}>"
+                    
+                    # Add breakdown if available
+                    if discord_id in self.detailed_data:
+                        breakdown = self.detailed_data[discord_id]
+                        detail = (f"\n   └ *Fav: {breakdown.get('favorites', 0):.1f}% | "
+                                f"Usage: {breakdown.get('consumption', 0):.1f}% | "
+                                f"Score: {breakdown.get('scoring', 0):.1f}% | "
+                                f"Genre: {breakdown.get('genres', 0):.1f}%*")
+                        base_info += detail
+                    
+                    description_parts.append(base_info)
+                
+                description = "\n".join(description_parts)
+                embed_title = f"💞 Detailed Affinity Ranking for {self.user_name}"
+            else:
+                # Standard compact view
+                description = "\n".join(
+                    f"{i}. `{score}%` — <@{discord_id}>"
+                    for i, (discord_id, score) in enumerate(current_entries, start=start + 1)
+                )
+                embed_title = f"💞 Affinity Ranking for {self.user_name}"
 
             if not description:
                 description = "No users found."
 
+            # Color coding based on average affinity
+            if current_entries:
+                avg_score = sum(score for _, score in current_entries) / len(current_entries)
+                if avg_score >= 80:
+                    color = discord.Color.gold()
+                elif avg_score >= 60:
+                    color = discord.Color.green()
+                elif avg_score >= 40:
+                    color = discord.Color.orange()
+                else:
+                    color = discord.Color.red()
+            else:
+                color = discord.Color.blurple()
+
             embed = discord.Embed(
-                title=f"💞 Affinity Ranking for {self.user_name}",
+                title=embed_title,
                 description=description,
-                color=discord.Color.blurple()
+                color=color
             )
-            embed.set_footer(text=f"Page {self.page + 1}/{total_pages} • {len(self.entries)} total results")
+            
+            # Enhanced footer with statistics
+            if self.entries:
+                highest_score = max(score for _, score in self.entries)
+                avg_all_score = sum(score for _, score in self.entries) / len(self.entries)
+                footer_text = (f"Page {self.page + 1}/{total_pages} • {len(self.entries)} total results\n"
+                             f"Highest: {highest_score}% • Average: {avg_all_score:.1f}%")
+                if self.show_details:
+                    footer_text += " • Showing detailed breakdown"
+            else:
+                footer_text = f"Page {self.page + 1}/{total_pages} • No results"
+                
+            embed.set_footer(text=footer_text)
             return embed
 
         async def on_timeout(self):
             """Handle view timeout."""
-            logger.info(f"AffinityView timed out for {self.user_name}")
+            logger.info(f"Enhanced AffinityView timed out for {self.user_name}")
             # Disable all buttons
             for item in self.children:
                 item.disabled = True
@@ -252,6 +531,21 @@ class Affinity(commands.Cog):
                 await interaction.response.edit_message(embed=self.get_embed(), view=self)
             else:
                 await interaction.response.defer()
+
+        @discord.ui.button(label="📊 Toggle Details", style=discord.ButtonStyle.secondary)
+        async def toggle_details(self, interaction: discord.Interaction, button: discord.ui.Button):
+            """Toggle between standard and detailed view."""
+            self.show_details = not self.show_details
+            logger.debug(f"AffinityView: Toggled details to {self.show_details} for {self.user_name}")
+            await interaction.response.edit_message(embed=self.get_embed(), view=self)
+
+        @discord.ui.button(label="🔄 Refresh", style=discord.ButtonStyle.green)
+        async def refresh_data(self, interaction: discord.Interaction, button: discord.ui.Button):
+            """Refresh affinity calculations."""
+            await interaction.response.send_message(
+                "🔄 Use `/affinity` command again to refresh with latest data.", 
+                ephemeral=True
+            )
 
     # ---------------------------------------------------------
     # Slash Command: /affinity
@@ -316,18 +610,20 @@ class Affinity(commands.Cog):
                 )
                 return
 
-            # Calculate affinities
-            logger.info(f"Starting affinity calculations for {anilist_username}")
+            # Calculate affinities with detailed breakdowns
+            logger.info(f"Starting advanced affinity calculations for {anilist_username}")
             results = []
+            detailed_data = {}
             successful_comparisons = 0
             
             for other_discord_id, other_anilist in all_users:
                 other_user = await self.fetch_user(other_anilist)
                 if other_user:
-                    score = self.calculate_affinity(me, other_user)
+                    score, breakdown = self.calculate_affinity(me, other_user, return_breakdown=True)
                     results.append((other_discord_id, score))
+                    detailed_data[other_discord_id] = breakdown
                     successful_comparisons += 1
-                    logger.debug(f"Calculated affinity with {other_anilist}: {score}%")
+                    logger.debug(f"Calculated advanced affinity with {other_anilist}: {score}%")
                 else:
                     logger.warning(f"Failed to fetch data for {other_anilist}")
 
@@ -342,12 +638,12 @@ class Affinity(commands.Cog):
             # Sort results by affinity score (highest first)
             results.sort(key=lambda x: x[1], reverse=True)
             
-            logger.info(f"Affinity calculation completed: {successful_comparisons}/{len(all_users)} successful comparisons")
+            logger.info(f"Advanced affinity calculation completed: {successful_comparisons}/{len(all_users)} successful comparisons")
 
-            # Create and send paginated view
-            view = self.AffinityView(results, user_display)
+            # Create and send enhanced paginated view with detailed breakdowns
+            view = self.AffinityView(results, user_display, detailed_data)
             await interaction.followup.send(embed=view.get_embed(), view=view)
-            logger.info(f"Affinity results sent for {user_display}")
+            logger.info(f"Enhanced affinity results sent for {user_display}")
             
         except Exception as e:
             logger.error(f"Error in affinity command for {user_display}: {e}")
