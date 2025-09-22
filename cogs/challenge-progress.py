@@ -188,46 +188,6 @@ class MangaChallenges(commands.Cog):
         anilist_username = anilist_info.get("username")
         anilist_id = anilist_info.get("id")
 
-        @app_commands.guilds(discord.Object(id=GUILD_ID))
-        @app_commands.command(
-            name="challenge-leaderboard",
-            description="🏆 View the top users ranked by manga challenge points"
-        )
-        async def challenge_leaderboard(interaction: discord.Interaction):
-            await interaction.response.defer()
-
-            async with aiosqlite.connect(DB_PATH) as db:
-                cursor = await db.execute("""
-                    SELECT u.username, SUM(ump.points) as total_points
-                    FROM user_manga_progress ump
-                    JOIN users u ON u.discord_id = ump.discord_id
-                    GROUP BY ump.discord_id
-                    ORDER BY total_points DESC
-                    LIMIT 10
-                """)
-                leaderboard_rows = await cursor.fetchall()
-                await cursor.close()
-
-            if not leaderboard_rows:
-                await interaction.followup.send("⚠️ No leaderboard data found yet.", ephemeral=True)
-                return
-
-            embed = discord.Embed(
-                title="🏆 Manga Challenge Leaderboard",
-                description="Top 10 users ranked by **total challenge points**",
-                color=discord.Color.gold()
-            )
-
-            for rank, (username, total_points) in enumerate(leaderboard_rows, start=1):
-                embed.add_field(
-                    name=f"#{rank} — {username}",
-                    value=f"**{total_points} pts**",
-                    inline=False
-                )
-
-            embed.set_footer(text="Leaderboard updates automatically as challenges progress!")
-            await interaction.followup.send(embed=embed)
-
         # Fetch challenges
         async with aiosqlite.connect(DB_PATH) as db:
             challenges = await db.execute_fetchall(
