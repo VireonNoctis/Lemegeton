@@ -1111,6 +1111,75 @@ async def upsert_user_manga_progress(discord_id, manga_id, title, chapters, poin
         await db.commit()
 
 # ------------------------------------------------------
+# INVITE TRACKER TABLES
+# ------------------------------------------------------
+async def init_invite_tracker_tables():
+    """Initialize all invite tracker tables in the main database"""
+    logger.info("Initializing invite tracker tables")
+    
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            # Invites table - tracks all invites
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS invites (
+                    invite_code TEXT PRIMARY KEY,
+                    guild_id INTEGER NOT NULL,
+                    inviter_id INTEGER NOT NULL,
+                    inviter_name TEXT NOT NULL,
+                    channel_id INTEGER,
+                    max_uses INTEGER,
+                    uses INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Invite uses table - tracks who used which invite
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS invite_uses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    invite_code TEXT NOT NULL,
+                    inviter_id INTEGER NOT NULL,
+                    inviter_name TEXT NOT NULL,
+                    joiner_id INTEGER NOT NULL,
+                    joiner_name TEXT NOT NULL,
+                    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (invite_code) REFERENCES invites (invite_code)
+                )
+            """)
+            
+            # Recruitment stats table - tracks total recruits per user
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS recruitment_stats (
+                    user_id INTEGER PRIMARY KEY,
+                    guild_id INTEGER NOT NULL,
+                    username TEXT NOT NULL,
+                    total_recruits INTEGER DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Leave tracking table - tracks when users leave
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS user_leaves (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    username TEXT NOT NULL,
+                    left_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    was_invited_by INTEGER,
+                    days_in_server INTEGER DEFAULT 0
+                )
+            """)
+            
+            await db.commit()
+            logger.info("✅ Invite tracker tables initialized successfully")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize invite tracker tables: {e}", exc_info=True)
+        raise
+
+# ------------------------------------------------------
 # STEAM USERS TABLE
 # ------------------------------------------------------
 async def init_steam_users_table():
@@ -1149,6 +1218,7 @@ async def init_db():
         ("Manga Challenges", init_manga_challenges_table),
         ("User Progress", init_user_progress_table),
         ("Global Challenges", init_global_challenges_table),
+        ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
     ]

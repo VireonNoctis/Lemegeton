@@ -4520,3 +4520,499 @@ sqlite3.OperationalError: no such column: updated_at
 [2025-09-22 02:27:06] [INFO] [Database] init_db:1194 - ✅ All database tables initialized successfully
 [2025-09-22 02:27:06] [INFO] [Database] init_db:1196 - ============================================================
 [2025-09-22 02:27:06] [INFO] [Database] init_db:1201 - Final database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:05:36] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 05:05:36] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 05:05:36] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 05:05:36] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 05:05:36] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 05:05:36] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.db
+[2025-09-22 05:05:36] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-22 05:05:36] [INFO] [Database] <module>:75 - Database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1137 - ============================================================
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1138 - STARTING DATABASE INITIALIZATION
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1139 - ============================================================
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1162 - Verifying database connectivity...
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1165 - ✅ Database connectivity verified
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Users table...
+[2025-09-22 05:05:36] [INFO] [Database] init_users_table:168 - Initializing users table
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing users table creation
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER UNIQUE NOT NULL,
+                username TEXT NOT NULL,
+                anilist_username TEXT,
+                anilist_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:142 - users table creation completed in 0.002s
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_username column to users
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_username TEXT
+[2025-09-22 05:05:36] [ERROR] [Database] execute_db_operation:156 - add anilist_username column to users failed after 0.002s: duplicate column name: anilist_username
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:200 - Column 'anilist_username' already exists in users table
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_id column to users
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_id INTEGER
+[2025-09-22 05:05:36] [ERROR] [Database] execute_db_operation:156 - add anilist_id column to users failed after 0.001s: duplicate column name: anilist_id
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:200 - Column 'anilist_id' already exists in users table
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at column to users
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:05:36] [ERROR] [Database] execute_db_operation:156 - add created_at column to users failed after 0.003s: Cannot add a column with non-constant default
+[2025-09-22 05:05:36] [WARNING] [Database] init_users_table:202 - Error adding column 'created_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at column to users
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:05:36] [ERROR] [Database] execute_db_operation:156 - add updated_at column to users failed after 0.001s: Cannot add a column with non-constant default
+[2025-09-22 05:05:36] [WARNING] [Database] init_users_table:202 - Error adding column 'updated_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing users table schema check
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(users)
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:142 - users table schema check completed in 0.002s
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:148 - Query returned 5 rows
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:207 - Users table schema: 5 columns
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:209 -   Column: id (INTEGER)
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:209 -   Column: discord_id (INTEGER)
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:209 -   Column: username (TEXT)
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:209 -   Column: anilist_username (TEXT)
+[2025-09-22 05:05:36] [DEBUG] [Database] init_users_table:209 -   Column: anilist_id (INTEGER)
+[2025-09-22 05:05:36] [INFO] [Database] init_users_table:211 - ✅ Users table initialization completed successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Users table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Challenge Rules table...
+[2025-09-22 05:05:36] [INFO] [Database] init_challenge_rules_table:568 - Initializing challenge rules table
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing challenge rules table creation
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS challenge_rules (
+                id INTEGER PRIMARY KEY,
+                rules TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:142 - challenge rules table creation completed in 0.002s
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at to challenge_rules
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:05:36] [ERROR] [Database] execute_db_operation:156 - add created_at to challenge_rules failed after 0.001s: Cannot add a column with non-constant default
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at to challenge_rules
+[2025-09-22 05:05:36] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:05:36] [ERROR] [Database] execute_db_operation:156 - add updated_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:05:36] [INFO] [Database] init_challenge_rules_table:592 - ✅ Challenge rules table initialization completed
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Challenge Rules table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Recommendation Votes table...
+[2025-09-22 05:05:36] [INFO] [Database] init_recommendation_votes_table:660 - Manga recommendation votes table ready.
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Recommendation Votes table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing User Stats table...
+[2025-09-22 05:05:36] [INFO] [Database] init_user_stats_table:678 - User stats table ready.
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ User Stats table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Achievements table...
+[2025-09-22 05:05:36] [INFO] [Database] init_achievements_table:694 - Achievements table ready.
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Achievements table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing User Manga Progress table...
+[2025-09-22 05:05:36] [INFO] [Database] init_user_manga_progress_table:730 - User manga progress table ready (with started_at, repeat, and updated_at).
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ User Manga Progress table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Manga Challenges table...
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Manga Challenges table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing User Progress table...
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ User Progress table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Global Challenges table...
+[2025-09-22 05:05:36] [INFO] [Database] init_global_challenges_table:1028 - Global challenges table ready with difficulty column.
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Global Challenges table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Steam Users table...
+[2025-09-22 05:05:36] [INFO] [Database] init_steam_users_table:1127 - Steam users table ready.
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Steam Users table initialized successfully
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1170 - Initializing Challenge Manga table...
+[2025-09-22 05:05:36] [DEBUG] [Database] init_db:1173 - ✅ Challenge Manga table initialized successfully
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1184 - ============================================================
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1185 - DATABASE INITIALIZATION SUMMARY
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1186 - Total tables: 11
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1187 - Successfully initialized: 11
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1188 - Failed to initialize: 0
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1189 - Total time: 0.05 seconds
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1194 - ✅ All database tables initialized successfully
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1196 - ============================================================
+[2025-09-22 05:05:36] [INFO] [Database] init_db:1201 - Final database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:22:13] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 05:22:13] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 05:22:13] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 05:22:13] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 05:22:13] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 05:22:13] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.db
+[2025-09-22 05:22:13] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-22 05:22:13] [INFO] [Database] <module>:75 - Database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1137 - ============================================================
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1138 - STARTING DATABASE INITIALIZATION
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1139 - ============================================================
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1162 - Verifying database connectivity...
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1165 - ✅ Database connectivity verified
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Users table...
+[2025-09-22 05:22:13] [INFO] [Database] init_users_table:168 - Initializing users table
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing users table creation
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER UNIQUE NOT NULL,
+                username TEXT NOT NULL,
+                anilist_username TEXT,
+                anilist_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:142 - users table creation completed in 0.002s
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_username column to users
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_username TEXT
+[2025-09-22 05:22:13] [ERROR] [Database] execute_db_operation:156 - add anilist_username column to users failed after 0.002s: duplicate column name: anilist_username
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:200 - Column 'anilist_username' already exists in users table
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_id column to users
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_id INTEGER
+[2025-09-22 05:22:13] [ERROR] [Database] execute_db_operation:156 - add anilist_id column to users failed after 0.002s: duplicate column name: anilist_id
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:200 - Column 'anilist_id' already exists in users table
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at column to users
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:22:13] [ERROR] [Database] execute_db_operation:156 - add created_at column to users failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:22:13] [WARNING] [Database] init_users_table:202 - Error adding column 'created_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at column to users
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:22:13] [ERROR] [Database] execute_db_operation:156 - add updated_at column to users failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:22:13] [WARNING] [Database] init_users_table:202 - Error adding column 'updated_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing users table schema check
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(users)
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:142 - users table schema check completed in 0.002s
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:148 - Query returned 5 rows
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:207 - Users table schema: 5 columns
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:209 -   Column: id (INTEGER)
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:209 -   Column: discord_id (INTEGER)
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:209 -   Column: username (TEXT)
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:209 -   Column: anilist_username (TEXT)
+[2025-09-22 05:22:13] [DEBUG] [Database] init_users_table:209 -   Column: anilist_id (INTEGER)
+[2025-09-22 05:22:13] [INFO] [Database] init_users_table:211 - ✅ Users table initialization completed successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Users table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Challenge Rules table...
+[2025-09-22 05:22:13] [INFO] [Database] init_challenge_rules_table:568 - Initializing challenge rules table
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing challenge rules table creation
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS challenge_rules (
+                id INTEGER PRIMARY KEY,
+                rules TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:142 - challenge rules table creation completed in 0.001s
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at to challenge_rules
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:22:13] [ERROR] [Database] execute_db_operation:156 - add created_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at to challenge_rules
+[2025-09-22 05:22:13] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:22:13] [ERROR] [Database] execute_db_operation:156 - add updated_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:22:13] [INFO] [Database] init_challenge_rules_table:592 - ✅ Challenge rules table initialization completed
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Challenge Rules table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Recommendation Votes table...
+[2025-09-22 05:22:13] [INFO] [Database] init_recommendation_votes_table:660 - Manga recommendation votes table ready.
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Recommendation Votes table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing User Stats table...
+[2025-09-22 05:22:13] [INFO] [Database] init_user_stats_table:678 - User stats table ready.
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ User Stats table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Achievements table...
+[2025-09-22 05:22:13] [INFO] [Database] init_achievements_table:694 - Achievements table ready.
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Achievements table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing User Manga Progress table...
+[2025-09-22 05:22:13] [INFO] [Database] init_user_manga_progress_table:730 - User manga progress table ready (with started_at, repeat, and updated_at).
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ User Manga Progress table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Manga Challenges table...
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Manga Challenges table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing User Progress table...
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ User Progress table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Global Challenges table...
+[2025-09-22 05:22:13] [INFO] [Database] init_global_challenges_table:1028 - Global challenges table ready with difficulty column.
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Global Challenges table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Steam Users table...
+[2025-09-22 05:22:13] [INFO] [Database] init_steam_users_table:1127 - Steam users table ready.
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Steam Users table initialized successfully
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1170 - Initializing Challenge Manga table...
+[2025-09-22 05:22:13] [DEBUG] [Database] init_db:1173 - ✅ Challenge Manga table initialized successfully
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1184 - ============================================================
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1185 - DATABASE INITIALIZATION SUMMARY
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1186 - Total tables: 11
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1187 - Successfully initialized: 11
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1188 - Failed to initialize: 0
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1189 - Total time: 0.04 seconds
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1194 - ✅ All database tables initialized successfully
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1196 - ============================================================
+[2025-09-22 05:22:13] [INFO] [Database] init_db:1201 - Final database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:25:15] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 05:25:15] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 05:25:15] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 05:25:15] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 05:25:15] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 05:25:15] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.db
+[2025-09-22 05:25:15] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-22 05:25:15] [INFO] [Database] <module>:75 - Database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1137 - ============================================================
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1138 - STARTING DATABASE INITIALIZATION
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1139 - ============================================================
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1162 - Verifying database connectivity...
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1165 - ✅ Database connectivity verified
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Users table...
+[2025-09-22 05:25:15] [INFO] [Database] init_users_table:168 - Initializing users table
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing users table creation
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER UNIQUE NOT NULL,
+                username TEXT NOT NULL,
+                anilist_username TEXT,
+                anilist_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:142 - users table creation completed in 0.002s
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_username column to users
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_username TEXT
+[2025-09-22 05:25:15] [ERROR] [Database] execute_db_operation:156 - add anilist_username column to users failed after 0.002s: duplicate column name: anilist_username
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:200 - Column 'anilist_username' already exists in users table
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_id column to users
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_id INTEGER
+[2025-09-22 05:25:15] [ERROR] [Database] execute_db_operation:156 - add anilist_id column to users failed after 0.002s: duplicate column name: anilist_id
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:200 - Column 'anilist_id' already exists in users table
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at column to users
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:25:15] [ERROR] [Database] execute_db_operation:156 - add created_at column to users failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:25:15] [WARNING] [Database] init_users_table:202 - Error adding column 'created_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at column to users
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:25:15] [ERROR] [Database] execute_db_operation:156 - add updated_at column to users failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:25:15] [WARNING] [Database] init_users_table:202 - Error adding column 'updated_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing users table schema check
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(users)
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:142 - users table schema check completed in 0.002s
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:148 - Query returned 5 rows
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:207 - Users table schema: 5 columns
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:209 -   Column: id (INTEGER)
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:209 -   Column: discord_id (INTEGER)
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:209 -   Column: username (TEXT)
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:209 -   Column: anilist_username (TEXT)
+[2025-09-22 05:25:15] [DEBUG] [Database] init_users_table:209 -   Column: anilist_id (INTEGER)
+[2025-09-22 05:25:15] [INFO] [Database] init_users_table:211 - ✅ Users table initialization completed successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Users table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Challenge Rules table...
+[2025-09-22 05:25:15] [INFO] [Database] init_challenge_rules_table:568 - Initializing challenge rules table
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing challenge rules table creation
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS challenge_rules (
+                id INTEGER PRIMARY KEY,
+                rules TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:142 - challenge rules table creation completed in 0.002s
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at to challenge_rules
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:25:15] [ERROR] [Database] execute_db_operation:156 - add created_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at to challenge_rules
+[2025-09-22 05:25:15] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:25:15] [ERROR] [Database] execute_db_operation:156 - add updated_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:25:15] [INFO] [Database] init_challenge_rules_table:592 - ✅ Challenge rules table initialization completed
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Challenge Rules table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Recommendation Votes table...
+[2025-09-22 05:25:15] [INFO] [Database] init_recommendation_votes_table:660 - Manga recommendation votes table ready.
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Recommendation Votes table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing User Stats table...
+[2025-09-22 05:25:15] [INFO] [Database] init_user_stats_table:678 - User stats table ready.
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ User Stats table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Achievements table...
+[2025-09-22 05:25:15] [INFO] [Database] init_achievements_table:694 - Achievements table ready.
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Achievements table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing User Manga Progress table...
+[2025-09-22 05:25:15] [INFO] [Database] init_user_manga_progress_table:730 - User manga progress table ready (with started_at, repeat, and updated_at).
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ User Manga Progress table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Manga Challenges table...
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Manga Challenges table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing User Progress table...
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ User Progress table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Global Challenges table...
+[2025-09-22 05:25:15] [INFO] [Database] init_global_challenges_table:1028 - Global challenges table ready with difficulty column.
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Global Challenges table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Steam Users table...
+[2025-09-22 05:25:15] [INFO] [Database] init_steam_users_table:1127 - Steam users table ready.
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Steam Users table initialized successfully
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1170 - Initializing Challenge Manga table...
+[2025-09-22 05:25:15] [DEBUG] [Database] init_db:1173 - ✅ Challenge Manga table initialized successfully
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1184 - ============================================================
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1185 - DATABASE INITIALIZATION SUMMARY
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1186 - Total tables: 11
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1187 - Successfully initialized: 11
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1188 - Failed to initialize: 0
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1189 - Total time: 0.04 seconds
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1194 - ✅ All database tables initialized successfully
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1196 - ============================================================
+[2025-09-22 05:25:15] [INFO] [Database] init_db:1201 - Final database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:30:47] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 05:30:47] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 05:30:47] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 05:30:47] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 05:30:47] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 05:30:47] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.db
+[2025-09-22 05:30:47] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-22 05:30:47] [INFO] [Database] <module>:75 - Database file size: 454,656 bytes (0.43 MB)
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1206 - ============================================================
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1207 - STARTING DATABASE INITIALIZATION
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1208 - ============================================================
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1232 - Verifying database connectivity...
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1235 - ✅ Database connectivity verified
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Users table...
+[2025-09-22 05:30:47] [INFO] [Database] init_users_table:168 - Initializing users table
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing users table creation
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER UNIQUE NOT NULL,
+                username TEXT NOT NULL,
+                anilist_username TEXT,
+                anilist_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:142 - users table creation completed in 0.002s
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_username column to users
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_username TEXT
+[2025-09-22 05:30:47] [ERROR] [Database] execute_db_operation:156 - add anilist_username column to users failed after 0.002s: duplicate column name: anilist_username
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:200 - Column 'anilist_username' already exists in users table
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing add anilist_id column to users
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN anilist_id INTEGER
+[2025-09-22 05:30:47] [ERROR] [Database] execute_db_operation:156 - add anilist_id column to users failed after 0.002s: duplicate column name: anilist_id
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:200 - Column 'anilist_id' already exists in users table
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at column to users
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:30:47] [ERROR] [Database] execute_db_operation:156 - add created_at column to users failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:30:47] [WARNING] [Database] init_users_table:202 - Error adding column 'created_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at column to users
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE users ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:30:47] [ERROR] [Database] execute_db_operation:156 - add updated_at column to users failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:30:47] [WARNING] [Database] init_users_table:202 - Error adding column 'updated_at' to users table: Cannot add a column with non-constant default
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing users table schema check
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(users)
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:142 - users table schema check completed in 0.002s
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:148 - Query returned 5 rows
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:207 - Users table schema: 5 columns
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:209 -   Column: id (INTEGER)
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:209 -   Column: discord_id (INTEGER)
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:209 -   Column: username (TEXT)
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:209 -   Column: anilist_username (TEXT)
+[2025-09-22 05:30:47] [DEBUG] [Database] init_users_table:209 -   Column: anilist_id (INTEGER)
+[2025-09-22 05:30:47] [INFO] [Database] init_users_table:211 - ✅ Users table initialization completed successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Users table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Challenge Rules table...
+[2025-09-22 05:30:47] [INFO] [Database] init_challenge_rules_table:568 - Initializing challenge rules table
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing challenge rules table creation
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            CREATE TABLE IF NOT EXISTS challenge_rules (
+                id INTEGER PRIMARY KEY,
+                rules TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:142 - challenge rules table creation completed in 0.002s
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing add created_at to challenge_rules
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:30:47] [ERROR] [Database] execute_db_operation:156 - add created_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:115 - Executing add updated_at to challenge_rules
+[2025-09-22 05:30:47] [DEBUG] [Database] execute_db_operation:116 - Query: ALTER TABLE challenge_rules ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+[2025-09-22 05:30:47] [ERROR] [Database] execute_db_operation:156 - add updated_at to challenge_rules failed after 0.002s: Cannot add a column with non-constant default
+[2025-09-22 05:30:47] [INFO] [Database] init_challenge_rules_table:592 - ✅ Challenge rules table initialization completed
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Challenge Rules table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Recommendation Votes table...
+[2025-09-22 05:30:47] [INFO] [Database] init_recommendation_votes_table:660 - Manga recommendation votes table ready.
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Recommendation Votes table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing User Stats table...
+[2025-09-22 05:30:47] [INFO] [Database] init_user_stats_table:678 - User stats table ready.
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ User Stats table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Achievements table...
+[2025-09-22 05:30:47] [INFO] [Database] init_achievements_table:694 - Achievements table ready.
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Achievements table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing User Manga Progress table...
+[2025-09-22 05:30:47] [INFO] [Database] init_user_manga_progress_table:730 - User manga progress table ready (with started_at, repeat, and updated_at).
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ User Manga Progress table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Manga Challenges table...
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Manga Challenges table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing User Progress table...
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ User Progress table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Global Challenges table...
+[2025-09-22 05:30:47] [INFO] [Database] init_global_challenges_table:1028 - Global challenges table ready with difficulty column.
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Global Challenges table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Invite Tracker table...
+[2025-09-22 05:30:47] [INFO] [Database] init_invite_tracker_tables:1118 - Initializing invite tracker tables
+[2025-09-22 05:30:47] [INFO] [Database] init_invite_tracker_tables:1176 - ✅ Invite tracker tables initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Invite Tracker table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Steam Users table...
+[2025-09-22 05:30:47] [INFO] [Database] init_steam_users_table:1196 - Steam users table ready.
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Steam Users table initialized successfully
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1240 - Initializing Challenge Manga table...
+[2025-09-22 05:30:47] [DEBUG] [Database] init_db:1243 - ✅ Challenge Manga table initialized successfully
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1254 - ============================================================
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1255 - DATABASE INITIALIZATION SUMMARY
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1256 - Total tables: 12
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1257 - Successfully initialized: 12
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1258 - Failed to initialize: 0
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1259 - Total time: 0.07 seconds
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1264 - ✅ All database tables initialized successfully
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1266 - ============================================================
+[2025-09-22 05:30:47] [INFO] [Database] init_db:1271 - Final database file size: 475,136 bytes (0.45 MB)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('3D78HtzAvU', 897814031346319382, 331164413623009281, 'Kyerstorm', 897814032180994070, -1, 70)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('84NfpySHPZ', 897814031346319382, 369957492962099201, 'xuehua', 897814032180994070, -1, 4)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.007s
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('BWE5EdnV', 897814031346319382, 528583472663494656, 'Jay', 897814032180994070, -1, 0)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.008s
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('FQKEruYX', 897814031346319382, 820255198697619466, 'ＤＡＮＩＳＨ', 897814032180994070, -1, 1)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('HWWMmjKQ', 897814031346319382, 569552732856385536, 'Chef Luca', 898972125044543549, -1, 0)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.007s
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('hGNsuDxM', 897814031346319382, 461675352952012801, 'mrtester.', 897814032180994070, -1, 0)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('xUGD7krzws', 897814031346319382, 331164413623009281, 'Kyerstorm', 898184958542233600, -1, 292)
+[2025-09-22 05:30:51] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
