@@ -7,36 +7,32 @@ from pathlib import Path
 from config import CHANNEL_ID
 
 # ------------------------------------------------------
-# Logging Setup - Auto-clearing
+# Logging Setup - Safe handling
 # ------------------------------------------------------
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "feedback.log"
 
-# Clear the log file on startup
-if LOG_FILE.exists():
-    LOG_FILE.unlink()
-
 # Setup logger
 logger = logging.getLogger("feedback")
 logger.setLevel(logging.INFO)
 
-# File handler
-file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-
-# Formatter
-formatter = logging.Formatter(
-    '[%(asctime)s] [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
-file_handler.setFormatter(formatter)
-
-# Add handler if not already added
+# Only add handler if not already present
 if not logger.handlers:
+    # File handler with safe file access
+    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+    
+    # Formatter
+    formatter = logging.Formatter(
+        '[%(asctime)s] [%(levelname)s] %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-
-logger.info("Feedback cog logging initialized - log file cleared")
+    logger.info("Feedback cog logging initialized")
+else:
+    logger.info("Feedback cog logging reinitialized - using existing handler")
 
 
 class Feedback(commands.Cog):
@@ -200,7 +196,7 @@ class FeedbackView(View):
         self.bot = bot
         self.user = user
 
-    @discord.ui.button(label="Open Thread", style=discord.ButtonStyle.primary)
+    @discord.ui.button(label="Open Thread", style=discord.ButtonStyle.primary, custom_id="feedback_open_thread")
     async def open_thread(self, interaction: discord.Interaction, button: Button):
         user = self.user or interaction.user
         logger.info(f"Opening thread for feedback from {user.display_name}")
@@ -246,7 +242,7 @@ class CloseThreadView(View):
         self.user = user
         self.thread = thread
 
-    @discord.ui.button(label="Close Thread", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="Close Thread", style=discord.ButtonStyle.danger, custom_id="feedback_close_thread")
     async def close_thread(self, interaction: discord.Interaction, button: Button):
         user = self.user or interaction.user
         logger.info(f"Close thread requested for {user.display_name} by {interaction.user.display_name}")
@@ -266,7 +262,7 @@ class ConfirmCloseView(View):
         self.thread = thread
         self.mod = mod
 
-    @discord.ui.button(label="✅ Yes, close it", style=discord.ButtonStyle.danger)
+    @discord.ui.button(label="✅ Yes, close it", style=discord.ButtonStyle.danger, custom_id="feedback_confirm_yes")
     async def confirm_yes(self, interaction: discord.Interaction, button: Button):
         user = self.user or interaction.user
         mod = self.mod or interaction.user
@@ -306,7 +302,7 @@ class ConfirmCloseView(View):
         except Exception as e:
             logger.error(f"Error closing thread: {e}")
 
-    @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(label="❌ Cancel", style=discord.ButtonStyle.secondary, custom_id="feedback_confirm_no")
     async def confirm_no(self, interaction: discord.Interaction, button: Button):
         logger.info(f"Thread closure cancelled by {interaction.user.display_name}")
         await interaction.response.edit_message(content="❎ Close thread cancelled.", view=None)

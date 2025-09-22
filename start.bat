@@ -1,30 +1,21 @@
-@echo off@echo off
+@echo off
 
-echo Starting Lemegeton Discord Bot...REM ==========================================
-
-echo.REM   Discord Bot Startup Script
-
+REM ==========================================
+REM   Discord Bot Startup Script
 REM   Lemegeton Bot
+REM ==========================================
 
-REM Activate virtual environmentREM ==========================================
-
-call .venv\Scripts\activate
+echo Starting Lemegeton Discord Bot...
+echo.
 
 REM Change directory to the bot's folder
-
-REM Start the botcd /d "%~dp0"
-
-python bot.py
+cd /d "%~dp0"
 
 REM Activate the virtual environment
+echo Activating virtual environment...
+call .venv\Scripts\activate
 
-REM Keep window open if bot crashesecho Activating virtual environment...
-
-echo.call .venv\Scripts\activate
-
-echo Bot has stopped. Press any key to close...
-
-pause > nulREM Run the bot
+REM Run the bot
 echo Starting Lemegeton Bot...
 python bot.py
 
@@ -32,4 +23,3 @@ REM Keep the console open if the bot crashes
 echo.
 echo The bot has stopped or crashed.
 pause
-:
