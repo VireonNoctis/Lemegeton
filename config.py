@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = int(os.getenv("GUILD_ID"))
-BOT_ID = int(os.getenv("BOT_ID"))
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+GUILD_ID = int(os.getenv("GUILD_ID", 0))
+BOT_ID = int(os.getenv("BOT_ID", 0))
+CHANNEL_ID = int(os.getenv("CHANNEL_ID", 0))
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 CHALLENGE_ROLE_IDS = {
