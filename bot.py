@@ -275,8 +275,21 @@ async def update_streaming_status():
 # Cog Management with Timestamps
 # ------------------------------------------------------
 cog_timestamps = {}
+cog_loading_semaphore = asyncio.Semaphore(1)  # Prevent concurrent cog loading
 
 async def load_cogs():
+    """
+    Load and manage cogs with timestamp tracking and comprehensive error handling.
+    Only one cog loading operation can run at a time to prevent race conditions.
+    """
+    async with cog_loading_semaphore:
+        logger.debug("Acquired cog loading semaphore")
+        try:
+            await _load_cogs_impl()
+        finally:
+            logger.debug("Released cog loading semaphore")
+
+async def _load_cogs_impl():
     """
     Load or reload all cogs asynchronously with comprehensive logging and error handling.
     Tracks file modification times to only reload changed cogs.
@@ -284,6 +297,21 @@ async def load_cogs():
     logger.debug("Starting cog loading/reloading process")
     
     try:
+        # Clean up any stuck extensions first (from previous crashes/forced shutdowns)
+        loaded_extensions = list(bot.extensions.keys())
+        for ext_name in loaded_extensions:
+            if ext_name.startswith('cogs.'):
+                try:
+                    # Check if the corresponding file still exists
+                    cog_file = f"./cogs/{ext_name[5:]}.py"
+                    if not os.path.exists(cog_file):
+                        logger.debug(f"Cleaning up orphaned extension: {ext_name}")
+                        await bot.unload_extension(ext_name)
+                        if ext_name in cog_timestamps:
+                            del cog_timestamps[ext_name]
+                except Exception as cleanup_error:
+                    logger.error(f"Failed to cleanup extension {ext_name}: {cleanup_error}")
+        
         cogs_dir = "./cogs"
         if not os.path.exists(cogs_dir):
             logger.error(f"Cogs directory not found: {cogs_dir}")
@@ -316,8 +344,13 @@ async def load_cogs():
                 if cog_name in bot.extensions:
                     stored_timestamp = cog_timestamps.get(cog_name, 0)
                     
+                    # Ensure timestamp is always recorded for loaded cogs
+                    if cog_name not in cog_timestamps:
+                        cog_timestamps[cog_name] = last_mod
+                        logger.debug(f"Added missing timestamp for already-loaded cog {cog_name}")
+                    
                     # Only reload if file was modified since last load
-                    if stored_timestamp < last_mod:
+                    elif stored_timestamp < last_mod:
                         logger.debug(f"File {filename} modified, reloading cog")
                         
                         try:
@@ -327,6 +360,16 @@ async def load_cogs():
                             reloaded_count += 1
                         except Exception as reload_error:
                             logger.error(f"❌ Failed to reload cog {cog_name}: {reload_error}", exc_info=True)
+                            
+                            # If reload fails, unload the broken extension
+                            try:
+                                await bot.unload_extension(cog_name)
+                                logger.debug(f"Unloaded broken extension: {cog_name}")
+                                if cog_name in cog_timestamps:
+                                    del cog_timestamps[cog_name]
+                            except Exception as unload_error:
+                                logger.error(f"Failed to unload broken extension {cog_name}: {unload_error}")
+                            
                             failed_count += 1
                     else:
                         logger.debug(f"Cog {cog_name} is up to date")
@@ -335,12 +378,34 @@ async def load_cogs():
                     logger.debug(f"Loading new cog: {cog_name}")
                     
                     try:
+                        logger.debug(f"About to load extension: {cog_name}")
+                        
+                        # Check if cog is already loaded before attempting to load
+                        cog_class_name = cog_name.split('.')[-1].capitalize()  # e.g., "steam" -> "Steam"
+                        existing_cog = bot.get_cog(cog_class_name)
+                        if existing_cog:
+                            logger.warning(f"Cog {cog_class_name} is already loaded, attempting to unload first")
+                            try:
+                                await bot.remove_cog(cog_class_name)
+                                logger.debug(f"Successfully unloaded existing cog: {cog_class_name}")
+                            except Exception as unload_error:
+                                logger.error(f"Failed to unload existing cog {cog_class_name}: {unload_error}")
+                        
                         await bot.load_extension(cog_name)
                         cog_timestamps[cog_name] = last_mod
                         logger.info(f"✅ Successfully loaded cog: {cog_name}")
                         loaded_count += 1
                     except Exception as load_error:
                         logger.error(f"❌ Failed to load cog {cog_name}: {load_error}", exc_info=True)
+                        
+                        # If the extension was partially loaded but failed, try to unload it
+                        if cog_name in bot.extensions:
+                            try:
+                                await bot.unload_extension(cog_name)
+                                logger.debug(f"Cleaned up partially loaded extension: {cog_name}")
+                            except Exception as cleanup_error:
+                                logger.error(f"Failed to cleanup extension {cog_name}: {cleanup_error}")
+                        
                         failed_count += 1
                         
             except OSError as file_error:
@@ -367,6 +432,16 @@ async def watch_cogs():
     Continuously monitor cogs directory for changes with comprehensive logging.
     """
     logger.info("Starting cog file watcher")
+    
+    # Wait for bot to be ready to avoid race conditions during initial startup
+    logger.debug("Waiting for bot to be ready before starting cog monitoring...")
+    await bot.wait_until_ready()
+    logger.debug("Bot is ready, starting cog file monitoring")
+    
+    # Additional delay to ensure initial loading is completely finished
+    await asyncio.sleep(5)
+    logger.debug("Initial delay completed, beginning cog watch cycles")
+    
     watch_cycle = 0
     
     try:
