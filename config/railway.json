@@ -1,0 +1,16 @@
+{
+  "build": {
+    "builder": "nixpacks"
+  },
+  "deploy": {
+    "startCommand": "python bot.py",
+    "restartPolicyType": "always",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 300
+  },
+  "variables": {
+    "PYTHONUNBUFFERED": "1",
+    "PYTHONPATH": "/app",
+    "PORT": "8080"
+  }
+}

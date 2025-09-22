@@ -68,6 +68,15 @@ logger.info("Bot logging system initialized")
 logger.info(f"Log file: {log_file_path}")
 logger.info("="*50)
 
+# Import monitoring integration (optional)
+try:
+    from bot_monitoring import setup_bot_monitoring
+    MONITORING_ENABLED = True
+    logger.info("✅ Bot monitoring system available")
+except ImportError:
+    MONITORING_ENABLED = False
+    logger.warning("⚠️ Bot monitoring system not available")
+
 # ------------------------------------------------------
 # Intents and Bot Setup
 # ------------------------------------------------------
@@ -76,6 +85,19 @@ intents.message_content = True
 intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, application_id=BOT_ID)
+
+# Initialize monitoring system if available
+monitoring = None
+if MONITORING_ENABLED:
+    try:
+        monitoring = setup_bot_monitoring(bot)
+        if monitoring:
+            logger.info("✅ Bot monitoring integration initialized")
+        else:
+            logger.warning("⚠️ Bot monitoring setup failed")
+    except Exception as e:
+        logger.error(f"❌ Error setting up bot monitoring: {e}")
+        MONITORING_ENABLED = False
 
 # ------------------------------------------------------
 # AniList API Function

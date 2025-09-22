@@ -11,7 +11,7 @@ STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 ADMIN_DISCORD_ID = int(os.getenv("ADMIN_DISCORD_ID"))
 
 # Database path - Railway compatible
-DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "database.db"))
+DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "data", "database.db"))
 CHALLENGE_ROLE_IDS = {
     # challenge_id: {threshold: role_id}
     1: {  # Challenge ID 1
