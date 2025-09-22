@@ -88,10 +88,14 @@ class InviteTracker(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.invite_cache: Dict[int, List[discord.Invite]] = {}
+        self.announcement_channels: Dict[int, int] = {}  # guild_id -> channel_id
         logger.info("Invite Tracker cog initialized")
     
     async def cog_load(self):
         """Load invite cache when cog loads"""
+        # Load channel settings from database
+        await self._load_channel_settings()
+        
         if self.bot.is_ready():
             await self._cache_invites()
             logger.info("Invite Tracker cog loaded and invite cache initialized")
@@ -122,6 +126,23 @@ class InviteTracker(commands.Cog):
         """Cache invites when bot is ready if not already done"""
         if not self.invite_cache:
             await self._cache_invites()
+    
+    async def _load_channel_settings(self):
+        """Load announcement channel settings from database"""
+        try:
+            settings = await execute_db_operation(
+                "load channel settings",
+                "SELECT guild_id, announcement_channel_id FROM invite_tracker_settings",
+                fetch_type='all'
+            )
+            
+            if settings:
+                for guild_id, channel_id in settings:
+                    self.announcement_channels[guild_id] = channel_id
+                logger.info(f"Loaded announcement channel settings for {len(settings)} guilds")
+            
+        except Exception as e:
+            logger.error(f"Error loading channel settings: {e}")
     
     async def _update_invites_in_db(self, guild_id: int, invites: List[discord.Invite]):
         """Update invite database with current invite data"""
@@ -340,6 +361,18 @@ class InviteTracker(commands.Cog):
     
     async def _get_announcement_channel(self, guild: discord.Guild) -> Optional[discord.TextChannel]:
         """Get the best channel for announcements"""
+        # Check if a specific channel is configured for this guild
+        if guild.id in self.announcement_channels:
+            configured_channel = guild.get_channel(self.announcement_channels[guild.id])
+            if configured_channel and isinstance(configured_channel, discord.TextChannel):
+                permissions = configured_channel.permissions_for(guild.me)
+                if permissions.send_messages:
+                    return configured_channel
+                else:
+                    logger.warning(f"No send permissions in configured channel {configured_channel.name}")
+            else:
+                logger.warning(f"Configured channel {self.announcement_channels[guild.id]} not found, falling back to auto-detection")
+        
         # Try system channel first
         if guild.system_channel:
             return guild.system_channel
@@ -379,6 +412,120 @@ class InviteTracker(commands.Cog):
         guild_invites = self.invite_cache.get(invite.guild.id, [])
         self.invite_cache[invite.guild.id] = [inv for inv in guild_invites if inv.code != invite.code]
         logger.info(f"Removed deleted invite {invite.code} from cache")
+    
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
+    @app_commands.command(
+        name="set_invite_channel",
+        description="🔧 Set the channel for invite tracking messages (Admin only)"
+    )
+    @app_commands.describe(
+        channel="The channel where invite join/leave messages will be sent"
+    )
+    @app_commands.default_permissions(administrator=True)
+    async def set_invite_channel(
+        self,
+        interaction: discord.Interaction,
+        channel: discord.TextChannel
+    ):
+        """Set the announcement channel for invite tracking"""
+        guild_id = interaction.guild.id
+        
+        # Check if bot has permission to send messages in the channel
+        permissions = channel.permissions_for(interaction.guild.me)
+        if not permissions.send_messages:
+            await interaction.response.send_message(
+                f"❌ I don't have permission to send messages in {channel.mention}.",
+                ephemeral=True
+            )
+            return
+        
+        try:
+            # Update database
+            await execute_db_operation(
+                "set invite channel",
+                """
+                INSERT OR REPLACE INTO invite_tracker_settings 
+                (guild_id, announcement_channel_id, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                """,
+                (guild_id, channel.id)
+            )
+            
+            # Update cache
+            self.announcement_channels[guild_id] = channel.id
+            
+            embed = discord.Embed(
+                title="🔧 Invite Channel Configuration",
+                description=f"Invite tracking messages will now be sent to {channel.mention}",
+                color=0x00FF00
+            )
+            
+            embed.add_field(
+                name="Channel Settings",
+                value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nPermissions: ✅ Send Messages```",
+                inline=False
+            )
+            
+            embed.set_footer(text="Use /invite_channel_info to view current settings")
+            
+            await interaction.response.send_message(embed=embed)
+            logger.info(f"Set invite channel to #{channel.name} for guild {interaction.guild.name}")
+            
+        except Exception as e:
+            logger.error(f"Error setting invite channel: {e}")
+            await interaction.response.send_message(
+                "❌ An error occurred while setting the invite channel.",
+                ephemeral=True
+            )
+    
+    @app_commands.guilds(discord.Object(id=GUILD_ID))
+    @app_commands.command(
+        name="invite_channel_info",
+        description="ℹ️ View current invite tracking channel settings"
+    )
+    async def invite_channel_info(self, interaction: discord.Interaction):
+        """View current invite channel configuration"""
+        guild_id = interaction.guild.id
+        
+        embed = discord.Embed(
+            title="ℹ️ Invite Channel Configuration",
+            color=0x3498DB
+        )
+        
+        if guild_id in self.announcement_channels:
+            channel_id = self.announcement_channels[guild_id]
+            channel = interaction.guild.get_channel(channel_id)
+            
+            if channel:
+                permissions = channel.permissions_for(interaction.guild.me)
+                permission_status = "✅" if permissions.send_messages else "❌"
+                
+                embed.add_field(
+                    name="Configured Channel",
+                    value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nPermissions: {permission_status} Send Messages```",
+                    inline=False
+                )
+                
+                embed.description = f"Invite messages are configured to be sent to {channel.mention}"
+            else:
+                embed.add_field(
+                    name="⚠️ Configuration Issue",
+                    value=f"```\nConfigured Channel ID: {channel_id}\nStatus: Channel not found or deleted```",
+                    inline=False
+                )
+                
+                embed.description = "Configured channel is no longer available. Auto-detection will be used."
+                embed.color = 0xFF6B35
+        else:
+            embed.description = "No specific channel configured. Using auto-detection."
+            embed.add_field(
+                name="Auto-Detection Priority",
+                value="```\n1. Server System Channel\n2. #general, #welcome, #announcements\n3. First available channel```",
+                inline=False
+            )
+        
+        embed.set_footer(text="Use /set_invite_channel to configure a specific channel")
+        await interaction.response.send_message(embed=embed)
     
     @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(

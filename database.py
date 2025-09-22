@@ -1172,6 +1172,15 @@ async def init_invite_tracker_tables():
                 )
             """)
             
+            # Invite tracker settings - stores channel configuration
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS invite_tracker_settings (
+                    guild_id INTEGER PRIMARY KEY,
+                    announcement_channel_id INTEGER NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
             await db.commit()
             logger.info("✅ Invite tracker tables initialized successfully")
     
