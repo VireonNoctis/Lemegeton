@@ -1,0 +1,81 @@
+[2025-09-22 01:14:51] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 01:14:51] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 01:14:51] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 01:14:51] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 01:14:51] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 01:14:51] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\scripts\database.db
+[2025-09-22 01:14:51] [INFO] [Database] <module>:72 - Database file exists: False
+[2025-09-22 01:14:51] [INFO] [Database] remove_user:346 - Removing user with Discord ID: 999999999
+[2025-09-22 01:14:51] [DEBUG] [Database] get_user:261 - Retrieving user data for Discord ID: 999999999
+[2025-09-22 01:14:51] [DEBUG] [Database] execute_db_operation:115 - Executing get user 999999999
+[2025-09-22 01:14:51] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM users WHERE discord_id = ?
+[2025-09-22 01:14:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: (999999999,)
+[2025-09-22 01:14:51] [ERROR] [Database] execute_db_operation:156 - get user 999999999 failed after 0.001s: no such table: users
+[2025-09-22 01:14:51] [ERROR] [Database] get_user:286 - ❌ Error retrieving user 999999999: no such table: users
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 268, in get_user
+    user = await execute_db_operation(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 128, in execute_db_operation
+    cursor = await db.execute(query, params or ())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 193, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 115, in run
+    result = function()
+sqlite3.OperationalError: no such table: users
+[2025-09-22 01:14:51] [ERROR] [Database] remove_user:438 - ❌ Error removing user 999999999: no such table: users
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 353, in remove_user
+    existing_user = await get_user(discord_id)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 268, in get_user
+    user = await execute_db_operation(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 128, in execute_db_operation
+    cursor = await db.execute(query, params or ())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 193, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 115, in run
+    result = function()
+sqlite3.OperationalError: no such table: users
+[2025-09-22 01:14:51] [DEBUG] [Database] get_user:261 - Retrieving user data for Discord ID: 999999999
+[2025-09-22 01:14:51] [DEBUG] [Database] execute_db_operation:115 - Executing get user 999999999
+[2025-09-22 01:14:51] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM users WHERE discord_id = ?
+[2025-09-22 01:14:51] [DEBUG] [Database] execute_db_operation:118 - Parameters: (999999999,)
+[2025-09-22 01:14:51] [ERROR] [Database] execute_db_operation:156 - get user 999999999 failed after 0.001s: no such table: users
+[2025-09-22 01:14:51] [ERROR] [Database] get_user:286 - ❌ Error retrieving user 999999999: no such table: users
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 268, in get_user
+    user = await execute_db_operation(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.py", line 128, in execute_db_operation
+    cursor = await db.execute(query, params or ())
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 193, in execute
+    cursor = await self._execute(self._conn.execute, sql, parameters)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 132, in _execute
+    return await future
+           ^^^^^^^^^^^^
+  File "C:\Users\benet\AppData\Roaming\Python\Python313\site-packages\aiosqlite\core.py", line 115, in run
+    result = function()
+sqlite3.OperationalError: no such table: users

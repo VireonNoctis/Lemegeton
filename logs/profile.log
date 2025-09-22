@@ -1,0 +1,21 @@
+[2025-09-21 16:37:28] [INFO] Profile cog logging initialized - log file cleared
+[2025-09-21 16:37:28] [INFO] Profile cog loaded successfully
+[2025-09-21 16:37:38] [INFO] Profile command initiated by ☆ (331164413623009281) for target ☆ (331164413623009281)
+[2025-09-21 16:37:38] [INFO] Found AniList username 'Kyerstorm' for Discord user ☆ (331164413623009281)
+[2025-09-21 16:37:38] [INFO] Fetching manga and anime data for Kyerstorm
+[2025-09-21 16:37:38] [INFO] Fetching MANGA data from AniList for user: Kyerstorm
+[2025-09-21 16:37:39] [INFO] Successfully fetched MANGA data for Kyerstorm
+[2025-09-21 16:37:39] [INFO] Processed 1485 manga entries for Kyerstorm
+[2025-09-21 16:37:39] [INFO] Fetching ANIME data from AniList for user: Kyerstorm
+[2025-09-21 16:37:40] [INFO] Successfully fetched ANIME data for Kyerstorm
+[2025-09-21 16:37:40] [INFO] Processed 492 anime entries for Kyerstorm
+[2025-09-21 16:37:40] [INFO] Updating stats and calculating achievements for Kyerstorm
+[2025-09-21 16:37:40] [INFO] Updating stats for Kyerstorm - 1485 manga, 492 anime
+[2025-09-21 16:37:40] [INFO] Generated stats for Kyerstorm: Manga avg=6.37, Anime avg=6.56
+[2025-09-21 16:37:40] [INFO] Updated database stats for Kyerstorm
+[2025-09-21 16:37:40] [INFO] Generated 8 achievements for Kyerstorm
+[2025-09-21 16:37:40] [INFO] Building profile embeds for Kyerstorm
+[2025-09-21 16:37:42] [INFO] Successfully sent profile for Kyerstorm to ☆
+[2025-09-21 16:37:53] [INFO] Profile cog loaded successfully
+[2025-09-21 16:37:55] [INFO] Profile cog loaded successfully
+[2025-09-21 16:37:57] [INFO] Profile cog loaded successfully
