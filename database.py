@@ -82,29 +82,25 @@ async def get_db_connection():
         try:
             logger.debug(f"Attempting database connection (attempt {attempt + 1}/{CONNECTION_RETRIES})")
             
-            connection = await aiosqlite.connect(
+            # Create a new connection each time to avoid thread reuse issues
+            connection = aiosqlite.connect(
                 DB_PATH, 
                 timeout=DB_TIMEOUT,
                 check_same_thread=False
             )
             
-            # Enable foreign key constraints
-            await connection.execute("PRAGMA foreign_keys = ON")
-            
-            logger.debug(f"Database connection established successfully")
+            # Don't await here - let the caller handle the async context
+            logger.debug(f"Database connection object created successfully")
             return connection
             
-        except aiosqlite.Error as db_error:
-            logger.warning(f"Database connection attempt {attempt + 1} failed: {db_error}")
+        except Exception as e:
+            logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
             if attempt < CONNECTION_RETRIES - 1:
                 logger.debug(f"Retrying in {RETRY_DELAY} seconds...")
                 await asyncio.sleep(RETRY_DELAY)
             else:
                 logger.error(f"All database connection attempts failed")
                 raise
-        except Exception as e:
-            logger.error(f"Unexpected error during database connection: {e}", exc_info=True)
-            raise
 
 async def execute_db_operation(operation_name: str, query: str, params=None, fetch_type=None):
     """
@@ -124,7 +120,11 @@ async def execute_db_operation(operation_name: str, query: str, params=None, fet
     start_time = time.time()
     
     try:
-        async with await get_db_connection() as db:
+        # Use direct aiosqlite.connect instead of the helper to avoid connection reuse issues
+        async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
+            # Enable foreign key constraints
+            await db.execute("PRAGMA foreign_keys = ON")
+            
             cursor = await db.execute(query, params or ())
             
             result = None
@@ -324,7 +324,7 @@ async def update_username(discord_id: int, username: str):
         
         old_username = existing_user[2]  # username at index 2
         
-        query = "UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ?"
+        query = "UPDATE users SET username = ? WHERE discord_id = ?"
         await execute_db_operation(
             f"update username for {discord_id}",
             query,
@@ -342,7 +342,7 @@ async def update_username(discord_id: int, username: str):
         raise
 
 async def remove_user(discord_id: int):
-    """Remove user with comprehensive logging and validation."""
+    """Remove user with comprehensive logging and validation, including all related data."""
     logger.info(f"Removing user with Discord ID: {discord_id}")
     
     try:
@@ -356,16 +356,122 @@ async def remove_user(discord_id: int):
             return False
         
         username = existing_user[2]  # username at index 2
+        logger.info(f"Beginning cascading deletion for user: {username} (Discord ID: {discord_id})")
         
-        query = "DELETE FROM users WHERE discord_id = ?"
-        await execute_db_operation(
-            f"remove user {discord_id}",
-            query,
-            (discord_id,)
-        )
+        # Check related records for debugging
+        related_records = await check_user_related_records(discord_id)
+        if any(count > 0 for count in related_records.values() if isinstance(count, int)):
+            logger.info(f"Found related records to delete: {related_records}")
         
-        logger.info(f"✅ Successfully removed user: {username} (Discord ID: {discord_id})")
-        return True
+        # Use direct connection to ensure all operations are in a single transaction
+        async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
+            db.row_factory = aiosqlite.Row
+            
+            # Begin transaction for atomic deletion
+            await db.execute("BEGIN TRANSACTION")
+            
+            try:
+                # Delete from all related tables first (in order to avoid foreign key conflicts)
+                
+                # 1. Delete user manga progress
+                result = await db.execute("DELETE FROM user_manga_progress WHERE discord_id = ?", (discord_id,))
+                progress_deleted = result.rowcount
+                logger.debug(f"Deleted {progress_deleted} manga progress records for user {discord_id}")
+                
+                # 2. Delete user stats
+                result = await db.execute("DELETE FROM user_stats WHERE discord_id = ?", (discord_id,))
+                stats_deleted = result.rowcount
+                logger.debug(f"Deleted {stats_deleted} user stats records for user {discord_id}")
+                
+                # 3. Delete cached stats
+                try:
+                    result = await db.execute("DELETE FROM cached_stats WHERE discord_id = ?", (discord_id,))
+                    cached_deleted = result.rowcount
+                    logger.debug(f"Deleted {cached_deleted} cached stats records for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"Cached stats deletion failed (table may not exist): {e}")
+                    cached_deleted = 0
+                
+                # 4. Delete manga recommendation votes (voter_id column)
+                try:
+                    result = await db.execute("DELETE FROM manga_recommendations_votes WHERE voter_id = ?", (discord_id,))
+                    votes_deleted = result.rowcount
+                    logger.debug(f"Deleted {votes_deleted} recommendation votes for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"Manga recommendations votes deletion failed (table may not exist): {e}")
+                    votes_deleted = 0
+                
+                # 5. Delete achievements
+                try:
+                    result = await db.execute("DELETE FROM achievements WHERE discord_id = ?", (discord_id,))
+                    achievements_deleted = result.rowcount
+                    logger.debug(f"Deleted {achievements_deleted} achievements for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"Achievements table deletion failed (table may not exist): {e}")
+                    achievements_deleted = 0
+                
+                # 6. Delete steam user mapping
+                try:
+                    result = await db.execute("DELETE FROM steam_users WHERE discord_id = ?", (discord_id,))
+                    steam_deleted = result.rowcount
+                    logger.debug(f"Deleted {steam_deleted} steam user mappings for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"Steam users table deletion failed (table may not exist): {e}")
+                    steam_deleted = 0
+                
+                # 7. Delete user progress checkpoint
+                try:
+                    result = await db.execute("DELETE FROM user_progress_checkpoint WHERE discord_id = ?", (discord_id,))
+                    checkpoint_deleted = result.rowcount
+                    logger.debug(f"Deleted {checkpoint_deleted} progress checkpoint records for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"Progress checkpoint deletion failed (table may not exist): {e}")
+                    checkpoint_deleted = 0
+                
+                # 8. Delete manga challenges (user_id column)
+                try:
+                    result = await db.execute("DELETE FROM manga_challenges WHERE user_id = ?", (discord_id,))
+                    manga_challenges_deleted = result.rowcount
+                    logger.debug(f"Deleted {manga_challenges_deleted} manga challenges for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"Manga challenges deletion failed (table may not exist): {e}")
+                    manga_challenges_deleted = 0
+                
+                # 9. Delete user progress (user_id column)
+                try:
+                    result = await db.execute("DELETE FROM user_progress WHERE user_id = ?", (discord_id,))
+                    user_progress_deleted = result.rowcount
+                    logger.debug(f"Deleted {user_progress_deleted} user progress records for user {discord_id}")
+                except Exception as e:
+                    logger.debug(f"User progress deletion failed (table may not exist): {e}")
+                    user_progress_deleted = 0
+                
+                # 6. Finally, delete from users table
+                result = await db.execute("DELETE FROM users WHERE discord_id = ?", (discord_id,))
+                user_deleted = result.rowcount
+                
+                if user_deleted == 0:
+                    logger.error(f"Failed to delete user {discord_id} from users table")
+                    await db.execute("ROLLBACK")
+                    return False
+                
+                # Commit the transaction
+                await db.commit()
+                
+                # Log summary of deletion
+                logger.info(f"✅ Successfully removed user: {username} (Discord ID: {discord_id})")
+                logger.info(f"   Deleted records: manga_progress={progress_deleted}, stats={stats_deleted}, "
+                           f"cached_stats={cached_deleted}, votes={votes_deleted}, achievements={achievements_deleted}, "
+                           f"steam={steam_deleted}, checkpoint={checkpoint_deleted}, "
+                           f"manga_challenges={manga_challenges_deleted}, user_progress={user_progress_deleted}")
+                
+                return True
+                
+            except Exception as e:
+                # Rollback on any error
+                await db.execute("ROLLBACK")
+                logger.error(f"Failed to delete user data, transaction rolled back: {e}")
+                raise
         
     except ValueError as validation_error:
         logger.error(f"Validation error removing user: {validation_error}")
@@ -373,6 +479,44 @@ async def remove_user(discord_id: int):
     except Exception as e:
         logger.error(f"❌ Error removing user {discord_id}: {e}", exc_info=True)
         raise
+
+async def check_user_related_records(discord_id: int):
+    """Check for related records before user deletion (for debugging)."""
+    logger.debug(f"Checking related records for user {discord_id}")
+    
+    try:
+        async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
+            related_counts = {}
+            
+            # Check each table that might reference the user
+            tables_to_check = [
+                ("user_manga_progress", "discord_id"),
+                ("user_stats", "discord_id"),
+                ("cached_stats", "discord_id"),
+                ("manga_recommendations_votes", "voter_id"),
+                ("achievements", "discord_id"),
+                ("steam_users", "discord_id"),
+                ("user_progress_checkpoint", "discord_id"),
+                ("manga_challenges", "user_id"),
+                ("user_progress", "user_id")
+            ]
+            
+            for table_name, column_name in tables_to_check:
+                try:
+                    cursor = await db.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} = ?", (discord_id,))
+                    count = await cursor.fetchone()
+                    related_counts[table_name] = count[0] if count else 0
+                    await cursor.close()
+                except Exception as e:
+                    logger.debug(f"Could not check table {table_name}: {e}")
+                    related_counts[table_name] = "ERROR"
+            
+            logger.debug(f"Related records for user {discord_id}: {related_counts}")
+            return related_counts
+            
+    except Exception as e:
+        logger.error(f"Error checking related records for user {discord_id}: {e}")
+        return {}
 
 async def update_anilist_info(discord_id: int, anilist_username: str, anilist_id: int):
     """Update AniList information with comprehensive logging and validation."""
@@ -967,6 +1111,84 @@ async def upsert_user_manga_progress(discord_id, manga_id, title, chapters, poin
         await db.commit()
 
 # ------------------------------------------------------
+# INVITE TRACKER TABLES
+# ------------------------------------------------------
+async def init_invite_tracker_tables():
+    """Initialize all invite tracker tables in the main database"""
+    logger.info("Initializing invite tracker tables")
+    
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            # Invites table - tracks all invites
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS invites (
+                    invite_code TEXT PRIMARY KEY,
+                    guild_id INTEGER NOT NULL,
+                    inviter_id INTEGER NOT NULL,
+                    inviter_name TEXT NOT NULL,
+                    channel_id INTEGER,
+                    max_uses INTEGER,
+                    uses INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Invite uses table - tracks who used which invite
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS invite_uses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    invite_code TEXT NOT NULL,
+                    inviter_id INTEGER NOT NULL,
+                    inviter_name TEXT NOT NULL,
+                    joiner_id INTEGER NOT NULL,
+                    joiner_name TEXT NOT NULL,
+                    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (invite_code) REFERENCES invites (invite_code)
+                )
+            """)
+            
+            # Recruitment stats table - tracks total recruits per user
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS recruitment_stats (
+                    user_id INTEGER PRIMARY KEY,
+                    guild_id INTEGER NOT NULL,
+                    username TEXT NOT NULL,
+                    total_recruits INTEGER DEFAULT 0,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Leave tracking table - tracks when users leave
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS user_leaves (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    username TEXT NOT NULL,
+                    left_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    was_invited_by INTEGER,
+                    days_in_server INTEGER DEFAULT 0
+                )
+            """)
+            
+            # Invite tracker settings - stores channel configuration
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS invite_tracker_settings (
+                    guild_id INTEGER PRIMARY KEY,
+                    announcement_channel_id INTEGER NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            await db.commit()
+            logger.info("✅ Invite tracker tables initialized successfully")
+    
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize invite tracker tables: {e}", exc_info=True)
+        raise
+
+# ------------------------------------------------------
 # STEAM USERS TABLE
 # ------------------------------------------------------
 async def init_steam_users_table():
@@ -1005,6 +1227,7 @@ async def init_db():
         ("Manga Challenges", init_manga_challenges_table),
         ("User Progress", init_user_progress_table),
         ("Global Challenges", init_global_challenges_table),
+        ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
     ]
@@ -1016,7 +1239,7 @@ async def init_db():
     try:
         # Verify database connectivity first
         logger.info("Verifying database connectivity...")
-        async with await get_db_connection() as test_db:
+        async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as test_db:
             await test_db.execute("SELECT 1")
         logger.info("✅ Database connectivity verified")
         
