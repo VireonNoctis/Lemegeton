@@ -36,6 +36,7 @@ query ($username: String) {
         genres { genre count }
         statuses { status count }
         scores { score count }
+        formats { format count }
       }
       manga {
         count
@@ -43,6 +44,61 @@ query ($username: String) {
         genres { genre count }
         statuses { status count }
         scores { score count }
+        formats { format count }
+        countries { country count }
+      }
+    }
+    favourites {
+      anime(perPage: 10) {
+        nodes {
+          id
+          title { romaji english }
+          coverImage { large }
+          siteUrl
+          averageScore
+          genres
+          format
+          episodes
+          status
+        }
+      }
+      manga(perPage: 10) {
+        nodes {
+          id
+          title { romaji english }
+          coverImage { large }
+          siteUrl
+          averageScore
+          genres
+          format
+          chapters
+          volumes
+          status
+        }
+      }
+      characters(perPage: 10) {
+        nodes {
+          id
+          name { full }
+          image { large }
+          siteUrl
+        }
+      }
+      studios(perPage: 10) {
+        nodes {
+          id
+          name
+          siteUrl
+        }
+      }
+      staff(perPage: 10) {
+        nodes {
+          id
+          name { full }
+          image { large }
+          siteUrl
+          primaryOccupations
+        }
       }
     }
   }
@@ -105,6 +161,8 @@ def build_achievements(anime_stats: dict, manga_stats: dict) -> Dict[str, any]:
     m_reading = status_count(manga_stats.get("statuses", []), "CURRENT")
     a_paused = status_count(anime_stats.get("statuses", []), "PAUSED")
     m_paused = status_count(manga_stats.get("statuses", []), "PAUSED")
+    a_dropped = status_count(anime_stats.get("statuses", []), "DROPPED")
+    m_dropped = status_count(manga_stats.get("statuses", []), "DROPPED")
 
     # Totals
     total_manga = manga_stats.get("count", 0)
@@ -113,6 +171,101 @@ def build_achievements(anime_stats: dict, manga_stats: dict) -> Dict[str, any]:
     # Means (use weighted by buckets, not AniList meanScore to keep consistent with bars)
     a_avg = calc_weighted_avg(anime_stats.get("scores", []))
     m_avg = calc_weighted_avg(manga_stats.get("scores", []))
+
+    # Format distribution for manga - using country data to distinguish Manga/Manhwa/Manhua
+    # Adjust counts to exclude planning entries
+    total_manga_entries = total_manga
+    manga_planning_ratio = m_planning / total_manga_entries if total_manga_entries > 0 else 0
+    logger.info(f"Manga planning ratio: {manga_planning_ratio} (planning: {m_planning}, total: {total_manga_entries})")
+    
+    format_distribution = {}
+    logger.info(f"Manga formats from AniList: {manga_stats.get('formats', [])}")
+    logger.info(f"Manga countries from AniList: {manga_stats.get('countries', [])}")
+    
+    # Initialize all format types to 0
+    format_distribution = {
+        "Manga": 0,      # Japan
+        "Manhwa": 0,     # South Korea
+        "Manhua": 0,     # China
+        "Light Novel": 0,
+        "Novel": 0,
+        "One Shot": 0,
+        "Doujinshi": 0
+    }
+    
+    # Process country data to get Manga/Manhwa/Manhua distinction
+    for country_data in manga_stats.get("countries", []):
+        country = country_data.get("country", "Unknown")
+        count = country_data.get("count", 0)
+        # Adjust count to exclude planning entries (assume planning is distributed proportionally)
+        adjusted_count = int(count * (1 - manga_planning_ratio))
+        logger.info(f"Processing manga country: {country} with count: {count} -> adjusted: {adjusted_count}")
+        
+        if country == "JP":  # Japan
+            format_distribution["Manga"] += adjusted_count
+        elif country == "KR":  # South Korea
+            format_distribution["Manhwa"] += adjusted_count  
+        elif country == "CN":  # China
+            format_distribution["Manhua"] += adjusted_count
+        else:
+            # For other countries, add to general manga category
+            format_distribution["Manga"] += adjusted_count
+            logger.info(f"Unknown country {country}, adding to Manga category")
+    
+    # Process format data for other types (Light Novel, Novel, One Shot, etc.)
+    for f in manga_stats.get("formats", []):
+        format_name = f.get("format", "Unknown")
+        count = f.get("count", 0)
+        # Adjust count to exclude planning entries
+        adjusted_count = int(count * (1 - manga_planning_ratio))
+        logger.info(f"Processing manga format: {format_name} with count: {count} -> adjusted: {adjusted_count}")
+        
+        if format_name == "LIGHT_NOVEL":
+            format_distribution["Light Novel"] = adjusted_count
+        elif format_name == "NOVEL":
+            format_distribution["Novel"] = adjusted_count
+        elif format_name == "ONE_SHOT":
+            format_distribution["One Shot"] = adjusted_count
+        elif format_name == "DOUJINSHI":
+            format_distribution["Doujinshi"] = adjusted_count
+        # Note: We don't process "MANGA" format here since we're using country data instead
+    
+    logger.info(f"Final manga format_distribution (excluding planning): {format_distribution}")
+
+    # Format distribution for anime - exclude planning entries
+    total_anime_entries = total_anime
+    anime_planning_ratio = a_planning / total_anime_entries if total_anime_entries > 0 else 0
+    logger.info(f"Anime planning ratio: {anime_planning_ratio} (planning: {a_planning}, total: {total_anime_entries})")
+    
+    anime_format_distribution = {}
+    for f in anime_stats.get("formats", []):
+        format_name = f.get("format", "Unknown")
+        count = f.get("count", 0)
+        # Adjust count to exclude planning entries
+        adjusted_count = int(count * (1 - anime_planning_ratio))
+        logger.info(f"Processing anime format: {format_name} with count: {count} -> adjusted: {adjusted_count}")
+        
+        # Map AniList anime format names to more readable names
+        if format_name == "TV":
+            format_display = "TV Series"
+        elif format_name == "MOVIE":
+            format_display = "Movie"
+        elif format_name == "OVA":
+            format_display = "OVA"
+        elif format_name == "ONA":
+            format_display = "ONA"
+        elif format_name == "SPECIAL":
+            format_display = "Special"
+        elif format_name == "TV_SHORT":
+            format_display = "TV Short"
+        elif format_name == "MUSIC":
+            format_display = "Music Video"
+        else:
+            format_display = format_name.replace("_", " ").title()
+        
+        anime_format_distribution[format_display] = adjusted_count
+    
+    logger.info(f"Final anime format_distribution (excluding planning): {anime_format_distribution}")
 
     # Genre variety calculation
     all_genres = {}
@@ -270,9 +423,24 @@ def build_achievements(anime_stats: dict, manga_stats: dict) -> Dict[str, any]:
     elif total_current >= 10:
         achieved.append("⚡ Juggler (10+ current)")
 
-    # COMPLETION RATE ACHIEVEMENTS
-    if total_entries > 0:
-        completion_rate = (a_completed + m_completed) / total_entries
+    # COMPLETION RATE ACHIEVEMENTS (only started entries)
+    # Calculate completion rate as: Completed / (Completed + Dropped + Paused + Current)
+    # This gives us the percentage of started content that was actually finished
+    total_started_entries = (a_completed + m_completed + a_dropped + m_dropped + 
+                           a_paused + m_paused + a_watching + m_reading)
+    
+    # Debug logging to understand the values
+    logger.info(f"Completion rate calculation: total_anime={total_anime}, total_manga={total_manga}")
+    logger.info(f"a_completed={a_completed}, m_completed={m_completed}, a_planning={a_planning}, m_planning={m_planning}")
+    logger.info(f"a_dropped={a_dropped}, m_dropped={m_dropped}, a_paused={a_paused}, m_paused={m_paused}")
+    logger.info(f"a_watching={a_watching}, m_reading={m_reading}")
+    logger.info(f"total_started_entries={total_started_entries}")
+    
+    if total_started_entries > 0:
+        completion_rate = (a_completed + m_completed) / total_started_entries
+        # Cap completion rate at 100% to prevent impossible values
+        completion_rate = min(completion_rate, 1.0)
+        
         if completion_rate >= 0.8:
             achieved.append(f"✅ Finisher ({completion_rate:.1%} completion rate)")
         elif completion_rate >= 0.6:
@@ -289,9 +457,92 @@ def build_achievements(anime_stats: dict, manga_stats: dict) -> Dict[str, any]:
             "total_genres": unique_genres,
             "max_genre": max_genre_count,
             "total_entries": total_entries,
-            "completion_rate": (a_completed + m_completed) / total_entries if total_entries > 0 else 0
+            "completion_rate": min((a_completed + m_completed) / total_started_entries, 1.0) if total_started_entries > 0 else 0,
+            "format_distribution": format_distribution,
+            "anime_format_distribution": anime_format_distribution
         }
     }
+
+
+def build_favorites_embed(user_data: dict, avatar_url: str, profile_url: str) -> discord.Embed:
+    """Build favorites embed showing user's favorite anime and manga"""
+    embed = discord.Embed(
+        title=f"⭐ {user_data['name']}'s Favorites",
+        url=profile_url,
+        color=discord.Color.from_rgb(255, 182, 193)  # Light pink
+    )
+    
+    if avatar_url:
+        embed.set_thumbnail(url=avatar_url)
+    
+    favourites = user_data.get("favourites", {})
+    
+    # Favorite Anime
+    fav_anime = favourites.get("anime", {}).get("nodes", [])
+    if fav_anime:
+        anime_list = []
+        for anime in fav_anime[:5]:  # Show top 5
+            title = anime["title"].get("english") or anime["title"].get("romaji") or "Unknown"
+            anime_list.append(f"• [{title}]({anime['siteUrl']})")
+        
+        embed.add_field(
+            name="🎬 Favorite Anime",
+            value="\n".join(anime_list),
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="🎬 Favorite Anime", 
+            value="*No favorite anime set*",
+            inline=False
+        )
+    
+    # Favorite Manga
+    fav_manga = favourites.get("manga", {}).get("nodes", [])
+    if fav_manga:
+        manga_list = []
+        for manga in fav_manga[:5]:  # Show top 5
+            title = manga["title"].get("english") or manga["title"].get("romaji") or "Unknown"
+            manga_list.append(f"• [{title}]({manga['siteUrl']})")
+        
+        embed.add_field(
+            name="📚 Favorite Manga",
+            value="\n".join(manga_list),
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="📚 Favorite Manga",
+            value="*No favorite manga set*", 
+            inline=False
+        )
+    
+    # Favorite Characters
+    fav_characters = favourites.get("characters", {}).get("nodes", [])
+    if fav_characters:
+        character_list = []
+        for character in fav_characters[:5]:  # Show top 5
+            name = character["name"].get("full") or "Unknown"
+            character_list.append(f"• [{name}]({character['siteUrl']})")
+        
+        embed.add_field(
+            name="👥 Favorite Characters",
+            value="\n".join(character_list),
+            inline=False
+        )
+    else:
+        embed.add_field(
+            name="👥 Favorite Characters",
+            value="*No favorite characters set*",
+            inline=False
+        )
+
+    # Add a note about favorites
+    total_anime = len(fav_anime)
+    total_manga = len(fav_manga)
+    
+    embed.set_footer(text="Data from AniList")
+    return embed
 
 
 # -----------------------------
@@ -375,7 +626,7 @@ class Profile(commands.Cog):
             value=score_bar(stats_manga.get("scores", [])),
             inline=False
         )
-        manga_embed.set_footer(text="Data from AniList • Page 1/3")
+        manga_embed.set_footer(text="Data from AniList • Page 1/2")
 
         # Anime page
         anime_embed = discord.Embed(
@@ -397,28 +648,31 @@ class Profile(commands.Cog):
             value=score_bar(stats_anime.get("scores", [])),
             inline=False
         )
-        anime_embed.set_footer(text="Data from AniList • Page 2/3")
+        anime_embed.set_footer(text="Data from AniList • Page 2/2")
 
-        # Achievements pages (paginate 10 per page)
+        # Achievements data
         achievements_data = build_achievements(stats_anime, stats_manga)
         
-        # Create achievements button view
-        view = AchievementsView(achievements_data, user_data, avatar_url, profile_url)
+        # Create achievements and favorites button views
+        achievements_view = AchievementsView(achievements_data, user_data, avatar_url, profile_url)
+        favorites_view = FavoritesView(user_data, avatar_url, profile_url)
 
         pages: List[discord.Embed] = [manga_embed, anime_embed]
 
-        # Send first page and attach pager with achievements button
-        pager = ProfilePager(pages, view)
-        view.profile_pager = pager  # Set the reference after creating the pager
+        # Send first page and attach pager with achievements and favorites buttons
+        pager = ProfilePager(pages, achievements_view, favorites_view)
+        achievements_view.profile_pager = pager  # Set the reference after creating the pager
+        favorites_view.profile_pager = pager  # Set the reference after creating the pager
         msg = await interaction.followup.send(embed=pages[0], view=pager)
 
 
 class ProfilePager(discord.ui.View):
-    def __init__(self, pages: List[discord.Embed], achievements_view):
+    def __init__(self, pages: List[discord.Embed], achievements_view, favorites_view):
         super().__init__(timeout=120)
         self.pages = pages
         self.index = 0
         self.achievements_view = achievements_view
+        self.favorites_view = favorites_view
 
     async def on_timeout(self):
         for child in self.children:
@@ -440,6 +694,13 @@ class ProfilePager(discord.ui.View):
         await interaction.response.edit_message(
             embed=self.achievements_view.get_current_embed(),
             view=self.achievements_view
+        )
+
+    @discord.ui.button(label="⭐ Favorites", style=discord.ButtonStyle.primary)
+    async def show_favorites(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            embed=self.favorites_view.get_current_embed(),
+            view=self.favorites_view
         )
 
 
@@ -478,7 +739,7 @@ class AchievementsView(discord.ui.View):
         if self.avatar_url:
             embed.set_thumbnail(url=self.avatar_url)
         
-        embed.set_footer(text=f"Achieved: {len(achieved)} • Page 1/3")
+        embed.set_footer(text=f"Achieved: {len(achieved)} • Achievements Page 1/3")
         return embed
 
     def get_progress_embed(self) -> discord.Embed:
@@ -495,12 +756,12 @@ class AchievementsView(discord.ui.View):
             embed.description = description if len(description) <= 4096 else description[:4090] + "..."
             
             if len(progress) > 8:
-                embed.set_footer(text=f"Progress: {len(progress)} items (showing first 8) • Page 2/3")
+                embed.set_footer(text=f"Progress: {len(progress)} items (showing first 8) • Achievements Page 2/3")
             else:
-                embed.set_footer(text=f"Progress: {len(progress)} items • Page 2/3")
+                embed.set_footer(text=f"Progress: {len(progress)} items • Achievements Page 2/3")
         else:
             embed.description = "All available achievements unlocked! 🎉"
-            embed.set_footer(text="Progress: Complete • Page 2/3")
+            embed.set_footer(text="Progress: Complete • Achievements Page 2/3")
         
         if self.avatar_url:
             embed.set_thumbnail(url=self.avatar_url)
@@ -555,10 +816,72 @@ class AchievementsView(discord.ui.View):
             inline=True
         )
         
+        # Format Distribution - Manga
+        format_dist = stats.get("format_distribution", {})
+        logger.info(f"Stats format_distribution: {format_dist}")
+        if format_dist:
+            format_lines = []
+            # Sort by count (descending) and take top entries
+            sorted_formats = sorted(format_dist.items(), key=lambda x: x[1], reverse=True)
+            logger.info(f"Sorted manga formats: {sorted_formats}")
+            for format_name, count in sorted_formats:
+                logger.info(f"Checking manga format {format_name} with count {count}")
+                # Show all formats, even with 0 count for debugging
+                # if count > 0:  # Only show formats with content
+                # Add emojis for different manga formats
+                if format_name == "Manga":
+                    emoji = "📚"
+                elif format_name == "Manhwa":
+                    emoji = "📚"
+                elif format_name == "Manhua":
+                    emoji = "📚"
+                elif format_name == "Light Novel":
+                    emoji = "📖"
+                elif format_name == "Novel":
+                    emoji = "📕"
+                elif format_name == "One Shot":
+                    emoji = "📄"
+                elif format_name == "Doujinshi":
+                    emoji = "📗"
+                else:
+                    emoji = "📚"
+                
+                if count > 0:  # Only add non-zero entries to the display
+                    format_lines.append(f"{emoji} **{format_name}** - {count:,} entries")
+            
+            logger.info(f"Final manga format_lines: {format_lines}")
+            if format_lines:
+                embed.add_field(
+                    name="📚 Manga Format Distribution",
+                    value="\n".join(format_lines),
+                    inline=True
+                )
+            else:
+                logger.info("No manga format lines to display (all counts were 0)")
+        else:
+            logger.info("No manga format distribution data found in stats")
+        
+        # Format Distribution - Anime
+        anime_format_dist = stats.get("anime_format_distribution", {})
+        if anime_format_dist:
+            anime_format_lines = []
+            # Sort by count (descending) and take top entries
+            sorted_anime_formats = sorted(anime_format_dist.items(), key=lambda x: x[1], reverse=True)
+            for format_name, count in sorted_anime_formats:
+                if count > 0:  # Only show formats with content
+                    anime_format_lines.append(f"**{format_name}** - {count:,} entries")
+            
+            if anime_format_lines:
+                embed.add_field(
+                    name="🎬 Anime Format Distribution",
+                    value="\n".join(anime_format_lines),
+                    inline=True
+                )
+        
         if self.avatar_url:
             embed.set_thumbnail(url=self.avatar_url)
         
-        embed.set_footer(text="Achievement Statistics • Page 3/3")
+        embed.set_footer(text="Achievement Statistics • Achievements Page 3/3")
         return embed
 
     async def on_timeout(self):
@@ -582,6 +905,204 @@ class AchievementsView(discord.ui.View):
         await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
 
     @discord.ui.button(label="◀ Back to Profile", style=discord.ButtonStyle.secondary, row=1)
+    async def back_to_profile(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.profile_pager:
+            await interaction.response.edit_message(
+                embed=self.profile_pager.pages[self.profile_pager.index],
+                view=self.profile_pager
+            )
+
+
+class FavoritesView(discord.ui.View):
+    def __init__(self, user_data: Dict, avatar_url: str, profile_url: str, profile_pager=None):
+        super().__init__(timeout=120)
+        self.user_data = user_data
+        self.avatar_url = avatar_url
+        self.profile_url = profile_url
+        self.profile_pager = profile_pager
+        self.current_page = 0  # 0=Anime, 1=Manga, 2=Characters, 3=Studios, 4=Staff
+        self.page_names = ["Anime", "Manga", "Characters", "Studios", "Staff"]
+    
+    async def on_timeout(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+    
+    def get_current_embed(self) -> discord.Embed:
+        """Get the current favorites page embed"""
+        if self.current_page == 0:
+            return self.build_anime_favorites()
+        elif self.current_page == 1:
+            return self.build_manga_favorites()
+        elif self.current_page == 2:
+            return self.build_character_favorites()
+        elif self.current_page == 3:
+            return self.build_studio_favorites()
+        elif self.current_page == 4:
+            return self.build_staff_favorites()
+        else:
+            return self.build_anime_favorites()
+    
+    def build_anime_favorites(self) -> discord.Embed:
+        """Build anime favorites page"""
+        embed = discord.Embed(
+            title=f"🎬 {self.user_data['name']}'s Favorite Anime",
+            url=self.profile_url,
+            color=discord.Color.blue()
+        )
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        fav_anime = self.user_data.get("favourites", {}).get("anime", {}).get("nodes", [])
+        if fav_anime:
+            anime_list = []
+            for i, anime in enumerate(fav_anime[:10], 1):
+                title = anime["title"].get("english") or anime["title"].get("romaji") or "Unknown"
+                score = f" ({anime['averageScore']}%)" if anime.get('averageScore') else ""
+                anime_list.append(f"{i}. [{title}]({anime['siteUrl']}){score}")
+            
+            embed.description = "\n".join(anime_list)
+        else:
+            embed.description = "*No favorite anime set*"
+        
+        embed.set_footer(text=f"Data from AniList • {self.page_names[self.current_page]} ({self.current_page + 1}/5)")
+        return embed
+    
+    def build_manga_favorites(self) -> discord.Embed:
+        """Build manga favorites page"""
+        embed = discord.Embed(
+            title=f"📚 {self.user_data['name']}'s Favorite Manga",
+            url=self.profile_url,
+            color=discord.Color.green()
+        )
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        fav_manga = self.user_data.get("favourites", {}).get("manga", {}).get("nodes", [])
+        if fav_manga:
+            manga_list = []
+            for i, manga in enumerate(fav_manga[:10], 1):
+                title = manga["title"].get("english") or manga["title"].get("romaji") or "Unknown"
+                score = f" ({manga['averageScore']}%)" if manga.get('averageScore') else ""
+                manga_list.append(f"{i}. [{title}]({manga['siteUrl']}){score}")
+            
+            embed.description = "\n".join(manga_list)
+        else:
+            embed.description = "*No favorite manga set*"
+        
+        embed.set_footer(text=f"Data from AniList • {self.page_names[self.current_page]} ({self.current_page + 1}/5)")
+        return embed
+    
+    def build_character_favorites(self) -> discord.Embed:
+        """Build character favorites page"""
+        embed = discord.Embed(
+            title=f"👥 {self.user_data['name']}'s Favorite Characters",
+            url=self.profile_url,
+            color=discord.Color.purple()
+        )
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        fav_characters = self.user_data.get("favourites", {}).get("characters", {}).get("nodes", [])
+        if fav_characters:
+            character_list = []
+            for i, character in enumerate(fav_characters[:10], 1):
+                name = character["name"].get("full") or "Unknown"
+                character_list.append(f"{i}. [{name}]({character['siteUrl']})")
+            
+            embed.description = "\n".join(character_list)
+        else:
+            embed.description = "*No favorite characters set*"
+        
+        embed.set_footer(text=f"Data from AniList • {self.page_names[self.current_page]} ({self.current_page + 1}/5)")
+        return embed
+    
+    def build_studio_favorites(self) -> discord.Embed:
+        """Build studio favorites page"""
+        embed = discord.Embed(
+            title=f"🎭 {self.user_data['name']}'s Favorite Studios",
+            url=self.profile_url,
+            color=discord.Color.gold()
+        )
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        fav_studios = self.user_data.get("favourites", {}).get("studios", {}).get("nodes", [])
+        if fav_studios:
+            studio_list = []
+            for i, studio in enumerate(fav_studios[:10], 1):
+                name = studio.get("name") or "Unknown"
+                studio_list.append(f"{i}. [{name}]({studio['siteUrl']})")
+            
+            embed.description = "\n".join(studio_list)
+        else:
+            embed.description = "*No favorite studios set*"
+        
+        embed.set_footer(text=f"Data from AniList • {self.page_names[self.current_page]} ({self.current_page + 1}/5)")
+        return embed
+    
+    def build_staff_favorites(self) -> discord.Embed:
+        """Build staff favorites page"""
+        embed = discord.Embed(
+            title=f"👨‍💼 {self.user_data['name']}'s Favorite Staff",
+            url=self.profile_url,
+            color=discord.Color.orange()
+        )
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        fav_staff = self.user_data.get("favourites", {}).get("staff", {}).get("nodes", [])
+        if fav_staff:
+            staff_list = []
+            for i, staff in enumerate(fav_staff[:10], 1):
+                name = staff["name"].get("full") or "Unknown"
+                occupations = staff.get("primaryOccupations", [])
+                occupation_text = f" ({', '.join(occupations[:2])})" if occupations else ""
+                staff_list.append(f"{i}. [{name}]({staff['siteUrl']}){occupation_text}")
+            
+            embed.description = "\n".join(staff_list)
+        else:
+            embed.description = "*No favorite staff set*"
+        
+        embed.set_footer(text=f"Data from AniList • {self.page_names[self.current_page]} ({self.current_page + 1}/5)")
+        return embed
+    
+    @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = (self.current_page - 1) % 5
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="▶", style=discord.ButtonStyle.secondary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = (self.current_page + 1) % 5
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="🎬 Anime", style=discord.ButtonStyle.primary)
+    async def show_anime(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 0
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="📚 Manga", style=discord.ButtonStyle.primary)
+    async def show_manga(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 1
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="👥 Characters", style=discord.ButtonStyle.primary, row=1)
+    async def show_characters(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 2
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="🎭 Studios", style=discord.ButtonStyle.primary, row=1)
+    async def show_studios(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 3
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="👨‍💼 Staff", style=discord.ButtonStyle.primary, row=1)
+    async def show_staff(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 4
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+    
+    @discord.ui.button(label="◀ Back to Profile", style=discord.ButtonStyle.secondary, row=2)
     async def back_to_profile(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.profile_pager:
             await interaction.response.edit_message(
