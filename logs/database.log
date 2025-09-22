@@ -5362,3 +5362,324 @@ sqlite3.OperationalError: no such column: updated_at
                     
 [2025-09-22 05:41:08] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('xUGD7krzws', 897814031346319382, 331164413623009281, 'Kyerstorm', 898184958542233600, -1, 292)
 [2025-09-22 05:41:08] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-22 05:46:09] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 05:46:09] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 05:46:09] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 05:46:09] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 05:46:09] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 05:46:09] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.db
+[2025-09-22 05:46:09] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-22 05:46:09] [INFO] [Database] <module>:75 - Database file size: 479,232 bytes (0.46 MB)
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invites
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invites WHERE guild_id = 897814031346319382
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:142 - cleanup invites completed in 0.004s
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invite_uses
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_uses WHERE guild_id = 897814031346319382
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:142 - cleanup invite_uses completed in 0.002s
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup recruitment_stats
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM recruitment_stats WHERE guild_id = 897814031346319382
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:142 - cleanup recruitment_stats completed in 0.001s
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup user_leaves
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM user_leaves WHERE guild_id = 897814031346319382
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:142 - cleanup user_leaves completed in 0.001s
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invite_tracker_settings
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_tracker_settings WHERE guild_id = 897814031346319382
+[2025-09-22 05:46:09] [DEBUG] [Database] execute_db_operation:142 - cleanup invite_tracker_settings completed in 0.001s
+[2025-09-22 05:47:21] [INFO] [Database] <module>:59 - ==================================================
+[2025-09-22 05:47:21] [INFO] [Database] <module>:60 - Database logging system initialized
+[2025-09-22 05:47:21] [INFO] [Database] <module>:61 - Log file: logs\database.log
+[2025-09-22 05:47:21] [INFO] [Database] <module>:62 - ==================================================
+[2025-09-22 05:47:21] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-22 05:47:21] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\database.db
+[2025-09-22 05:47:21] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-22 05:47:21] [INFO] [Database] <module>:75 - Database file size: 479,232 bytes (0.46 MB)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check table invites
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT name FROM sqlite_master WHERE type='table' AND name='invites'
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check table invites completed in 0.002s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check schema for invites
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(invites)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check schema for invites completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 8 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check table invite_uses
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT name FROM sqlite_master WHERE type='table' AND name='invite_uses'
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check table invite_uses completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check schema for invite_uses
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(invite_uses)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check schema for invite_uses completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 8 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check table recruitment_stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT name FROM sqlite_master WHERE type='table' AND name='recruitment_stats'
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check table recruitment_stats completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check schema for recruitment_stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(recruitment_stats)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check schema for recruitment_stats completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 5 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check table user_leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT name FROM sqlite_master WHERE type='table' AND name='user_leaves'
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check table user_leaves completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check schema for user_leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(user_leaves)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check schema for user_leaves completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 7 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check table invite_tracker_settings
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT name FROM sqlite_master WHERE type='table' AND name='invite_tracker_settings'
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check table invite_tracker_settings completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing check schema for invite_tracker_settings
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: PRAGMA table_info(invite_tracker_settings)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - check schema for invite_tracker_settings completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 3 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invites
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invites WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup invites completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invite_uses
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_uses WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup invite_uses completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup recruitment_stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM recruitment_stats WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup recruitment_stats completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup user_leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM user_leaves WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup user_leaves completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invite_tracker_settings
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_tracker_settings WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup invite_tracker_settings completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invites 
+                (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('testcode1', 897814031346319382, 444555666, 'TestInviter0', 999888777666, -1, 0)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite completed in 0.006s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invites 
+                (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('testcode2', 897814031346319382, 777888999, 'TestInviter1', 999888777666, -1, 0)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite completed in 0.008s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invites 
+                (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('testcode3', 897814031346319382, 444555666, 'TestInviter2', 999888777666, -1, 0)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite completed in 0.006s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite use
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invite_uses 
+                (guild_id, invite_code, inviter_id, inviter_name, joiner_id, joiner_name, joined_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 'testcode1', 444555666, 'TestInviter444555666', 123456789, 'TestUser123456789', datetime.datetime(2025, 9, 5, 5, 47, 21, 388129))
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite use completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite use
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invite_uses 
+                (guild_id, invite_code, inviter_id, inviter_name, joiner_id, joiner_name, joined_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 'testcode2', 777888999, 'TestInviter777888999', 987654321, 'TestUser987654321', datetime.datetime(2025, 9, 21, 5, 47, 21, 393880))
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite use completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite use
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invite_uses 
+                (guild_id, invite_code, inviter_id, inviter_name, joiner_id, joiner_name, joined_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 'testcode3', 444555666, 'TestInviter444555666', 555666777, 'TestUser555666777', datetime.datetime(2025, 8, 31, 5, 47, 21, 399126))
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite use completed in 0.004s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test invite use
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO invite_uses 
+                (guild_id, invite_code, inviter_id, inviter_name, joiner_id, joiner_name, joined_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 'testcode1', 777888999, 'TestInviter777888999', 111222333, 'TestUser111222333', datetime.datetime(2025, 9, 8, 5, 47, 21, 403909))
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test invite use completed in 0.006s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test recruitment stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO recruitment_stats
+                (user_id, guild_id, username, total_recruits)
+                VALUES (?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (444555666, 897814031346319382, 'TestInviter444555666', 2)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test recruitment stats completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test recruitment stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO recruitment_stats
+                (user_id, guild_id, username, total_recruits)
+                VALUES (?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (777888999, 897814031346319382, 'TestInviter777888999', 2)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test recruitment stats completed in 0.004s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test user leave
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO user_leaves 
+                (guild_id, user_id, username, was_invited_by, days_in_server, left_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 123456789, 'TestUser123456789', 444555666, 16, datetime.datetime(2025, 9, 16, 5, 47, 21, 419904))
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test user leave completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test user leave
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                INSERT INTO user_leaves 
+                (guild_id, user_id, username, was_invited_by, days_in_server, left_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 987654321, 'TestUser987654321', 777888999, 58, datetime.datetime(2025, 9, 16, 5, 47, 21, 424973))
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test user leave completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing insert test channel setting
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            INSERT INTO invite_tracker_settings
+            (guild_id, announcement_channel_id, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 999888777666)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - insert test channel setting completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get test invites
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM invites WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get test invites completed in 0.002s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 3 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get test invite uses
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM invite_uses WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get test invite uses completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 4 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get test recruitment stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM recruitment_stats WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get test recruitment stats completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 2 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get test user leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM user_leaves WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get test user leaves completed in 0.002s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 2 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get test channel setting
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT * FROM invite_tracker_settings WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get test channel setting completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get total recruited count
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT COUNT(*) FROM invite_uses WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get total recruited count completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get total leaves count
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT COUNT(*) FROM user_leaves WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get total leaves count completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get top recruiters
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            SELECT username, total_recruits FROM recruitment_stats 
+            WHERE guild_id = ? 
+            ORDER BY total_recruits DESC LIMIT 10
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get top recruiters completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 2 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get recent joins
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            SELECT COUNT(*) FROM invite_uses 
+            WHERE guild_id = ? AND joined_at >= datetime('now', '-7 days')
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get recent joins completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get recent leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            SELECT COUNT(*) FROM user_leaves 
+            WHERE guild_id = ? AND left_at >= datetime('now', '-7 days')
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get recent leaves completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing record test invite use
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            INSERT INTO invite_uses 
+            (guild_id, invite_code, inviter_id, inviter_name, joiner_id, joiner_name)
+            VALUES (?, ?, ?, ?, ?, ?)
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382, 'testcode1', 444555666, 'TestInviter444555666', 999999999, 'NewTestUser999999999')
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - record test invite use completed in 0.004s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing update recruitment stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            INSERT OR REPLACE INTO recruitment_stats
+            (user_id, guild_id, username, total_recruits)
+            VALUES (?, ?, ?, COALESCE((
+                SELECT total_recruits + 1 FROM recruitment_stats 
+                WHERE user_id = ? AND guild_id = ?
+            ), 1))
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (444555666, 897814031346319382, 'TestInviter444555666', 444555666, 897814031346319382)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - update recruitment stats completed in 0.006s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get updated recruit count
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            SELECT total_recruits FROM recruitment_stats 
+            WHERE user_id = ? AND guild_id = ?
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (444555666, 897814031346319382)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get updated recruit count completed in 0.002s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing delete test invite use
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_uses WHERE joiner_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (999999999,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - delete test invite use completed in 0.004s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing restore recruitment stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: 
+            UPDATE recruitment_stats 
+            SET total_recruits = ? 
+            WHERE user_id = ? AND guild_id = ?
+            
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (2, 444555666, 897814031346319382)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - restore recruitment stats completed in 0.006s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get all test invites
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT invite_code, inviter_name, uses FROM invites WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get all test invites completed in 0.002s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 3 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get all recruitment stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT username, total_recruits FROM recruitment_stats WHERE guild_id = ? ORDER BY total_recruits DESC
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get all recruitment stats completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:148 - Query returned 2 rows
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get total recruited
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT COUNT(*) FROM invite_uses WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get total recruited completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get total leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT COUNT(*) FROM user_leaves WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get total leaves completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing get channel setting
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT announcement_channel_id FROM invite_tracker_settings WHERE guild_id = ?
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:118 - Parameters: (897814031346319382,)
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - get channel setting completed in 0.001s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:146 - Query returned 1 row
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invites
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invites WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [ERROR] [Database] execute_db_operation:156 - cleanup invites failed after 0.003s: FOREIGN KEY constraint failed
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invite_uses
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_uses WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup invite_uses completed in 0.004s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup recruitment_stats
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM recruitment_stats WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup recruitment_stats completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup user_leaves
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM user_leaves WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup user_leaves completed in 0.005s
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:115 - Executing cleanup invite_tracker_settings
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:116 - Query: DELETE FROM invite_tracker_settings WHERE guild_id = 897814031346319382
+[2025-09-22 05:47:21] [DEBUG] [Database] execute_db_operation:142 - cleanup invite_tracker_settings completed in 0.006s
