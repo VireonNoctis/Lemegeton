@@ -91,12 +91,20 @@ def status_count(statuses: List[Dict[str, int]], key: str) -> int:
             return s["count"]
     return 0
 
-def build_achievements(anime_stats: dict, manga_stats: dict) -> List[str]:
-    ach = []
+def build_achievements(anime_stats: dict, manga_stats: dict) -> Dict[str, any]:
+    """Build achievements with progress tracking"""
+    achieved = []
+    progress = []
 
     # Helper: counts
     a_completed = status_count(anime_stats.get("statuses", []), "COMPLETED")
     m_completed = status_count(manga_stats.get("statuses", []), "COMPLETED")
+    a_planning = status_count(anime_stats.get("statuses", []), "PLANNING")
+    m_planning = status_count(manga_stats.get("statuses", []), "PLANNING")
+    a_watching = status_count(anime_stats.get("statuses", []), "CURRENT")
+    m_reading = status_count(manga_stats.get("statuses", []), "CURRENT")
+    a_paused = status_count(anime_stats.get("statuses", []), "PAUSED")
+    m_paused = status_count(manga_stats.get("statuses", []), "PAUSED")
 
     # Totals
     total_manga = manga_stats.get("count", 0)
@@ -106,40 +114,184 @@ def build_achievements(anime_stats: dict, manga_stats: dict) -> List[str]:
     a_avg = calc_weighted_avg(anime_stats.get("scores", []))
     m_avg = calc_weighted_avg(manga_stats.get("scores", []))
 
-    # Completion milestones
-    if m_completed >= 100:  ach.append("📚 Manga Enthusiast (100+ Manga)")
-    if m_completed >= 250:  ach.append("📖 Bookworm (250+ Manga)")
-    if m_completed >= 500:  ach.append("📚 Completionist (500+ Manga)")
-    if m_completed >= 1000: ach.append("📚 Ultimate Manga Collector (1000+ Manga)")
-
-    if a_completed >= 100:  ach.append("🎬 Anime Enthusiast (100+ Anime)")
-    if a_completed >= 250:  ach.append("🎥 Binge Watcher (250+ Anime)")
-    if a_completed >= 500:  ach.append("🎬 Anime Addict (500+ Anime)")
-    if a_completed >= 1000: ach.append("🎬 Anime Marathoner (1000+ Anime)")
-
-    # High scores
-    if m_avg >= 8: ach.append("🏆 Manga Critic (Avg ≥ 8)")
-    if m_avg >= 9: ach.append("🥇 Score Master (Avg ≥ 9)")
-    if a_avg >= 8: ach.append("🎖 Anime Critic (Avg ≥ 8)")
-    if a_avg >= 9: ach.append("🥇 Anime Score Master (Avg ≥ 9)")
-
-    # Genre variety / binge using statistics.genres counts
+    # Genre variety calculation
     all_genres = {}
     for g in manga_stats.get("genres", []):
         all_genres[g["genre"]] = all_genres.get(g["genre"], 0) + g["count"]
     for g in anime_stats.get("genres", []):
         all_genres[g["genre"]] = all_genres.get(g["genre"], 0) + g["count"]
+    
+    unique_genres = len(all_genres)
+    max_genre_count = max(all_genres.values()) if all_genres else 0
 
-    if len(all_genres) >= 10:
-        ach.append("🔄 Mixed Tastes (10+ genres)")
-    if any(v >= 50 for v in all_genres.values()):
-        ach.append("🔥 Binge Mode (50+ in one genre)")
+    # MANGA COMPLETION ACHIEVEMENTS
+    manga_milestones = [
+        (10, "📚 First Steps (10 Manga)"),
+        (25, "📖 Getting Started (25 Manga)"),
+        (50, "📚 Reader (50 Manga)"),
+        (100, "📚 Manga Enthusiast (100 Manga)"),
+        (250, "📖 Bookworm (250 Manga)"),
+        (500, "📚 Completionist (500 Manga)"),
+        (750, "📚 Manga Master (750 Manga)"),
+        (1000, "📚 Ultimate Manga Collector (1000 Manga)")
+    ]
 
-    # Activity
-    if total_manga >= 100 or total_anime >= 100:
-        ach.append("📝 Active User (100+ entries)")
+    for threshold, title in manga_milestones:
+        if m_completed >= threshold:
+            achieved.append(title)
+        else:
+            prog_bar = "█" * min(10, int(m_completed / threshold * 10))
+            prog_bar += "░" * (10 - len(prog_bar))
+            progress.append(f"{title}\n`{prog_bar}` {m_completed}/{threshold}")
+            break
 
-    return ach
+    # ANIME COMPLETION ACHIEVEMENTS
+    anime_milestones = [
+        (10, "🎬 First Watch (10 Anime)"),
+        (25, "🎥 Getting Into It (25 Anime)"),
+        (50, "🎬 Watcher (50 Anime)"),
+        (100, "🎬 Anime Enthusiast (100 Anime)"),
+        (250, "🎥 Binge Watcher (250 Anime)"),
+        (500, "🎬 Anime Addict (500 Anime)"),
+        (750, "🎬 Anime Master (750 Anime)"),
+        (1000, "🎬 Anime Marathoner (1000 Anime)")
+    ]
+
+    for threshold, title in anime_milestones:
+        if a_completed >= threshold:
+            achieved.append(title)
+        else:
+            prog_bar = "█" * min(10, int(a_completed / threshold * 10))
+            prog_bar += "░" * (10 - len(prog_bar))
+            progress.append(f"{title}\n`{prog_bar}` {a_completed}/{threshold}")
+            break
+
+    # SCORING ACHIEVEMENTS
+    score_achievements = [
+        (6.0, "⭐ Fair Critic"),
+        (7.0, "⭐⭐ Good Taste"),
+        (8.0, "🏆 High Standards"),
+        (8.5, "🥇 Elite Critic"),
+        (9.0, "💎 Perfect Taste")
+    ]
+
+    # Manga scoring
+    for threshold, title in score_achievements:
+        if m_avg >= threshold and m_completed >= 10:
+            achieved.append(f"{title} (Manga: {m_avg})")
+        elif m_completed >= 10:
+            next_threshold = next((t for t, _ in score_achievements if t > m_avg), None)
+            if next_threshold:
+                prog_bar = "█" * min(10, int(m_avg / next_threshold * 10))
+                prog_bar += "░" * (10 - len(prog_bar))
+                next_title = next(title for t, title in score_achievements if t == next_threshold)
+                progress.append(f"{next_title} (Manga)\n`{prog_bar}` {m_avg:.1f}/{next_threshold}")
+            break
+
+    # Anime scoring
+    for threshold, title in score_achievements:
+        if a_avg >= threshold and a_completed >= 10:
+            achieved.append(f"{title} (Anime: {a_avg})")
+        elif a_completed >= 10:
+            next_threshold = next((t for t, _ in score_achievements if t > a_avg), None)
+            if next_threshold:
+                prog_bar = "█" * min(10, int(a_avg / next_threshold * 10))
+                prog_bar += "░" * (10 - len(prog_bar))
+                next_title = next(title for t, title in score_achievements if t == next_threshold)
+                progress.append(f"{next_title} (Anime)\n`{prog_bar}` {a_avg:.1f}/{next_threshold}")
+            break
+
+    # GENRE VARIETY ACHIEVEMENTS
+    genre_milestones = [
+        (5, "🎭 Explorer (5+ genres)"),
+        (10, "🔄 Mixed Tastes (10+ genres)"),
+        (15, "🌟 Genre Connoisseur (15+ genres)"),
+        (20, "🌈 Diversity Master (20+ genres)")
+    ]
+
+    for threshold, title in genre_milestones:
+        if unique_genres >= threshold:
+            achieved.append(title)
+        else:
+            prog_bar = "█" * min(10, int(unique_genres / threshold * 10))
+            prog_bar += "░" * (10 - len(prog_bar))
+            progress.append(f"{title}\n`{prog_bar}` {unique_genres}/{threshold}")
+            break
+
+    # BINGE ACHIEVEMENTS
+    binge_milestones = [
+        (25, "🔥 Genre Fan"),
+        (50, "🔥 Binge Mode"),
+        (100, "🔥 Obsessed"),
+        (200, "🔥 Genre Master")
+    ]
+
+    for threshold, title in binge_milestones:
+        if max_genre_count >= threshold:
+            achieved.append(f"{title} ({max_genre_count} in one genre)")
+        else:
+            prog_bar = "█" * min(10, int(max_genre_count / threshold * 10))
+            prog_bar += "░" * (10 - len(prog_bar))
+            progress.append(f"{title}\n`{prog_bar}` {max_genre_count}/{threshold}")
+            break
+
+    # ACTIVITY ACHIEVEMENTS
+    total_entries = total_manga + total_anime
+    activity_milestones = [
+        (50, "📝 Getting Active (50+ entries)"),
+        (100, "📝 Active User (100+ entries)"),
+        (250, "📝 Super Active (250+ entries)"),
+        (500, "📝 Power User (500+ entries)"),
+        (1000, "📝 Database Destroyer (1000+ entries)")
+    ]
+
+    for threshold, title in activity_milestones:
+        if total_entries >= threshold:
+            achieved.append(title)
+        else:
+            prog_bar = "█" * min(10, int(total_entries / threshold * 10))
+            prog_bar += "░" * (10 - len(prog_bar))
+            progress.append(f"{title}\n`{prog_bar}` {total_entries}/{threshold}")
+            break
+
+    # PLANNING ACHIEVEMENTS
+    total_planning = a_planning + m_planning
+    if total_planning >= 100:
+        achieved.append("📋 Planning Master (100+ planned)")
+    elif total_planning >= 50:
+        achieved.append("📋 Future Watcher (50+ planned)")
+    elif total_planning >= 10:
+        achieved.append("� Organized (10+ planned)")
+
+    # MULTITASKING ACHIEVEMENTS
+    total_current = a_watching + m_reading
+    if total_current >= 20:
+        achieved.append("⚡ Multitasker (20+ current)")
+    elif total_current >= 10:
+        achieved.append("⚡ Juggler (10+ current)")
+
+    # COMPLETION RATE ACHIEVEMENTS
+    if total_entries > 0:
+        completion_rate = (a_completed + m_completed) / total_entries
+        if completion_rate >= 0.8:
+            achieved.append(f"✅ Finisher ({completion_rate:.1%} completion rate)")
+        elif completion_rate >= 0.6:
+            achieved.append(f"✅ Good Follow-Through ({completion_rate:.1%} completion rate)")
+
+    return {
+        "achieved": achieved,
+        "progress": progress,
+        "stats": {
+            "manga_completed": m_completed,
+            "anime_completed": a_completed,
+            "manga_avg": m_avg,
+            "anime_avg": a_avg,
+            "total_genres": unique_genres,
+            "max_genre": max_genre_count,
+            "total_entries": total_entries,
+            "completion_rate": (a_completed + m_completed) / total_entries if total_entries > 0 else 0
+        }
+    }
 
 
 # -----------------------------
@@ -248,37 +400,194 @@ class Profile(commands.Cog):
         anime_embed.set_footer(text="Data from AniList • Page 2/3")
 
         # Achievements pages (paginate 10 per page)
-        achievements = build_achievements(stats_anime, stats_manga)
-        ach_pages: List[discord.Embed] = []
-        if not achievements:
-            e = discord.Embed(
-                title=f"🏅 Achievements — {user_data['name']}",
-                description="No achievements yet. Keep watching/reading!",
-                url=profile_url,
-                color=discord.Color.gold()
-            )
-            if avatar_url: e.set_thumbnail(url=avatar_url)
-            e.set_footer(text="Data from AniList • Page 3/3")
-            ach_pages.append(e)
+        achievements_data = build_achievements(stats_anime, stats_manga)
+        
+        # Create achievements button view
+        view = AchievementsView(achievements_data, user_data, avatar_url, profile_url)
+
+        pages: List[discord.Embed] = [manga_embed, anime_embed]
+
+        # Send first page and attach pager with achievements button
+        pager = ProfilePager(pages, view)
+        view.profile_pager = pager  # Set the reference after creating the pager
+        msg = await interaction.followup.send(embed=pages[0], view=pager)
+
+
+class ProfilePager(discord.ui.View):
+    def __init__(self, pages: List[discord.Embed], achievements_view):
+        super().__init__(timeout=120)
+        self.pages = pages
+        self.index = 0
+        self.achievements_view = achievements_view
+
+    async def on_timeout(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+
+    @discord.ui.button(label="◀", style=discord.ButtonStyle.secondary)
+    async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index = (self.index - 1) % len(self.pages)
+        await interaction.response.edit_message(embed=self.pages[self.index], view=self)
+
+    @discord.ui.button(label="▶", style=discord.ButtonStyle.secondary)
+    async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.index = (self.index + 1) % len(self.pages)
+        await interaction.response.edit_message(embed=self.pages[self.index], view=self)
+
+    @discord.ui.button(label="🏅 Achievements", style=discord.ButtonStyle.primary)
+    async def show_achievements(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            embed=self.achievements_view.get_current_embed(),
+            view=self.achievements_view
+        )
+
+
+class AchievementsView(discord.ui.View):
+    def __init__(self, achievements_data: Dict, user_data: Dict, avatar_url: str, profile_url: str, profile_pager=None):
+        super().__init__(timeout=120)
+        self.achievements_data = achievements_data
+        self.user_data = user_data
+        self.avatar_url = avatar_url
+        self.profile_url = profile_url
+        self.current_page = 0  # 0 = achieved, 1 = progress, 2 = stats
+        self.profile_pager = profile_pager
+
+    def get_current_embed(self) -> discord.Embed:
+        if self.current_page == 0:
+            return self.get_achieved_embed()
+        elif self.current_page == 1:
+            return self.get_progress_embed()
         else:
-            page_size = 10
-            for i in range(0, len(achievements), page_size):
-                chunk = achievements[i:i+page_size]
-                page_num = (i // page_size) + 3  # pages start at 3
-                e = discord.Embed(
-                    title=f"🏅 Achievements — {user_data['name']}",
-                    description="\n".join(f"{idx+1+i}. {a}" for idx, a in enumerate(chunk)),
-                    url=profile_url,
-                    color=discord.Color.gold()
-                )
-                if avatar_url: e.set_thumbnail(url=avatar_url)
-                e.set_footer(text=f"Data from AniList • Page {page_num}/{2 + ((len(achievements)-1)//page_size + 1)}")
-                ach_pages.append(e)
+            return self.get_stats_embed()
 
-        pages: List[discord.Embed] = [manga_embed, anime_embed] + ach_pages
+    def get_achieved_embed(self) -> discord.Embed:
+        achieved = self.achievements_data["achieved"]
+        embed = discord.Embed(
+            title=f"🏅 Achievements — {self.user_data['name']}",
+            url=self.profile_url,
+            color=discord.Color.gold()
+        )
+        
+        if achieved:
+            description = "\n".join(f"✅ {achievement}" for achievement in achieved)
+            embed.description = description if len(description) <= 4096 else description[:4090] + "..."
+        else:
+            embed.description = "No achievements unlocked yet. Keep watching and reading to unlock more!"
+        
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        embed.set_footer(text=f"Achieved: {len(achieved)} • Page 1/3")
+        return embed
 
-        # Send first page and attach pager
-        msg = await interaction.followup.send(embed=pages[0], view=Pager(pages))
+    def get_progress_embed(self) -> discord.Embed:
+        progress = self.achievements_data["progress"]
+        embed = discord.Embed(
+            title=f"📈 Progress — {self.user_data['name']}",
+            url=self.profile_url,
+            color=discord.Color.blue()
+        )
+        
+        if progress:
+            # Show only first 8 progress items to fit in embed
+            description = "\n\n".join(progress[:8])
+            embed.description = description if len(description) <= 4096 else description[:4090] + "..."
+            
+            if len(progress) > 8:
+                embed.set_footer(text=f"Progress: {len(progress)} items (showing first 8) • Page 2/3")
+            else:
+                embed.set_footer(text=f"Progress: {len(progress)} items • Page 2/3")
+        else:
+            embed.description = "All available achievements unlocked! 🎉"
+            embed.set_footer(text="Progress: Complete • Page 2/3")
+        
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        return embed
+
+    def get_stats_embed(self) -> discord.Embed:
+        stats = self.achievements_data["stats"]
+        embed = discord.Embed(
+            title=f"📊 Achievement Stats — {self.user_data['name']}",
+            url=self.profile_url,
+            color=discord.Color.purple()
+        )
+        
+        embed.add_field(
+            name="📚 Manga Stats",
+            value=f"Completed: **{stats['manga_completed']:,}**\nAvg Score: **{stats['manga_avg']:.1f}**",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🎬 Anime Stats", 
+            value=f"Completed: **{stats['anime_completed']:,}**\nAvg Score: **{stats['anime_avg']:.1f}**",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="🎭 Variety",
+            value=f"Genres: **{stats['total_genres']}**\nMax in One: **{stats['max_genre']}**",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="📝 Activity",
+            value=f"Total Entries: **{stats['total_entries']:,}**",
+            inline=True
+        )
+        
+        embed.add_field(
+            name="✅ Completion Rate",
+            value=f"**{stats['completion_rate']:.1%}**",
+            inline=True
+        )
+        
+        achieved_count = len(self.achievements_data["achieved"])
+        progress_count = len(self.achievements_data["progress"])
+        total_possible = achieved_count + progress_count
+        
+        embed.add_field(
+            name="🏆 Achievement Progress",
+            value=f"**{achieved_count}/{total_possible}** unlocked",
+            inline=True
+        )
+        
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        embed.set_footer(text="Achievement Statistics • Page 3/3")
+        return embed
+
+    async def on_timeout(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+
+    @discord.ui.button(label="🏅 Achieved", style=discord.ButtonStyle.success)
+    async def show_achieved(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 0
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+
+    @discord.ui.button(label="📈 Progress", style=discord.ButtonStyle.primary)
+    async def show_progress(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 1
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+
+    @discord.ui.button(label="📊 Stats", style=discord.ButtonStyle.secondary)
+    async def show_stats(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_page = 2
+        await interaction.response.edit_message(embed=self.get_current_embed(), view=self)
+
+    @discord.ui.button(label="◀ Back to Profile", style=discord.ButtonStyle.secondary, row=1)
+    async def back_to_profile(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.profile_pager:
+            await interaction.response.edit_message(
+                embed=self.profile_pager.pages[self.profile_pager.index],
+                view=self.profile_pager
+            )
 
 
 class Pager(discord.ui.View):

@@ -7,6 +7,7 @@ from pathlib import Path
 from datetime import datetime, timezone
 import asyncio
 from typing import Optional, List, Tuple
+import time
 
 from config import GUILD_ID
 
@@ -224,9 +225,13 @@ class TimestampConverter(commands.Cog):
                 timestamp = self.parse_time_string(original_text)
                 if timestamp:
                     unix_timestamp = int(timestamp.timestamp())
-                    # Use relative timestamp format for clean display
-                    # Discord timestamps must be in exact format: <t:unix:R>
-                    discord_timestamp = f"<t:{unix_timestamp}:R>"
+                    # Use short time format for clean display that maintains grammar
+                    # :t shows "3:30 PM", :f shows "December 28, 2023 3:30 PM"
+                    # For better readability, use :f for dates with time, :t for just times
+                    if any(word in original_text.lower() for word in ['tomorrow', 'today', 'dec', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov']):
+                        discord_timestamp = f"<t:{unix_timestamp}:f>"  # Full date and time
+                    else:
+                        discord_timestamp = f"<t:{unix_timestamp}:t>"  # Just time
                     replacements.append((match.start(), match.end(), original_text, discord_timestamp))
                     processed_ranges.append((start_pos, end_pos))
         
@@ -263,7 +268,8 @@ class TimestampConverter(commands.Cog):
             if re.search(r'\b\d+\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)\s+(ago|from\s+now|later)\b', time_str, re.IGNORECASE):
                 return None
             
-            now = datetime.now(timezone.utc)
+            # Use local time for calculations - this will be the user's system timezone
+            now = datetime.now()
             
             # Combine time and date strings if provided
             full_str = f"{date_str} {time_str}" if date_str else time_str
@@ -321,8 +327,16 @@ class TimestampConverter(commands.Cog):
             # Validate hour and minute
             if hour > 23 or minute > 59:
                 return None
+            
+            # Create the final datetime in local time
+            result = base_date.replace(hour=hour, minute=minute)
+            
+            # Convert local time to UTC for Discord timestamps
+            # Use time.mktime to get local timestamp, then convert to UTC
+            local_timestamp = time.mktime(result.timetuple())
+            utc_result = datetime.fromtimestamp(local_timestamp, tz=timezone.utc)
                 
-            return base_date.replace(hour=hour, minute=minute)
+            return utc_result
             
         except Exception as e:
             logger.error(f"Error parsing time string '{time_str}': {e}")

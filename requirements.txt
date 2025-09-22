@@ -4,6 +4,7 @@ aiohttp==3.12.15
 aiosqlite==0.21.0
 beautifulsoup4==4.13.5
 python-dotenv==1.1.1
+yt-dlp==2024.12.13
 
 # File watching for development (optional)
 watchfiles==1.1.0

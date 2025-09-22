@@ -12,7 +12,7 @@ from database import init_db
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from config import TOKEN, GUILD_ID, BOT_ID
+from config import TOKEN, GUILD_ID, BOT_ID, ADMIN_DISCORD_ID
 
 # ------------------------------------------------------
 # Logging Setup
@@ -392,6 +392,89 @@ async def watch_cogs():
         asyncio.create_task(watch_cogs())
 
 # ------------------------------------------------------
+# Server Logging Function
+# ------------------------------------------------------
+async def log_server_information():
+    """
+    Log detailed information about all servers the bot is connected to.
+    Creates a separate log file with server details for monitoring purposes.
+    """
+    try:
+        # Create server log file
+        server_log_path = os.path.join(LOG_DIR, "servers.log")
+        
+        with open(server_log_path, 'w', encoding='utf-8') as server_log:
+            server_log.write("=" * 80 + "\n")
+            server_log.write(f"BOT SERVER INFORMATION - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            server_log.write("=" * 80 + "\n")
+            server_log.write(f"Bot User: {bot.user} (ID: {bot.user.id})\n")
+            server_log.write(f"Total Servers: {len(bot.guilds)}\n")
+            server_log.write(f"Bot Latency: {bot.latency*1000:.2f}ms\n")
+            server_log.write("-" * 80 + "\n\n")
+            
+            total_members = 0
+            
+            for i, guild in enumerate(bot.guilds, 1):
+                try:
+                    # Get guild information
+                    owner = guild.owner
+                    owner_info = f"{owner} (ID: {owner.id})" if owner else "Unknown"
+                    created_date = guild.created_at.strftime('%Y-%m-%d')
+                    
+                    # Count text and voice channels
+                    text_channels = len([c for c in guild.channels if isinstance(c, discord.TextChannel)])
+                    voice_channels = len([c for c in guild.channels if isinstance(c, discord.VoiceChannel)])
+                    
+                    # Count roles
+                    role_count = len(guild.roles)
+                    
+                    # Add to total members
+                    total_members += guild.member_count
+                    
+                    # Write server information
+                    server_log.write(f"[{i}] SERVER: {guild.name}\n")
+                    server_log.write(f"     Guild ID: {guild.id}\n")
+                    server_log.write(f"     Owner: {owner_info}\n")
+                    server_log.write(f"     Members: {guild.member_count:,}\n")
+                    server_log.write(f"     Created: {created_date}\n")
+                    server_log.write(f"     Channels: {text_channels} text, {voice_channels} voice\n")
+                    server_log.write(f"     Roles: {role_count}\n")
+                    server_log.write(f"     Features: {', '.join(guild.features) if guild.features else 'None'}\n")
+                    
+                    # Check bot permissions
+                    try:
+                        bot_member = guild.get_member(bot.user.id)
+                        if bot_member:
+                            permissions = bot_member.guild_permissions
+                            admin = permissions.administrator
+                            manage_server = permissions.manage_guild
+                            send_messages = permissions.send_messages
+                            
+                            server_log.write(f"     Bot Perms: Admin={admin}, Manage Server={manage_server}, Send Messages={send_messages}\n")
+                    except Exception as perm_error:
+                        server_log.write(f"     Bot Perms: Error retrieving - {perm_error}\n")
+                    
+                    server_log.write("\n")
+                    
+                except Exception as guild_error:
+                    server_log.write(f"[{i}] ERROR processing guild {guild.id}: {guild_error}\n\n")
+                    logger.warning(f"Error processing guild {guild.id}: {guild_error}")
+            
+            # Write summary
+            server_log.write("-" * 80 + "\n")
+            server_log.write("SUMMARY:\n")
+            server_log.write(f"Total Servers: {len(bot.guilds)}\n")
+            server_log.write(f"Total Members Across All Servers: {total_members:,}\n")
+            server_log.write(f"Average Members per Server: {total_members/len(bot.guilds):.1f}\n" if bot.guilds else "")
+            server_log.write("=" * 80 + "\n")
+        
+        logger.info(f"✅ Server information logged to: {server_log_path}")
+        logger.info(f"Bot is connected to {len(bot.guilds)} servers with {total_members:,} total members")
+        
+    except Exception as e:
+        logger.error(f"Error logging server information: {e}", exc_info=True)
+
+# ------------------------------------------------------
 # Bot Events with Comprehensive Logging
 # ------------------------------------------------------
 @bot.event
@@ -407,7 +490,9 @@ async def on_ready():
     logger.info("="*60)
     
     try:
-        # Log guild information
+        # Log guild information with detailed server logging
+        await log_server_information()
+        
         for guild in bot.guilds:
             logger.debug(f"Connected to guild: {guild.name} (ID: {guild.id}) - {guild.member_count} members")
         
@@ -479,6 +564,59 @@ async def on_error(event, *args, **kwargs):
 async def on_command_error(ctx, error):
     """Log command errors."""
     logger.error(f"Command error in '{ctx.command}' by {ctx.author}: {error}", exc_info=True)
+
+@bot.event
+async def on_guild_join(guild):
+    """Log when bot joins a new server."""
+    logger.info(f"🎉 Bot joined new server: {guild.name} (ID: {guild.id}) - {guild.member_count} members")
+    
+    # Update server log when joining new server
+    try:
+        await log_server_information()
+    except Exception as e:
+        logger.error(f"Error updating server log after guild join: {e}")
+
+@bot.event
+async def on_guild_remove(guild):
+    """Log when bot leaves a server."""
+    logger.info(f"👋 Bot removed from server: {guild.name} (ID: {guild.id})")
+    
+    # Update server log when leaving server
+    try:
+        await log_server_information()
+    except Exception as e:
+        logger.error(f"Error updating server log after guild remove: {e}")
+
+# Manual server logging command (for debugging)
+@bot.tree.command(name="log_servers", description="🔍 Manually log server information (Owner only)")
+async def manual_server_log(interaction: discord.Interaction):
+    """Manually trigger server logging (restricted to bot owner)."""
+    # Check if user is bot owner or admin
+    if interaction.user.id != ADMIN_DISCORD_ID:
+        await interaction.response.send_message("❌ This command is restricted to the bot owner.", ephemeral=True)
+        return
+    
+    try:
+        await interaction.response.defer(ephemeral=True)
+        await log_server_information()
+        
+        embed = discord.Embed(
+            title="🔍 Server Information Logged",
+            description=f"Successfully logged information for {len(bot.guilds)} servers to `logs/servers.log`",
+            color=0x00FF00
+        )
+        
+        total_members = sum(guild.member_count for guild in bot.guilds)
+        embed.add_field(name="Total Servers", value=str(len(bot.guilds)), inline=True)
+        embed.add_field(name="Total Members", value=f"{total_members:,}", inline=True)
+        embed.add_field(name="Average Members/Server", value=f"{total_members/len(bot.guilds):.1f}" if bot.guilds else "0", inline=True)
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
+        logger.info(f"Manual server log triggered by {interaction.user}")
+        
+    except Exception as e:
+        logger.error(f"Error in manual server log command: {e}")
+        await interaction.followup.send("❌ Error occurred while logging server information.", ephemeral=True)
 
 # ------------------------------------------------------
 # Main Function with Comprehensive Logging
