@@ -46,6 +46,11 @@ class HelpCog(commands.Cog):
                     "desc": "Manage your account - register, update, or unregister",
                     "usage": "/login",
                     "note": "Start here to connect your AniList account!"
+                },
+                "check_anilist": {
+                    "desc": "Check if an AniList username exists and is accessible",
+                    "usage": "/check_anilist <username>",
+                    "note": "Verify AniList usernames before registration"
                 }
             },
             "📊 Profile & Stats": {
@@ -62,14 +67,14 @@ class HelpCog(commands.Cog):
             },
             "📺 Anime & Manga": {
                 "watchlist": {
-                    "desc": "Show what someone is currently watching or reading",
-                    "usage": "/watchlist [user] [username]",
-                    "note": "View current watching/reading progress"
+                    "desc": "Show what someone is currently watching or reading on AniList", 
+                    "usage": "/watchlist [member] [username]",
+                    "note": "View current watching/reading progress with detailed status"
                 },
                 "browse": {
-                    "desc": "Browse and search anime/manga titles",
+                    "desc": "Search and browse anime, manga, light novels, and general novels",
                     "usage": "/browse",
-                    "note": "Interactive browsing with filtering options"
+                    "note": "Interactive browsing with advanced filtering and sorting options"
                 },
                 "trending": {
                     "desc": "View trending anime and manga",
@@ -77,9 +82,9 @@ class HelpCog(commands.Cog):
                     "note": "See what's popular right now"
                 },
                 "recommendations": {
-                    "desc": "Get personalized recommendations based on your ratings",
-                    "usage": "/recommendations [user] [username]",
-                    "note": "Recommendations based on highly-rated titles (≥7/10)"
+                    "desc": "Get personalized recommendations based on your highly-rated manga (≥8.0/10)",
+                    "usage": "/recommendations [member]",
+                    "note": "AI-powered recommendations with interactive browsing by category"
                 },
                 "search_similar": {
                     "desc": "Find anime/manga similar to a specific title",
@@ -233,11 +238,12 @@ class HelpCog(commands.Cog):
         embed = discord.Embed(
             title="🤖 Lemegeton Bot - Command Help",
             description=(
-                "**Welcome to Lemegeton!** Your ultimate anime/manga tracking companion.\n\n"
+                "**Welcome to Lemegeton!** Your ultimate anime/manga tracking companion with AI-powered features.\n\n"
                 "**🚀 Quick Start:**\n"
                 "1. Use `/login` to connect your AniList account\n"
                 "2. Explore commands by category below\n"
-                "3. Use `/feedback` to suggest improvements\n\n"
+                "3. Join our [Support Server](https://discord.gg/xUGD7krzws) for help\n"
+                "4. Use `/feedback` to suggest improvements\n\n"
                 "**📋 Command Categories:**"
             ),
             color=discord.Color.blue()
@@ -271,6 +277,7 @@ class HelpCog(commands.Cog):
             value=(
                 "• [AniList Website](https://anilist.co) - Create your account\n"
                 "• [Bot Invite Link](https://discord.com/api/oauth2/authorize?client_id={}&permissions=0&scope=bot%20applications.commands) - Share with friends\n"
+                "• [Support Server](https://discord.gg/xUGD7krzws) - Get help and report issues\n"
                 "• Use `/feedback` to report issues or suggest features"
             ).format(BOT_ID),
             inline=False
@@ -341,6 +348,7 @@ class HelpCog(commands.Cog):
             "account": (
                 "• Start with `/login` - it's required for most features\n"
                 "• Your AniList username must be exact (case-sensitive)\n"
+                "• Use `/check_anilist` to verify usernames before registration\n"
                 "• You can update or change your linked account anytime"
             ),
             "profile": (
@@ -350,8 +358,9 @@ class HelpCog(commands.Cog):
             ),
             "anime": (
                 "• Most commands work with both anime and manga\n"
-                "• Recommendations improve as you rate more titles\n"
-                "• Watchlist shows your current watching/reading progress"
+                "• Recommendations use advanced AI filtering for quality results\n"
+                "• Rate titles 8.0+ for best recommendation accuracy\n"
+                "• Browse supports advanced filtering by genre, year, format"
             ),
             "challenges": (
                 "• Join reading challenges to stay motivated\n"
@@ -376,7 +385,8 @@ class HelpCog(commands.Cog):
             "info": (
                 "• Keep up with bot updates via `/changelog`\n"
                 "• Use `/feedback` to suggest improvements\n"
-                "• Share the bot with `/invite` command"
+                "• Share the bot with `/invite` command\n"
+                "• Join our [Support Server](https://discord.gg/xUGD7krzws) for help"
             )
         }
         

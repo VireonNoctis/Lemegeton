@@ -1,196 +1,21 @@
-2025-09-21 19:48:56,695 - INFO - TimestampConverter cog initialized
-2025-09-21 19:49:55,089 - INFO - TimestampConverter cog initialized
-2025-09-21 19:50:49,279 - INFO - TimestampConverter cog initialized
-2025-09-21 19:54:35,560 - INFO - TimestampConverter cog initialized
-2025-09-21 19:55:42,049 - INFO - TimestampConverter cog initialized
-2025-09-21 19:55:47,354 - INFO - TimestampConverter cog initialized
-2025-09-21 19:56:14,088 - INFO - Timestamp watching enabled for channel 1409346772488425614 by kyerstorm
-2025-09-21 19:56:23,843 - INFO - Auto-converted 1 times for kyerstorm in bot-test
-2025-09-21 19:57:34,192 - INFO - TimestampConverter cog initialized
-2025-09-21 19:57:42,268 - INFO - TimestampConverter cog initialized
-2025-09-21 19:58:08,456 - INFO - TimestampConverter cog initialized
-2025-09-21 19:58:42,700 - INFO - TimestampConverter cog initialized
-2025-09-21 19:58:58,869 - INFO - TimestampConverter cog initialized
-2025-09-21 19:59:15,013 - INFO - TimestampConverter cog initialized
-2025-09-21 19:59:37,204 - INFO - TimestampConverter cog initialized
-2025-09-21 20:00:05,427 - INFO - TimestampConverter cog initialized
-2025-09-21 20:00:35,634 - INFO - TimestampConverter cog initialized
-2025-09-21 20:00:45,002 - INFO - TimestampConverter cog initialized
-2025-09-21 20:00:57,476 - INFO - Timestamp watching enabled globally by kyerstorm
-2025-09-21 20:01:15,100 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:02:14,473 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:02:24,645 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:02:46,193 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:04:06,646 - INFO - TimestampConverter cog initialized
-2025-09-21 20:04:36,893 - INFO - TimestampConverter cog initialized
-2025-09-21 20:05:03,080 - INFO - TimestampConverter cog initialized
-2025-09-21 20:05:59,382 - INFO - TimestampConverter cog initialized
-2025-09-21 20:06:06,048 - INFO - Timestamp watching enabled globally by kyerstorm
-2025-09-21 20:06:15,480 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:07:28,150 - INFO - TimestampConverter cog initialized
-2025-09-21 20:07:44,263 - INFO - TimestampConverter cog initialized
-2025-09-21 20:08:12,451 - INFO - TimestampConverter cog initialized
-2025-09-21 20:08:23,064 - INFO - Timestamp watching enabled globally by kyerstorm
-2025-09-21 20:08:31,312 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:09:10,897 - INFO - TimestampConverter cog initialized
-2025-09-21 20:09:20,989 - INFO - TimestampConverter cog initialized
-2025-09-21 20:09:53,185 - INFO - TimestampConverter cog initialized
-2025-09-21 20:09:55,216 - INFO - TimestampConverter cog initialized
-2025-09-21 20:09:57,244 - INFO - TimestampConverter cog initialized
-2025-09-21 20:09:59,274 - INFO - TimestampConverter cog initialized
-2025-09-21 20:10:01,305 - INFO - TimestampConverter cog initialized
-2025-09-21 20:10:37,624 - INFO - TimestampConverter cog initialized
-2025-09-21 20:10:47,130 - INFO - Timestamp watching enabled globally by kyerstorm
-2025-09-21 20:11:03,284 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:12:30,380 - INFO - TimestampConverter cog initialized
-2025-09-21 20:13:00,615 - INFO - TimestampConverter cog initialized
-2025-09-21 20:13:22,803 - INFO - TimestampConverter cog initialized
-2025-09-21 20:14:00,091 - INFO - Timestamp watching enabled globally by kyerstorm
-2025-09-21 20:14:10,015 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:16:46,166 - INFO - TimestampConverter cog initialized
-2025-09-21 20:17:00,260 - INFO - TimestampConverter cog initialized
-2025-09-21 20:17:06,320 - INFO - TimestampConverter cog initialized
-2025-09-21 20:17:12,946 - INFO - TimestampConverter cog initialized
-2025-09-21 20:20:06,158 - INFO - TimestampConverter cog initialized
-2025-09-21 20:26:12,810 - INFO - TimestampConverter cog initialized
-2025-09-21 20:31:13,803 - INFO - TimestampConverter cog initialized
-2025-09-21 20:31:54,364 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-21 20:31:54,751 - ERROR - Error in on_message timestamp detection: 404 Not Found (error code: 10008): Unknown Message
-2025-09-21 20:32:36,211 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-21 20:32:36,215 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-21 20:32:51,018 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:32:51,045 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:33:14,115 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 20:33:14,176 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 20:33:15,730 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-21 20:33:15,774 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-21 20:33:41,495 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 20:33:41,576 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 20:34:07,145 - INFO - TimestampConverter cog initialized
-2025-09-21 20:34:15,221 - INFO - TimestampConverter cog initialized
-2025-09-21 20:34:23,634 - INFO - TimestampConverter cog initialized
-2025-09-21 20:34:31,797 - INFO - TimestampConverter cog initialized
-2025-09-21 20:34:47,083 - INFO - TimestampConverter cog initialized
-2025-09-21 20:35:22,086 - INFO - TimestampConverter cog initialized
-2025-09-21 20:38:11,390 - INFO - TimestampConverter cog initialized
-2025-09-21 20:44:15,843 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-21 20:44:41,672 - INFO - Auto-converted timestamps for kyerstorm in bot-test
-2025-09-21 20:57:09,542 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 20:57:42,878 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 21:12:12,730 - INFO - Auto-converted timestamps for vireon._ in bot-test
-2025-09-21 23:14:50,869 - INFO - TimestampConverter cog initialized
-2025-09-22 01:06:24,102 - INFO - TimestampConverter cog initialized
-2025-09-22 01:10:04,024 - INFO - TimestampConverter cog initialized
-2025-09-22 01:12:03,641 - INFO - TimestampConverter cog initialized
-2025-09-22 01:12:59,330 - INFO - TimestampConverter cog initialized
-2025-09-22 01:27:00,991 - INFO - TimestampConverter cog initialized
-2025-09-22 01:31:30,404 - INFO - TimestampConverter cog initialized
-2025-09-22 01:34:32,597 - INFO - TimestampConverter cog initialized
-2025-09-22 01:34:43,248 - INFO - TimestampConverter cog initialized
-2025-09-22 01:51:06,315 - INFO - TimestampConverter cog initialized
-2025-09-22 01:56:12,256 - INFO - TimestampConverter cog initialized
-2025-09-22 01:56:25,896 - INFO - TimestampConverter cog initialized
-2025-09-22 01:57:10,424 - INFO - TimestampConverter cog initialized
-2025-09-22 02:18:48,002 - INFO - TimestampConverter cog initialized
-2025-09-22 02:20:46,560 - INFO - TimestampConverter cog initialized
-2025-09-22 02:21:39,516 - INFO - TimestampConverter cog initialized
-2025-09-22 02:23:48,499 - INFO - TimestampConverter cog initialized
-2025-09-22 02:24:53,295 - INFO - TimestampConverter cog initialized
-2025-09-22 02:26:17,739 - INFO - TimestampConverter cog initialized
-2025-09-22 02:27:06,142 - INFO - TimestampConverter cog initialized
-2025-09-22 05:05:36,616 - INFO - TimestampConverter cog initialized
-2025-09-22 05:22:14,100 - INFO - TimestampConverter cog initialized
-2025-09-22 05:25:15,348 - INFO - TimestampConverter cog initialized
-2025-09-22 05:30:48,067 - INFO - TimestampConverter cog initialized
-2025-09-22 05:39:12,746 - INFO - TimestampConverter cog initialized
-2025-09-22 05:41:04,863 - INFO - TimestampConverter cog initialized
-2025-09-22 12:16:59,415 - INFO - TimestampConverter cog initialized
-2025-09-22 12:27:03,207 - INFO - TimestampConverter cog initialized
-2025-09-22 12:29:01,854 - INFO - TimestampConverter cog initialized
-2025-09-22 12:53:33,428 - INFO - TimestampConverter cog initialized
-2025-09-22 12:59:27,883 - INFO - TimestampConverter cog initialized
-2025-09-22 13:02:20,032 - INFO - TimestampConverter cog initialized
-2025-09-22 13:08:26,794 - INFO - TimestampConverter cog initialized
-2025-09-22 13:26:16,073 - INFO - TimestampConverter cog initialized
-2025-09-22 14:04:44,206 - INFO - TimestampConverter cog initialized
-2025-09-22 14:06:02,541 - INFO - TimestampConverter cog initialized
-2025-09-22 14:09:40,340 - INFO - Auto-converted timestamps for vireon._ in 📺•anime-discussion•
-2025-09-22 14:12:12,808 - INFO - TimestampConverter cog initialized
-2025-09-22 14:12:33,887 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:12:59,020 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:13:09,002 - INFO - TimestampConverter cog initialized
-2025-09-22 14:14:38,340 - INFO - TimestampConverter cog initialized
-2025-09-22 14:15:44,255 - INFO - TimestampConverter cog initialized
-2025-09-22 14:17:21,236 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:18:46,509 - INFO - TimestampConverter cog initialized
-2025-09-22 14:18:56,645 - INFO - TimestampConverter cog initialized
-2025-09-22 14:19:06,773 - INFO - TimestampConverter cog initialized
-2025-09-22 14:19:31,078 - INFO - TimestampConverter cog initialized
-2025-09-22 14:19:39,194 - INFO - TimestampConverter cog initialized
-2025-09-22 14:19:49,337 - INFO - TimestampConverter cog initialized
-2025-09-22 14:21:25,586 - INFO - TimestampConverter cog initialized
-2025-09-22 14:23:00,710 - INFO - TimestampConverter cog initialized
-2025-09-22 14:23:27,295 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:27:36,137 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:28:01,752 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:28:43,860 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:29:04,757 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:30:23,867 - INFO - TimestampConverter cog initialized
-2025-09-22 14:32:24,836 - INFO - TimestampConverter cog initialized
-2025-09-22 14:32:30,478 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:32:39,466 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:32:44,421 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:35:16,623 - INFO - TimestampConverter cog initialized
-2025-09-22 14:36:56,939 - INFO - Auto-converted timestamps for vireon._ in 📺•anime-discussion•
-2025-09-22 14:37:14,694 - INFO - Auto-converted timestamps for vireon._ in 📺•anime-discussion•
-2025-09-22 14:37:36,413 - INFO - Auto-converted timestamps for vireon._ in 📺•anime-discussion•
-2025-09-22 14:38:33,127 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
-2025-09-22 14:38:42,854 - INFO - Auto-converted timestamps for kyerstorm in 📺•anime-discussion•
-2025-09-22 14:40:25,362 - INFO - Auto-converted timestamps for kyerstorm in 📺•anime-discussion•
-2025-09-22 16:14:43,971 - INFO - TimestampConverter cog initialized
-2025-09-22 16:19:36,562 - INFO - TimestampConverter cog initialized
-2025-09-22 16:28:07,846 - INFO - TimestampConverter cog initialized
-2025-09-22 16:33:18,175 - INFO - TimestampConverter cog initialized
-2025-09-22 16:36:49,140 - INFO - TimestampConverter cog initialized
-2025-09-22 16:41:28,600 - INFO - TimestampConverter cog initialized
-2025-09-22 16:41:34,387 - INFO - TimestampConverter cog initialized
-2025-09-22 17:12:11,459 - INFO - TimestampConverter cog initialized
-2025-09-22 17:13:52,845 - INFO - TimestampConverter cog initialized
-2025-09-22 17:15:14,132 - INFO - TimestampConverter cog initialized
-2025-09-22 17:18:11,475 - INFO - TimestampConverter cog initialized
-2025-09-22 17:19:16,971 - INFO - TimestampConverter cog initialized
-2025-09-22 17:21:59,527 - INFO - TimestampConverter cog initialized
-2025-09-22 17:27:46,673 - INFO - TimestampConverter cog initialized
-2025-09-22 17:33:12,564 - INFO - TimestampConverter cog initialized
-2025-09-22 17:35:39,336 - INFO - TimestampConverter cog initialized
-2025-09-22 17:39:39,179 - INFO - TimestampConverter cog initialized
-2025-09-22 17:43:27,088 - INFO - TimestampConverter cog initialized
-2025-09-22 17:44:26,630 - INFO - TimestampConverter cog initialized
-2025-09-22 17:47:22,383 - INFO - TimestampConverter cog initialized
-2025-09-22 18:47:45,967 - INFO - TimestampConverter cog initialized
-2025-09-22 18:49:20,817 - INFO - TimestampConverter cog initialized
-2025-09-22 18:51:30,881 - INFO - TimestampConverter cog initialized
-2025-09-22 18:52:30,140 - INFO - TimestampConverter cog initialized
-2025-09-22 19:00:56,671 - INFO - TimestampConverter cog initialized
-2025-09-22 19:12:58,618 - INFO - TimestampConverter cog initialized
-2025-09-22 19:14:16,860 - INFO - TimestampConverter cog initialized
-2025-09-22 19:14:55,948 - INFO - TimestampConverter cog initialized
-2025-09-22 19:19:02,461 - INFO - TimestampConverter cog initialized
-2025-09-22 19:20:48,669 - INFO - TimestampConverter cog initialized
-2025-09-22 19:23:11,967 - INFO - TimestampConverter cog initialized
-2025-09-22 19:35:41,155 - INFO - TimestampConverter cog initialized
-2025-09-22 19:43:04,093 - INFO - TimestampConverter cog initialized
-2025-09-22 20:37:13,836 - INFO - TimestampConverter cog initialized
-2025-09-22 20:47:10,027 - INFO - TimestampConverter cog initialized
-2025-09-22 20:50:08,954 - INFO - TimestampConverter cog initialized
-2025-09-22 20:56:28,953 - INFO - TimestampConverter cog initialized
-2025-09-22 21:00:40,965 - INFO - TimestampConverter cog initialized
-2025-09-23 00:15:34,386 - INFO - TimestampConverter cog initialized
-2025-09-23 00:27:39,143 - INFO - TimestampConverter cog initialized
-2025-09-23 00:32:12,101 - INFO - TimestampConverter cog initialized
-2025-09-23 00:48:37,219 - INFO - TimestampConverter cog initialized
-2025-09-23 01:00:20,499 - INFO - TimestampConverter cog initialized
-2025-09-23 01:13:02,827 - INFO - TimestampConverter cog initialized
-2025-09-23 04:09:08,194 - INFO - TimestampConverter cog initialized
-2025-09-23 04:18:42,584 - INFO - TimestampConverter cog initialized
-2025-09-23 04:22:31,181 - INFO - TimestampConverter cog initialized
+2025-09-23 14:03:58,255 - INFO - TimestampConverter cog initialized
+2025-09-23 14:14:49,998 - INFO - TimestampConverter cog initialized
+2025-09-23 14:16:07,104 - INFO - TimestampConverter cog initialized
+2025-09-23 14:18:21,677 - INFO - TimestampConverter cog initialized
+2025-09-23 14:21:20,170 - INFO - TimestampConverter cog initialized
+2025-09-23 14:22:32,916 - INFO - TimestampConverter cog initialized
+2025-09-23 14:22:45,909 - INFO - TimestampConverter cog initialized
+2025-09-23 14:22:49,434 - INFO - TimestampConverter cog initialized
+2025-09-23 14:22:59,434 - INFO - TimestampConverter cog initialized
+2025-09-23 14:31:52,961 - INFO - TimestampConverter cog initialized
+2025-09-23 14:43:56,887 - INFO - TimestampConverter cog initialized
+2025-09-23 14:45:27,854 - INFO - TimestampConverter cog initialized
+2025-09-23 15:29:29,430 - INFO - TimestampConverter cog initialized
+2025-09-23 15:30:15,719 - INFO - TimestampConverter cog initialized
+2025-09-23 15:37:24,441 - INFO - TimestampConverter cog initialized
+2025-09-23 15:45:44,301 - INFO - TimestampConverter cog initialized
+2025-09-23 15:57:24,516 - INFO - TimestampConverter cog initialized
+2025-09-23 16:00:39,891 - INFO - TimestampConverter cog initialized
+2025-09-23 16:03:37,109 - INFO - TimestampConverter cog initialized
+2025-09-23 16:05:23,343 - INFO - TimestampConverter cog initialized
+2025-09-23 16:08:55,602 - INFO - TimestampConverter cog initialized

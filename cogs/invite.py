@@ -60,7 +60,6 @@ class InviteCog(commands.Cog):
                 read_message_history=True,
                 use_external_emojis=True,
                 add_reactions=True,
-                use_slash_commands=True,
                 manage_roles=True,  # For challenge roles
                 view_channel=True,
                 connect=True,  # For voice channels if needed
@@ -100,7 +99,7 @@ class InviteCog(commands.Cog):
                     "• Send/Read Messages\n"
                     "• Embed Links & Attach Files\n"
                     "• Manage Messages & Roles\n"
-                    "• Use Slash Commands"
+                    "• View Channels & Message History"
                 ),
                 inline=False
             )

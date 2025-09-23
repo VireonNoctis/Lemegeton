@@ -501,6 +501,7 @@ class InviteTracker(commands.Cog):
         name="invite_channel_info",
         description="ℹ️ View current invite tracking channel settings"
     )
+    @app_commands.default_permissions(administrator=True)
     async def invite_channel_info(self, interaction: discord.Interaction):
         """View current invite channel configuration"""
         guild_id = interaction.guild.id
@@ -573,6 +574,7 @@ class InviteTracker(commands.Cog):
     @app_commands.describe(
         user="Check specific user's recruitment stats (leave empty for top recruiters)"
     )
+    @app_commands.default_permissions(administrator=True)
     async def recruitment_stats(
         self,
         interaction: discord.Interaction,
@@ -693,6 +695,7 @@ class InviteTracker(commands.Cog):
         name="sect_analytics",
         description="📊 View detailed sect analytics and statistics"
     )
+    @app_commands.default_permissions(administrator=True)
     async def sect_analytics(self, interaction: discord.Interaction):
         """View detailed analytics about the sect"""
         # Defer immediately to prevent timeout

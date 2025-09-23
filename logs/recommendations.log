@@ -1,0 +1,475 @@
+[2025-09-23 14:10:11,553] [INFO] Recommendations command invoked for Discord user <__main__.MockUser object at 0x0000022618658AD0> -> AniList 'Kyerstorm'
+[2025-09-23 14:10:11,553] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:10:22,892] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:10:22,894] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 14:10:22,895] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 14:10:22,896] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 14:10:22,896] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 14:10:22,897] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 14:10:22,897] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 14:10:22,897] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 14:10:22,897] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 14:10:22,897] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 14:10:22,897] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 14:10:22,897] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 14:10:51,728] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 14:10:51,728] [INFO] Top recommendations (top 10):
+[2025-09-23 14:10:51,728] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 14:10:51,728] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 14:10:51,728] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 14:10:51,728] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 14:10:51,728] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 14:10:51,728] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 14:10:51,729] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 14:10:51,729] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 14:10:51,729] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 14:10:51,729] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 14:10:51,729] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 14:10:57,886] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:11:08,069] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:11:25,637] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:11:36,441] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:12:12,794] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:12:23,311] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:38:02,885] [INFO] Database query successful for user 331164413623009281 in guild 897814031346319382
+[2025-09-23 14:38:02,885] [INFO] Recommendations command invoked for Discord user ☆ (331164413623009281) -> AniList 'Kyerstorm' in guild 897814031346319382
+[2025-09-23 14:38:03,758] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:38:14,582] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:38:14,584] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 14:38:14,585] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 14:38:14,586] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 14:38:14,586] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 14:38:14,587] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 14:38:14,587] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 14:38:14,587] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 14:38:14,588] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 14:38:14,588] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 14:38:14,588] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 14:38:14,829] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 14:38:49,209] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 14:38:49,480] [INFO] Top recommendations (top 10):
+[2025-09-23 14:38:49,480] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 14:38:49,480] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 14:38:49,480] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 14:38:49,481] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 14:38:49,481] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 14:38:49,481] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 14:38:49,481] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 14:38:49,481] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 14:38:49,481] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 14:38:49,481] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 14:38:49,481] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 14:46:15,873] [INFO] Database query successful for user 331164413623009281 in guild 897814031346319382
+[2025-09-23 14:46:15,873] [INFO] Recommendations command invoked for Discord user ☆ (331164413623009281) -> AniList 'Kyerstorm' in guild 897814031346319382
+[2025-09-23 14:46:16,129] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:46:27,351] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:46:27,354] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 14:46:27,354] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 14:46:27,356] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 14:46:27,356] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 14:46:27,357] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 14:46:27,357] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 14:46:27,357] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 14:46:27,357] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 14:46:27,358] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 14:46:27,358] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 14:46:27,649] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 14:47:02,685] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 14:47:03,128] [INFO] Top recommendations (top 10):
+[2025-09-23 14:47:03,128] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 14:47:03,129] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 14:47:03,130] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 14:47:03,130] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 14:47:06,873] [WARNING] Failed to fetch media details for ID 114714: HTTP 429
+[2025-09-23 14:47:07,094] [WARNING] Failed to fetch media details for ID 130231: HTTP 429
+[2025-09-23 14:47:07,285] [WARNING] Failed to fetch media details for ID 139639: HTTP 429
+[2025-09-23 14:47:07,487] [WARNING] Failed to fetch media details for ID 172269: HTTP 429
+[2025-09-23 14:47:07,674] [WARNING] Failed to fetch media details for ID 144204: HTTP 429
+[2025-09-23 14:47:07,868] [WARNING] Failed to fetch media details for ID 99396: HTTP 429
+[2025-09-23 14:47:08,078] [WARNING] Failed to fetch media details for ID 114599: HTTP 429
+[2025-09-23 14:47:08,293] [WARNING] Failed to fetch media details for ID 132791: HTTP 429
+[2025-09-23 14:47:08,481] [WARNING] Failed to fetch media details for ID 119526: HTTP 429
+[2025-09-23 14:47:08,676] [WARNING] Failed to fetch media details for ID 119486: HTTP 429
+[2025-09-23 14:47:08,868] [WARNING] Failed to fetch media details for ID 31320: HTTP 429
+[2025-09-23 14:47:09,072] [WARNING] Failed to fetch media details for ID 133700: HTTP 429
+[2025-09-23 14:47:09,267] [WARNING] Failed to fetch media details for ID 160269: HTTP 429
+[2025-09-23 14:47:09,336] [WARNING] Failed to fetch media details for ID 155627: HTTP 429
+[2025-09-23 14:47:09,408] [WARNING] Failed to fetch media details for ID 128791: HTTP 429
+[2025-09-23 14:47:09,479] [WARNING] Failed to fetch media details for ID 133070: HTTP 429
+[2025-09-23 14:47:09,480] [INFO] Enriched recommendations -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 14:51:18,311] [INFO] Database query successful for user 331164413623009281 in guild 897814031346319382
+[2025-09-23 14:51:18,311] [INFO] Recommendations command invoked for Discord user ☆ (331164413623009281) -> AniList 'Kyerstorm' in guild 897814031346319382
+[2025-09-23 14:51:18,956] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:51:29,928] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:51:29,930] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 14:51:29,931] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 14:51:29,932] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 14:51:29,932] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 14:51:29,933] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 14:51:29,933] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 14:51:29,934] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 14:51:29,934] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 14:51:29,934] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 14:51:29,934] [INFO] Cache performance: 19 cached, 0 need API calls
+[2025-09-23 14:51:30,477] [INFO] Top recommendations (top 10):
+[2025-09-23 14:51:30,477] [INFO] #1: Switch (id=169115) — Votes: 8, occurrences: 8
+[2025-09-23 14:51:30,477] [INFO] #2: Senryuu Shoujo (id=99183) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #4: Fukinoshita-san wa Sega Chiisai  (id=128305) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #5: Fruits Basket (id=30102) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #6: A Silent Voice (id=85135) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #7: Love, That's an Understatement (id=136943) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #8: Blue Box (id=132182) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #9: Kono Oto Tomare! (id=75143) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] #10: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 7, occurrences: 7
+[2025-09-23 14:51:30,478] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 14:51:37,296] [INFO] Enriched recommendations -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 14:59:02,124] [INFO] Recommendations command invoked for Discord user kyerstorm -> AniList 'Kyerstorm'
+[2025-09-23 14:59:02,549] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 14:59:14,885] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 14:59:14,887] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 14:59:14,888] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 14:59:14,889] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 14:59:14,889] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 14:59:14,890] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 14:59:14,890] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 14:59:14,890] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 14:59:14,890] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 14:59:14,890] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 15:00:52,262] [INFO] Recommendations command invoked for Discord user kyerstorm -> AniList 'Kyerstorm'
+[2025-09-23 15:00:52,640] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 15:01:04,829] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 15:01:04,831] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 15:01:04,832] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 15:01:04,833] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 15:01:04,833] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 15:01:04,834] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 15:01:04,834] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 15:01:04,834] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 15:01:04,835] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 15:01:04,835] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 15:01:04,835] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 15:01:05,268] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 15:01:39,870] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 15:01:40,195] [INFO] Top recommendations (top 10):
+[2025-09-23 15:01:40,195] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 15:01:40,195] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 15:01:40,196] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 15:01:40,196] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 15:01:40,196] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 15:01:40,196] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 15:01:40,196] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 15:01:40,196] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 15:01:40,197] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 15:01:40,197] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 15:01:40,197] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 15:01:42,798] [WARNING] Failed to fetch media details for ID 119276: HTTP 429
+[2025-09-23 15:01:42,982] [WARNING] Failed to fetch media details for ID 132457: HTTP 429
+[2025-09-23 15:01:43,200] [WARNING] Failed to fetch media details for ID 122110: HTTP 429
+[2025-09-23 15:01:43,381] [WARNING] Failed to fetch media details for ID 114714: HTTP 429
+[2025-09-23 15:01:43,567] [WARNING] Failed to fetch media details for ID 130231: HTTP 429
+[2025-09-23 15:01:43,742] [WARNING] Failed to fetch media details for ID 139639: HTTP 429
+[2025-09-23 15:01:43,795] [WARNING] Failed to fetch media details for ID 172269: HTTP 429
+[2025-09-23 15:01:43,839] [WARNING] Failed to fetch media details for ID 144204: HTTP 429
+[2025-09-23 15:01:43,891] [WARNING] Failed to fetch media details for ID 99396: HTTP 429
+[2025-09-23 15:01:43,938] [WARNING] Failed to fetch media details for ID 114599: HTTP 429
+[2025-09-23 15:01:43,988] [WARNING] Failed to fetch media details for ID 132791: HTTP 429
+[2025-09-23 15:01:44,033] [WARNING] Failed to fetch media details for ID 119526: HTTP 429
+[2025-09-23 15:01:44,076] [WARNING] Failed to fetch media details for ID 119486: HTTP 429
+[2025-09-23 15:01:44,130] [WARNING] Failed to fetch media details for ID 31320: HTTP 429
+[2025-09-23 15:01:44,178] [WARNING] Failed to fetch media details for ID 133700: HTTP 429
+[2025-09-23 15:01:44,238] [WARNING] Failed to fetch media details for ID 160269: HTTP 429
+[2025-09-23 15:01:44,288] [WARNING] Failed to fetch media details for ID 155627: HTTP 429
+[2025-09-23 15:01:44,335] [WARNING] Failed to fetch media details for ID 128791: HTTP 429
+[2025-09-23 15:01:44,379] [WARNING] Failed to fetch media details for ID 133070: HTTP 429
+[2025-09-23 15:01:44,379] [INFO] Enriched recommendations -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 15:09:31,021] [INFO] Recommendations command invoked for Discord user xuehua._ -> AniList 'xuehua'
+[2025-09-23 15:09:32,817] [INFO] Fetching MediaListCollection for AniList user 'xuehua'
+[2025-09-23 15:09:39,446] [INFO] Fetched 880 entries for 'xuehua' (raw entries: 880, with recommendations: 837)
+[2025-09-23 15:09:39,448] [INFO] Total entries received from AniList for 'xuehua': 880
+[2025-09-23 15:09:39,448] [INFO] User 'xuehua' has 512 titles on their list (includes Planning).
+[2025-09-23 15:09:39,448] [INFO] Selected top 0 rated entries (by normalized score) out of 0 scored entries.
+[2025-09-23 15:09:39,449] [INFO] Using 0 high-rated entries (>= 8.0) out of 0 top entries
+[2025-09-23 15:09:39,449] [INFO] Considered 0 recommendation entries across top 0 high-rated titles.
+[2025-09-23 15:09:39,449] [INFO] Unique recommended titles after excluding user's list: 0
+[2025-09-23 15:10:02,742] [INFO] Recommendations command invoked for Discord user mrtester. -> AniList 'tes'
+[2025-09-23 15:10:04,250] [INFO] Fetching MediaListCollection for AniList user 'tes'
+[2025-09-23 15:10:16,502] [INFO] Fetched 1380 entries for 'tes' (raw entries: 1380, with recommendations: 1273)
+[2025-09-23 15:10:16,504] [INFO] Total entries received from AniList for 'tes': 1380
+[2025-09-23 15:10:16,505] [INFO] User 'tes' has 1293 titles on their list (includes Planning).
+[2025-09-23 15:10:16,506] [INFO] Selected top 100 rated entries (by normalized score) out of 298 scored entries.
+[2025-09-23 15:10:16,506] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 15:10:16,507] [INFO] Considered 1181 recommendation entries across top 100 high-rated titles.
+[2025-09-23 15:10:16,507] [INFO] Unique recommended titles after excluding user's list: 693
+[2025-09-23 15:10:16,508] [INFO] Stage 1 - Occurrence filter: 80 candidates with >= 3 occurrences
+[2025-09-23 15:10:16,508] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 15:10:16,508] [INFO] Stage 3 - Country-balanced sampling: 24 final candidates
+[2025-09-23 15:10:16,508] [INFO] Cache performance: 0 cached, 24 need API calls
+[2025-09-23 15:10:16,508] [INFO] Limited API calls to top 20 candidates by occurrence: 20
+[2025-09-23 15:10:16,824] [INFO] Fetching global recommendation totals for 20 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 15:10:51,691] [INFO] Fetched global rec totals for 17 candidates (requested 20). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 15:10:51,938] [INFO] Top recommendations (top 10):
+[2025-09-23 15:10:51,938] [INFO] #1: S.K.T(Swallow Knights Tales) (id=171990) — Votes: 192, occurrences: 4
+[2025-09-23 15:10:51,938] [INFO] #2: A Bride's Story (id=41514) — Votes: 150, occurrences: 4
+[2025-09-23 15:10:51,938] [INFO] #3: Attack on Titan (id=53390) — Votes: 127, occurrences: 5
+[2025-09-23 15:10:51,939] [INFO] #4: Dusk Howler (id=87139) — Votes: 127, occurrences: 4
+[2025-09-23 15:10:51,939] [INFO] #5: Demon Slayer: Kimetsu no Yaiba (id=87216) — Votes: 121, occurrences: 7
+[2025-09-23 15:10:51,939] [INFO] #6: Vinland Saga (id=30642) — Votes: 94, occurrences: 7
+[2025-09-23 15:10:51,939] [INFO] #7: Sillyongui Juin (id=164447) — Votes: 85, occurrences: 6
+[2025-09-23 15:10:51,939] [INFO] #8: Fullmetal Alchemist (id=30025) — Votes: 77, occurrences: 8
+[2025-09-23 15:10:51,939] [INFO] #9: Blissful Land (id=103144) — Votes: 59, occurrences: 4
+[2025-09-23 15:10:51,939] [INFO] #10: Doctor Elise: The Royal Lady with the Lamp (id=107918) — Votes: 52, occurrences: 4
+[2025-09-23 15:10:51,940] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 10
+[2025-09-23 15:11:33,178] [WARNING] Failed to fetch media details for ID 138766: HTTP 429
+[2025-09-23 15:11:35,400] [WARNING] Failed to fetch media details for ID 110078: HTTP 429
+[2025-09-23 15:11:53,226] [INFO] Enriched recommendations -> Manga: 10, Manhwa: 10, Manhua: 10
+[2025-09-23 15:23:05,989] [INFO] Recommendations command invoked for Discord user kyerstorm -> AniList 'Kyerstorm'
+[2025-09-23 15:23:06,240] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 15:23:18,197] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 15:23:18,200] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 15:23:18,200] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 15:23:18,202] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 15:23:18,202] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 15:23:18,203] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 15:23:18,203] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 15:23:18,203] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 15:23:18,203] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 15:23:18,204] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 15:23:18,204] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 15:23:18,608] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 15:23:55,051] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 15:23:55,272] [INFO] Top recommendations (top 10):
+[2025-09-23 15:23:55,273] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 15:23:55,273] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 15:23:55,273] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 15:23:55,273] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 15:23:55,273] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 15:23:55,273] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 15:23:55,274] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 15:23:55,274] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 15:23:55,274] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 15:23:55,274] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 15:23:55,274] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 15:23:55,537] [INFO] Created recommendation data -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 15:30:26,397] [INFO] Recommendations command invoked for Discord user kyerstorm -> AniList 'Kyerstorm'
+[2025-09-23 15:30:26,398] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 15:30:37,451] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 15:30:37,453] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 15:30:37,454] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 15:30:37,455] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 15:30:37,455] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 15:30:37,456] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 15:30:37,456] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 15:30:37,456] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 15:30:37,456] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 15:30:37,457] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 15:30:37,457] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 15:30:37,457] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 15:31:06,359] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 15:31:06,359] [INFO] Top recommendations (top 10):
+[2025-09-23 15:31:06,359] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 15:31:06,360] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 15:31:06,361] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 15:31:06,361] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 15:31:06,361] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 15:31:06,362] [INFO] Created recommendation data -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 15:34:52,190] [INFO] No existing recommendation cache file found, starting fresh
+[2025-09-23 15:34:52,191] [INFO] No existing popular titles cache file found, starting fresh
+[2025-09-23 15:35:30,534] [INFO] No existing recommendation cache file found, starting fresh
+[2025-09-23 15:35:30,535] [INFO] No existing popular titles cache file found, starting fresh
+[2025-09-23 15:35:48,685] [INFO] No existing recommendation cache file found, starting fresh
+[2025-09-23 15:35:48,685] [INFO] No existing popular titles cache file found, starting fresh
+[2025-09-23 15:36:08,902] [INFO] No existing recommendation cache file found, starting fresh
+[2025-09-23 15:36:08,902] [INFO] No existing popular titles cache file found, starting fresh
+[2025-09-23 15:36:08,903] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:37:15,211] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:37:15,212] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:37:16,795] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:37:16,795] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:37:24,432] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:37:24,432] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:37:24,433] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:38:55,156] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:38:55,157] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:38:55,187] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:38:55,187] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:38:55,188] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:40:00,520] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:40:00,522] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:45:44,291] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:45:44,291] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:45:44,292] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:47:25,057] [INFO] Recommendations command invoked for Discord user slopking._ -> AniList 'slopking._'
+[2025-09-23 15:47:25,057] [INFO] Fetching MediaListCollection for AniList user 'slopking._'
+[2025-09-23 15:47:25,260] [WARNING] AniList API returned 404 for user 'slopking._': {'errors': [{'message': 'User not found', 'status': 404, 'locations': [{'line': 3, 'column': 11}]}], 'data': {'MediaListCollection': None}}
+[2025-09-23 15:57:23,519] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:57:23,521] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:57:24,509] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:57:24,509] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:57:24,509] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:58:17,133] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:58:17,136] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:58:17,169] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:58:17,170] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:58:17,170] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:58:29,277] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:58:29,279] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:58:29,311] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:58:29,312] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:58:29,312] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:58:39,396] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:58:39,398] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:58:39,429] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:58:39,429] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:58:39,430] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:58:49,516] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:58:49,518] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:58:49,552] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:58:49,552] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:58:49,553] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:59:23,844] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:59:23,846] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:59:23,881] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:59:23,882] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 15:59:23,882] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 15:59:34,849] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 15:59:34,852] [INFO] Recommendation caches saved successfully
+[2025-09-23 15:59:36,522] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 15:59:36,523] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 16:00:39,881] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 16:00:39,881] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 16:00:39,882] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:02:47,700] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:02:47,703] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:03:37,100] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 16:03:37,101] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 16:03:37,101] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:05:21,243] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:05:21,245] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:05:23,334] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 16:05:23,334] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 16:05:23,335] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:07:43,711] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:07:43,713] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:08:55,594] [INFO] Loaded 0 valid cache entries from persistent storage
+[2025-09-23 16:08:55,595] [INFO] Loaded 0 popular titles from persistent storage
+[2025-09-23 16:08:55,595] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:09:27,875] [INFO] Recommendations command invoked for Discord user slopking._ -> AniList 'Vireon'
+[2025-09-23 16:09:27,875] [INFO] Fetching MediaListCollection for AniList user 'Vireon'
+[2025-09-23 16:09:51,918] [INFO] Fetched 4389 entries for 'Vireon' (raw entries: 4389, with recommendations: 3492)
+[2025-09-23 16:09:51,922] [INFO] Total entries received from AniList for 'Vireon': 4389
+[2025-09-23 16:09:51,924] [INFO] User 'Vireon' has 3269 titles on their list (includes Planning).
+[2025-09-23 16:09:51,926] [INFO] Selected top 100 rated entries (by normalized score) out of 2083 scored entries.
+[2025-09-23 16:09:51,926] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 16:09:51,927] [INFO] Considered 962 recommendation entries across top 100 high-rated titles.
+[2025-09-23 16:09:51,928] [INFO] Unique recommended titles after excluding user's list: 351
+[2025-09-23 16:09:51,928] [INFO] Stage 1 - Occurrence filter: 220 candidates with >= 3 occurrences
+[2025-09-23 16:09:51,928] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 16:09:51,928] [INFO] Stage 3 - Country-balanced sampling: 24 final candidates
+[2025-09-23 16:09:51,928] [INFO] Cache performance: 0 cached, 24 need API calls
+[2025-09-23 16:09:51,929] [INFO] Limited API calls to top 20 candidates by occurrence: 20
+[2025-09-23 16:09:51,929] [INFO] Fetching global recommendation totals for 20 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 16:10:20,759] [INFO] Fetched global rec totals for 20 candidates (requested 20). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 16:10:20,761] [INFO] Top recommendations (top 10):
+[2025-09-23 16:10:20,762] [INFO] #1: Made in Abyss (id=86551) — Votes: 65, occurrences: 7
+[2025-09-23 16:10:20,762] [INFO] #2: Historie (id=32924) — Votes: 46, occurrences: 6
+[2025-09-23 16:10:20,762] [INFO] #3: My Dearest Self With Malice Aforethought (id=106867) — Votes: 45, occurrences: 6
+[2025-09-23 16:10:20,762] [INFO] #4: Tales of Demons and Gods (id=86707) — Votes: 45, occurrences: 4
+[2025-09-23 16:10:20,762] [INFO] #5: Nano Machine (id=120980) — Votes: 43, occurrences: 4
+[2025-09-23 16:10:20,762] [INFO] #6: Kakegurui - Compulsive Gambler - (id=85793) — Votes: 42, occurrences: 6
+[2025-09-23 16:10:20,762] [INFO] #7: Angel Densetsu (id=30838) — Votes: 38, occurrences: 6
+[2025-09-23 16:10:20,763] [INFO] #8: Gambling Apocalypse Kaiji (id=33572) — Votes: 36, occurrences: 6
+[2025-09-23 16:10:20,763] [INFO] #9: Altair: A Record of Battles (id=31605) — Votes: 28, occurrences: 6
+[2025-09-23 16:10:20,763] [INFO] #10: Hwasanjeonsaeng (id=101418) — Votes: 28, occurrences: 4
+[2025-09-23 16:10:20,763] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 10
+[2025-09-23 16:10:20,763] [INFO] Created recommendation data -> Manga: 10, Manhwa: 10, Manhua: 10
+[2025-09-23 16:11:08,807] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:11:08,810] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:11:08,857] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:11:08,863] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:11:08,864] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:11:37,133] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:11:37,135] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:11:37,175] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:11:37,176] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:11:37,177] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:12:01,375] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:12:01,377] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:12:01,411] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:12:01,412] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:12:01,413] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:12:22,532] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:12:22,532] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:12:37,723] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:12:37,727] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:12:37,765] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:12:37,766] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:12:37,767] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:12:57,930] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:12:57,932] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:12:57,964] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:12:57,965] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:12:57,966] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:13:10,061] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:13:10,064] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:13:10,097] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:13:10,098] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:13:10,099] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:13:46,362] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:13:46,365] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:13:46,405] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:13:46,407] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:13:46,407] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:14:00,540] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:14:00,542] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:14:00,576] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:14:00,577] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:14:00,578] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:14:37,810] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:14:37,810] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:15:05,092] [INFO] Saving recommendation caches before cog unload...
+[2025-09-23 16:15:05,094] [INFO] Recommendation caches saved successfully
+[2025-09-23 16:15:05,133] [INFO] Loaded 20 valid cache entries from persistent storage
+[2025-09-23 16:15:05,134] [INFO] Loaded 11 popular titles from persistent storage
+[2025-09-23 16:15:05,135] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 16:15:07,738] [INFO] Recommendations command invoked for Discord user kyerstorm -> AniList 'Kyerstorm'
+[2025-09-23 16:15:07,738] [INFO] Fetching MediaListCollection for AniList user 'Kyerstorm'
+[2025-09-23 16:15:19,383] [INFO] Fetched 1787 entries for 'Kyerstorm' (raw entries: 1787, with recommendations: 1550)
+[2025-09-23 16:15:19,385] [INFO] Total entries received from AniList for 'Kyerstorm': 1787
+[2025-09-23 16:15:19,385] [INFO] User 'Kyerstorm' has 1485 titles on their list (includes Planning).
+[2025-09-23 16:15:19,386] [INFO] Selected top 100 rated entries (by normalized score) out of 1722 scored entries.
+[2025-09-23 16:15:19,387] [INFO] Using 100 high-rated entries (>= 8.0) out of 100 top entries
+[2025-09-23 16:15:19,388] [INFO] Considered 680 recommendation entries across top 100 high-rated titles.
+[2025-09-23 16:15:19,388] [INFO] Unique recommended titles after excluding user's list: 293
+[2025-09-23 16:15:19,388] [INFO] Stage 1 - Occurrence filter: 66 candidates with >= 3 occurrences
+[2025-09-23 16:15:19,388] [INFO] Stage 2 - Limited to top 50 by occurrence count: 50 candidates
+[2025-09-23 16:15:19,388] [INFO] Stage 3 - Country-balanced sampling: 19 final candidates
+[2025-09-23 16:15:19,388] [INFO] Cache performance: 0 cached, 19 need API calls
+[2025-09-23 16:15:19,388] [INFO] Fetching global recommendation totals for 19 candidates (batch_size=2, interval=3.0s).
+[2025-09-23 16:15:48,296] [INFO] Fetched global rec totals for 18 candidates (requested 19). Rate-limited/exhausted hits may be reflected as 0 totals.
+[2025-09-23 16:15:48,298] [INFO] Top recommendations (top 10):
+[2025-09-23 16:15:48,298] [INFO] #1: Fruits Basket (id=30102) — Votes: 108, occurrences: 7
+[2025-09-23 16:15:48,298] [INFO] #2: Kubo Won't Let Me Be Invisible (id=112981) — Votes: 87, occurrences: 7
+[2025-09-23 16:15:48,298] [INFO] #3: The Dangers in My Heart (id=101557) — Votes: 73, occurrences: 7
+[2025-09-23 16:15:48,298] [INFO] #4: A Silent Voice (id=85135) — Votes: 72, occurrences: 7
+[2025-09-23 16:15:48,299] [INFO] #5: Blue Box (id=132182) — Votes: 48, occurrences: 7
+[2025-09-23 16:15:48,299] [INFO] #6: Love, That's an Understatement (id=136943) — Votes: 37, occurrences: 7
+[2025-09-23 16:15:48,299] [INFO] #7: Senryuu Shoujo (id=99183) — Votes: 31, occurrences: 7
+[2025-09-23 16:15:48,299] [INFO] #8: Kono Oto Tomare! (id=75143) — Votes: 29, occurrences: 7
+[2025-09-23 16:15:48,299] [INFO] #9: The Advanced Player of the Tutorial Tower (id=119276) — Votes: 29, occurrences: 4
+[2025-09-23 16:15:48,299] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
+[2025-09-23 16:15:48,300] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 16:15:48,300] [INFO] Created recommendation data -> Manga: 10, Manhwa: 10, Manhua: 9

@@ -163,6 +163,54 @@ async def execute_db_operation(operation_name: str, query: str, params=None, fet
 # ------------------------------------------------------
 # USERS TABLE FUNCTIONS with Enhanced Logging
 # ------------------------------------------------------
+
+async def migrate_to_multi_guild_schema():
+    """Migrate the users table to support multi-guild by removing UNIQUE constraint on discord_id."""
+    logger.info("🔄 Starting migration to multi-guild schema")
+    
+    try:
+        # SQLite doesn't support dropping constraints, so we need to recreate the table
+        # 1. Create new table with correct schema
+        new_table_query = """
+            CREATE TABLE users_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER NOT NULL,
+                guild_id INTEGER NOT NULL,
+                username TEXT NOT NULL,
+                anilist_username TEXT,
+                anilist_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(discord_id, guild_id)
+            )
+        """
+        await execute_db_operation("create new users table", new_table_query)
+        
+        # 2. Copy data from old table to new table
+        copy_query = """
+            INSERT INTO users_new (id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at)
+            SELECT id, discord_id, COALESCE(guild_id, 897814031346319382), username, anilist_username, anilist_id, created_at, updated_at
+            FROM users
+        """
+        await execute_db_operation("copy data to new users table", copy_query)
+        
+        # 3. Drop old table
+        await execute_db_operation("drop old users table", "DROP TABLE users")
+        
+        # 4. Rename new table to original name
+        await execute_db_operation("rename new users table", "ALTER TABLE users_new RENAME TO users")
+        
+        logger.info("✅ Successfully migrated to multi-guild schema")
+        
+    except Exception as e:
+        logger.error(f"❌ Failed to migrate to multi-guild schema: {e}", exc_info=True)
+        # Try to clean up any partial migration
+        try:
+            await execute_db_operation("cleanup failed migration", "DROP TABLE IF EXISTS users_new")
+        except:
+            pass
+        raise
+
 async def init_users_table():
     """Initialize users table with comprehensive logging and error handling."""
     logger.info("Initializing users table")
@@ -186,6 +234,7 @@ async def init_users_table():
         columns_to_add = [
             ("anilist_username", "TEXT"),
             ("anilist_id", "INTEGER"),
+            ("guild_id", "INTEGER"),
             ("created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP"),
             ("updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP")
         ]
@@ -207,6 +256,56 @@ async def init_users_table():
         logger.debug(f"Users table schema: {len(schema)} columns")
         for column in schema:
             logger.debug(f"  Column: {column[1]} ({column[2]})")
+        
+        # Check if we need to migrate to multi-guild support
+        # The original table has UNIQUE constraint on discord_id, but for multi-guild we need to allow duplicates
+        try:
+            # Check if guild_id column exists and if we have multi-guild data
+            has_guild_id = any(col[1] == 'guild_id' for col in schema)
+            if has_guild_id:
+                # Check if we have any users with guild_id (new schema)
+                check_query = "SELECT COUNT(*) FROM users WHERE guild_id IS NOT NULL"
+                count_result = await execute_db_operation("check guild_id usage", check_query, fetch_type='one')
+                has_guild_data = count_result[0] > 0 if count_result else False
+                
+                if not has_guild_data:
+                    # Migrate existing users to use default guild_id
+                    default_guild_id = 897814031346319382  # Your server ID
+                    migrate_query = "UPDATE users SET guild_id = ? WHERE guild_id IS NULL"
+                    await execute_db_operation("migrate existing users to default guild", migrate_query, (default_guild_id,))
+                    logger.info(f"✅ Migrated existing users to default guild ID: {default_guild_id}")
+                
+                # Remove the UNIQUE constraint on discord_id to allow multi-guild support
+                # SQLite doesn't support dropping constraints directly, so we need to recreate the table
+                # But only if we still have the old constraint
+                try:
+                    # Test if we can insert duplicate discord_id (different guild_id)
+                    test_discord_id = 999999999999999999  # Unlikely to exist
+                    test_guild_id_1 = 1
+                    test_guild_id_2 = 2
+                    
+                    # Try to insert two records with same discord_id but different guild_id
+                    test_query = "INSERT INTO users (discord_id, guild_id, username) VALUES (?, ?, ?)"
+                    await execute_db_operation("test multi-guild insert 1", test_query, (test_discord_id, test_guild_id_1, "test1"))
+                    await execute_db_operation("test multi-guild insert 2", test_query, (test_discord_id, test_guild_id_2, "test2"))
+                    
+                    # Clean up test data
+                    cleanup_query = "DELETE FROM users WHERE discord_id = ?"
+                    await execute_db_operation("cleanup test data", cleanup_query, (test_discord_id,))
+                    
+                    logger.info("✅ Multi-guild support confirmed - table supports multiple guilds per user")
+                    
+                except aiosqlite.IntegrityError as e:
+                    if "UNIQUE constraint failed" in str(e):
+                        logger.warning("🔄 Table still has UNIQUE constraint on discord_id - migration needed")
+                        await migrate_to_multi_guild_schema()
+                    else:
+                        logger.error(f"Unexpected integrity error during multi-guild test: {e}")
+                except Exception as e:
+                    logger.debug(f"Multi-guild test failed (may be normal): {e}")
+                    
+        except Exception as e:
+            logger.error(f"Error during multi-guild migration check: {e}", exc_info=True)
         
         logger.info("✅ Users table initialization completed successfully")
         

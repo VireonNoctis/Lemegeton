@@ -17,9 +17,8 @@ import textwrap
 try:
     from PIL import Image, ImageDraw, ImageFont
     PIL_AVAILABLE = True
-except Exception:
+except (ImportError, Exception):
     PIL_AVAILABLE = False
-
 logger = logging.getLogger("steam")
 logger.setLevel(logging.INFO)
 if not logger.hasHandlers():

@@ -1,179 +1,145 @@
-import os
-import re
-import json
-import asyncio
-import aiohttp
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
-from dotenv import load_dotenv
+import re
+import aiohttp
+from bs4 import BeautifulSoup
+from datetime import datetime, timedelta
 
-load_dotenv()
-EZ_API = os.getenv("EZ_API")
+# ------------------------------
+# Helpers
+# ------------------------------
 
-# Mapping table for rewrites
-REWRITE_MAP = {
-    r"(?:https?://)?(?:www\.)?x\.com": "https://xeezz.com",
-    r"(?:https?://)?(?:www\.)?tiktok\.com": "https://tiktokez.com",
-    r"(?:https?://)?(?:www\.)?ifunny\.co": "https://ifunnyez.co",
-    r"(?:https?://)?(?:www\.)?reddit\.com": "https://redditez.com",
-    r"(?:https?://)?(?:www\.)?snapchat\.com": "https://snapchatez.com",
-    r"(?:https?://)?(?:www\.)?bilibili\.com": "https://bilibiliez.com",
-    r"(?:https?://)?(?:www\.)?imgur\.com": "https://imgurez.com",
-    r"(?:https?://)?(?:www\.)?weibo\.com": "https://weiboez.com",
+PLATFORM_MAP = {
+    "x.com": ("xeezz.com", "Twitter", "https://cdn-icons-png.flaticon.com/512/733/733579.png"),
+    "tiktok.com": ("tiktokez.com", "TikTok", "https://cdn-icons-png.flaticon.com/512/3046/3046120.png"),
+    "ifunny.co": ("ifunnyez.co", "iFunny", "https://cdn-icons-png.flaticon.com/512/2111/2111589.png"),
+    "reddit.com": ("redditez.com", "Reddit", "https://cdn-icons-png.flaticon.com/512/2111/2111589.png"),
+    "snapchat.com": ("snapchatez.com", "Snapchat", "https://cdn-icons-png.flaticon.com/512/2111/2111628.png"),
+    "bilibili.com": ("bilibiliez.com", "Bilibili", "https://cdn-icons-png.flaticon.com/512/3670/3670227.png"),
+    "imgur.com": ("imgurez.com", "Imgur", "https://cdn-icons-png.flaticon.com/512/2111/2111370.png"),
+    "weibo.com": ("weiboez.com", "Weibo", "https://cdn-icons-png.flaticon.com/512/2111/2111664.png"),
 }
 
 
-class EmbedView(View):
-    """Buttons for embeds."""
+def rewrite_url(url: str):
+    for base, (new, _, _) in PLATFORM_MAP.items():
+        if base in url:
+            return url.replace(base, new)
+    return url
 
-    def __init__(self, user: discord.User, url: str):
-        super().__init__(timeout=None)
-        self.user = user
-        self.url = url
 
-        # Add View button
-        self.add_item(Button(label="View", style=discord.ButtonStyle.link, url=url))
-
-        # Add Delete button
-        delete_button = Button(label="Delete", style=discord.ButtonStyle.danger)
-
-        async def delete_callback(interaction: discord.Interaction):
-            if interaction.user.id == user.id or interaction.user.guild_permissions.manage_messages:
-                await interaction.message.delete()
-            else:
-                await interaction.response.send_message("❌ You can't delete this embed.", ephemeral=True)
-
-        delete_button.callback = delete_callback
-        self.add_item(delete_button)
-
-        # Expire delete button after 2h
-        asyncio.create_task(self._expire_delete())
-
-    async def _expire_delete(self):
-        await asyncio.sleep(7200)
-        for item in list(self.children):
-            if isinstance(item, Button) and item.label == "Delete":
-                self.remove_item(item)
+async def fetch_meta(url: str):
+    """Scrape OpenGraph/Meta tags from a URL."""
+    async with aiohttp.ClientSession() as session:
         try:
-            await self.message.edit(view=self)
-        except:
-            pass
+            async with session.get(url, timeout=10) as resp:
+                if resp.status != 200:
+                    return {}
+                text = await resp.text()
+                soup = BeautifulSoup(text, "html.parser")
+                meta = {
+                    "description": None,
+                    "author": None,
+                    "pfp": None,
+                    "date": None,
+                }
+                if (desc := soup.find("meta", property="og:description")):
+                    meta["description"] = desc.get("content")
+                elif (desc := soup.find("meta", attrs={"name": "description"})):
+                    meta["description"] = desc.get("content")
 
+                if (auth := soup.find("meta", property="og:site_name")):
+                    meta["author"] = auth.get("content")
+
+                if (img := soup.find("meta", property="og:image")):
+                    meta["pfp"] = img.get("content")
+
+                if (date := soup.find("meta", property="article:published_time")):
+                    meta["date"] = date.get("content").split("T")[0]
+
+                return meta
+        except Exception:
+            return {}
+
+
+# ------------------------------
+# Delete/View Buttons
+# ------------------------------
+
+class EmbedView(View):
+    def __init__(self, url: str, author_id: int):
+        super().__init__(timeout=7200)  # 2 hours
+        self.add_item(Button(label="View", url=url, style=discord.ButtonStyle.link))
+        self.author_id = author_id
+        self.message = None
+
+    @discord.ui.button(label="Delete", style=discord.ButtonStyle.danger)
+    async def delete_button(self, interaction: discord.Interaction, button: Button):
+        if interaction.user.id != self.author_id:
+            await interaction.response.send_message("❌ You can’t delete this embed.", ephemeral=True)
+            return
+        if self.message:
+            await self.message.delete()
+        else:
+            await interaction.message.delete()
+
+    async def on_timeout(self):
+        self.clear_items()
+        if self.message:
+            try:
+                await self.message.edit(view=self)
+            except:
+                pass
+
+
+# ------------------------------
+# Cog
+# ------------------------------
 
 class EmbedCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.url_pattern = re.compile(r"(https?://[^\s]+)")
 
-    # ------------------------
-    # Main listener
-    # ------------------------
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.author.bot:
             return
 
-        url = self._match_supported_url(message.content)
-        if not url:
-            return
-
-        await message.delete()
-        await self._process_embed(message, url)
-
-    # ------------------------
-    # URL matcher
-    # ------------------------
-    def _match_supported_url(self, content: str) -> str | None:
-        for pattern in REWRITE_MAP.keys():
-            if re.search(pattern, content):
-                urls = re.findall(r"https?://[^\s]+", content)
-                return urls[0] if urls else None
-        return None
-
-    # ------------------------
-    # Process embed
-    # ------------------------
-    async def _process_embed(self, message: discord.Message, url: str):
-        # Try API first
-        data = await self._fetch_api(url)
-
-        if not data:
-            # fallback: rewrite domain
-            for pattern, fixed in REWRITE_MAP.items():
-                if re.search(pattern, url):
-                    url = re.sub(pattern, fixed, url)
+        urls = self.url_pattern.findall(message.content)
+        for url in urls:
+            for base, (new, sitename, logo) in PLATFORM_MAP.items():
+                if base in url:
+                    await self._process(message, url, base, new, sitename, logo)
                     break
-            data = {
-                "url": url,
-                "title": "Post",
-                "description": "",
-                "author": {"name": "Unknown", "icon": None},
-                "stats": {"comments": "N/A", "likes": "N/A", "views": "N/A", "reposts": "N/A"},
-                "site": "Unknown",
-                "logo": "",
-                "date": "Unknown Date",
-            }
 
-        embed = self._build_embed(data)
-        view = EmbedView(message.author, data.get("url", url))
-        sent = await message.channel.send(embed=embed, view=view)
-        view.message = sent
+    async def _process(self, message, url, base, new, sitename, logo):
+        rewritten = url.replace(base, new)
+        meta = await fetch_meta(url)
 
-        # Also paste raw fixed URL below embed
-        await message.channel.send(data.get("url", url))
+        description = meta.get("description") or "No description available."
+        author = meta.get("author") or "Unknown"
+        pfp = meta.get("pfp") or message.author.avatar.url if message.author.avatar else None
+        date = meta.get("date") or datetime.utcnow().strftime("%Y-%m-%d")
 
-    # ------------------------
-    # Call EmbedEZ API
-    # ------------------------
-    async def _fetch_api(self, url: str) -> dict | None:
-        if not EZ_API:
-            return None
-        api_url = f"https://embedez.com/api?url={url}&key={EZ_API}"
+        files = []
+        if message.attachments:
+            for att in message.attachments:
+                files.append(await att.to_file())
+
+        embed = discord.Embed(description=description, color=discord.Color.blurple())
+        embed.set_author(name=author, icon_url=pfp)
+        embed.set_footer(text=f"{sitename} • {date}", icon_url=logo)
+
+        view = EmbedView(rewritten, message.author.id)
+
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(api_url) as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-        except Exception:
-            return None
-        return None
-
-    # ------------------------
-    # Build embed
-    # ------------------------
-    def _build_embed(self, data: dict) -> discord.Embed:
-        title = data.get("title", "Untitled")
-        url = data.get("url")
-        description = data.get("description", "")
-        author = data.get("author", {})
-        stats = data.get("stats", {})
-        date = data.get("date", "Unknown Date")
-        site = data.get("site", "Unknown")
-        logo = data.get("logo", "")
-
-        embed = discord.Embed(
-            title=title,
-            url=url,
-            description=description,
-            color=discord.Color.blurple()
-        )
-
-        # Author pfp + name
-        if author:
-            embed.set_author(name=author.get("name", "Unknown"), icon_url=author.get("icon", ""))
-
-        # Stats line
-        stats_line = (
-            f"💬 {stats.get('comments', 'N/A')}   "
-            f"❤️ {stats.get('likes', 'N/A')}   "
-            f"👁️ {stats.get('views', 'N/A')}   "
-            f"🔁 {stats.get('reposts', 'N/A')}"
-        )
-        embed.add_field(name="", value=stats_line, inline=False)
-
-        # Footer
-        embed.set_footer(text=f"{site} • {date}", icon_url=logo)
-        return embed
+            sent = await message.channel.send(content=rewritten, embed=embed, files=files, view=view)
+            view.message = sent
+            await message.delete()
+        except Exception as e:
+            print(f"Error sending embed: {e}")
 
 
 async def setup(bot):

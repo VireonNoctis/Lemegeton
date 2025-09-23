@@ -1,169 +1,60 @@
-[2025-09-22 16:41:34] [INFO] Feedback cog logging initialized - log file cleared
-[2025-09-22 16:41:34] [INFO] Feedback cog initialized
-[2025-09-22 17:12:11] [INFO] Feedback cog logging initialized
-[2025-09-22 17:12:11] [INFO] Feedback cog initialized
-[2025-09-22 17:12:11] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:11] [INFO] Feedback cog initialized
-[2025-09-22 17:12:13] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:13] [INFO] Feedback cog initialized
-[2025-09-22 17:12:15] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:15] [INFO] Feedback cog initialized
-[2025-09-22 17:12:17] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:17] [INFO] Feedback cog initialized
-[2025-09-22 17:12:19] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:19] [INFO] Feedback cog initialized
-[2025-09-22 17:12:21] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:21] [INFO] Feedback cog initialized
-[2025-09-22 17:12:23] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:23] [INFO] Feedback cog initialized
-[2025-09-22 17:12:25] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:25] [INFO] Feedback cog initialized
-[2025-09-22 17:12:27] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:27] [INFO] Feedback cog initialized
-[2025-09-22 17:12:29] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:29] [INFO] Feedback cog initialized
-[2025-09-22 17:12:31] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:31] [INFO] Feedback cog initialized
-[2025-09-22 17:12:33] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:33] [INFO] Feedback cog initialized
-[2025-09-22 17:12:35] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:35] [INFO] Feedback cog initialized
-[2025-09-22 17:12:37] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:37] [INFO] Feedback cog initialized
-[2025-09-22 17:12:39] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:39] [INFO] Feedback cog initialized
-[2025-09-22 17:12:41] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:41] [INFO] Feedback cog initialized
-[2025-09-22 17:12:43] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:43] [INFO] Feedback cog initialized
-[2025-09-22 17:12:45] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:45] [INFO] Feedback cog initialized
-[2025-09-22 17:12:47] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:47] [INFO] Feedback cog initialized
-[2025-09-22 17:12:49] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:49] [INFO] Feedback cog initialized
-[2025-09-22 17:12:51] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:12:51] [INFO] Feedback cog initialized
-[2025-09-22 17:13:52] [INFO] Feedback cog logging initialized
-[2025-09-22 17:13:52] [INFO] Feedback cog initialized
-[2025-09-22 17:13:52] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:15:14] [INFO] Feedback cog logging initialized
-[2025-09-22 17:15:14] [INFO] Feedback cog initialized
-[2025-09-22 17:15:14] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:18:11] [INFO] Feedback cog logging initialized
-[2025-09-22 17:18:11] [INFO] Feedback cog initialized
-[2025-09-22 17:18:11] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:19:16] [INFO] Feedback cog logging initialized
-[2025-09-22 17:19:16] [INFO] Feedback cog initialized
-[2025-09-22 17:19:16] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:20:41] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 17:20:41] [INFO] Feedback cog initialized
-[2025-09-22 17:20:41] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:21:59] [INFO] Feedback cog logging initialized
-[2025-09-22 17:21:59] [INFO] Feedback cog initialized
-[2025-09-22 17:21:59] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:27:46] [INFO] Feedback cog logging initialized
-[2025-09-22 17:27:46] [INFO] Feedback cog initialized
-[2025-09-22 17:27:46] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:33:12] [INFO] Feedback cog logging initialized
-[2025-09-22 17:33:12] [INFO] Feedback cog initialized
-[2025-09-22 17:33:12] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:35:39] [INFO] Feedback cog logging initialized
-[2025-09-22 17:35:39] [INFO] Feedback cog initialized
-[2025-09-22 17:35:39] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:39:39] [INFO] Feedback cog logging initialized
-[2025-09-22 17:39:39] [INFO] Feedback cog initialized
-[2025-09-22 17:39:39] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:43:27] [INFO] Feedback cog logging initialized
-[2025-09-22 17:43:27] [INFO] Feedback cog initialized
-[2025-09-22 17:43:27] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:44:26] [INFO] Feedback cog logging initialized
-[2025-09-22 17:44:26] [INFO] Feedback cog initialized
-[2025-09-22 17:44:26] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 17:47:22] [INFO] Feedback cog logging initialized
-[2025-09-22 17:47:22] [INFO] Feedback cog initialized
-[2025-09-22 17:47:22] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 18:47:45] [INFO] Feedback cog logging initialized
-[2025-09-22 18:47:45] [INFO] Feedback cog initialized
-[2025-09-22 18:47:45] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 18:48:16] [INFO] Feedback cog logging reinitialized - using existing handler
-[2025-09-22 18:48:16] [INFO] Feedback cog initialized
-[2025-09-22 18:48:16] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 18:49:20] [INFO] Feedback cog logging initialized
-[2025-09-22 18:49:20] [INFO] Feedback cog initialized
-[2025-09-22 18:49:20] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 18:51:30] [INFO] Feedback cog logging initialized
-[2025-09-22 18:51:30] [INFO] Feedback cog initialized
-[2025-09-22 18:51:30] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 18:52:30] [INFO] Feedback cog logging initialized
-[2025-09-22 18:52:30] [INFO] Feedback cog initialized
-[2025-09-22 18:52:30] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:00:56] [INFO] Feedback cog logging initialized
-[2025-09-22 19:00:56] [INFO] Feedback cog initialized
-[2025-09-22 19:00:56] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:12:58] [INFO] Feedback cog logging initialized
-[2025-09-22 19:12:58] [INFO] Feedback cog initialized
-[2025-09-22 19:12:58] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:14:16] [INFO] Feedback cog logging initialized
-[2025-09-22 19:14:16] [INFO] Feedback cog initialized
-[2025-09-22 19:14:16] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:14:55] [INFO] Feedback cog logging initialized
-[2025-09-22 19:14:55] [INFO] Feedback cog initialized
-[2025-09-22 19:14:55] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:19:02] [INFO] Feedback cog logging initialized
-[2025-09-22 19:19:02] [INFO] Feedback cog initialized
-[2025-09-22 19:19:02] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:20:48] [INFO] Feedback cog logging initialized
-[2025-09-22 19:20:48] [INFO] Feedback cog initialized
-[2025-09-22 19:20:48] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:23:11] [INFO] Feedback cog logging initialized
-[2025-09-22 19:23:11] [INFO] Feedback cog initialized
-[2025-09-22 19:23:11] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:35:41] [INFO] Feedback cog logging initialized
-[2025-09-22 19:35:41] [INFO] Feedback cog initialized
-[2025-09-22 19:35:41] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 19:43:04] [INFO] Feedback cog logging initialized
-[2025-09-22 19:43:04] [INFO] Feedback cog initialized
-[2025-09-22 19:43:04] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 20:37:13] [INFO] Feedback cog logging initialized
-[2025-09-22 20:37:13] [INFO] Feedback cog initialized
-[2025-09-22 20:37:13] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 20:47:09] [INFO] Feedback cog logging initialized
-[2025-09-22 20:47:09] [INFO] Feedback cog initialized
-[2025-09-22 20:47:09] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 20:50:08] [INFO] Feedback cog logging initialized
-[2025-09-22 20:50:08] [INFO] Feedback cog initialized
-[2025-09-22 20:50:08] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 20:56:28] [INFO] Feedback cog logging initialized
-[2025-09-22 20:56:28] [INFO] Feedback cog initialized
-[2025-09-22 20:56:28] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-22 21:00:40] [INFO] Feedback cog logging initialized
-[2025-09-22 21:00:40] [INFO] Feedback cog initialized
-[2025-09-22 21:00:40] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 00:15:34] [INFO] Feedback cog logging initialized
-[2025-09-23 00:15:34] [INFO] Feedback cog initialized
-[2025-09-23 00:15:34] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 00:27:39] [INFO] Feedback cog logging initialized
-[2025-09-23 00:27:39] [INFO] Feedback cog initialized
-[2025-09-23 00:27:39] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 00:32:12] [INFO] Feedback cog logging initialized
-[2025-09-23 00:32:12] [INFO] Feedback cog initialized
-[2025-09-23 00:32:12] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 00:48:37] [INFO] Feedback cog logging initialized
-[2025-09-23 00:48:37] [INFO] Feedback cog initialized
-[2025-09-23 00:48:37] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 01:00:20] [INFO] Feedback cog logging initialized
-[2025-09-23 01:00:20] [INFO] Feedback cog initialized
-[2025-09-23 01:00:20] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 01:13:02] [INFO] Feedback cog logging initialized
-[2025-09-23 01:13:02] [INFO] Feedback cog initialized
-[2025-09-23 01:13:02] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 04:09:07] [INFO] Feedback cog logging initialized
-[2025-09-23 04:09:07] [INFO] Feedback cog initialized
-[2025-09-23 04:09:07] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 04:18:42] [INFO] Feedback cog logging initialized
-[2025-09-23 04:18:42] [INFO] Feedback cog initialized
-[2025-09-23 04:18:42] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
-[2025-09-23 04:22:31] [INFO] Feedback cog logging initialized
-[2025-09-23 04:22:31] [INFO] Feedback cog initialized
-[2025-09-23 04:22:31] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:03:58] [INFO] Feedback cog logging initialized
+[2025-09-23 14:03:58] [INFO] Feedback cog initialized
+[2025-09-23 14:03:58] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:14:49] [INFO] Feedback cog logging initialized
+[2025-09-23 14:14:49] [INFO] Feedback cog initialized
+[2025-09-23 14:14:49] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:16:07] [INFO] Feedback cog logging initialized
+[2025-09-23 14:16:07] [INFO] Feedback cog initialized
+[2025-09-23 14:16:07] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:18:21] [INFO] Feedback cog logging initialized
+[2025-09-23 14:18:21] [INFO] Feedback cog initialized
+[2025-09-23 14:18:21] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:21:20] [INFO] Feedback cog logging initialized
+[2025-09-23 14:21:20] [INFO] Feedback cog initialized
+[2025-09-23 14:21:20] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:22:31] [INFO] Feedback cog logging reinitialized - using existing handler
+[2025-09-23 14:22:31] [INFO] Feedback cog initialized
+[2025-09-23 14:22:31] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:22:48] [INFO] Feedback cog logging reinitialized - using existing handler
+[2025-09-23 14:22:48] [INFO] Feedback cog initialized
+[2025-09-23 14:22:48] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:22:59] [INFO] Feedback cog logging initialized
+[2025-09-23 14:22:59] [INFO] Feedback cog initialized
+[2025-09-23 14:22:59] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:31:52] [INFO] Feedback cog logging initialized
+[2025-09-23 14:31:52] [INFO] Feedback cog initialized
+[2025-09-23 14:31:52] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:43:56] [INFO] Feedback cog logging initialized
+[2025-09-23 14:43:56] [INFO] Feedback cog initialized
+[2025-09-23 14:43:56] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 14:45:27] [INFO] Feedback cog logging initialized
+[2025-09-23 14:45:27] [INFO] Feedback cog initialized
+[2025-09-23 14:45:27] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 15:29:29] [INFO] Feedback cog logging initialized
+[2025-09-23 15:29:29] [INFO] Feedback cog initialized
+[2025-09-23 15:29:29] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 15:30:15] [INFO] Feedback cog logging initialized
+[2025-09-23 15:30:15] [INFO] Feedback cog initialized
+[2025-09-23 15:30:15] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 15:37:24] [INFO] Feedback cog logging initialized
+[2025-09-23 15:37:24] [INFO] Feedback cog initialized
+[2025-09-23 15:37:24] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 15:45:44] [INFO] Feedback cog logging initialized
+[2025-09-23 15:45:44] [INFO] Feedback cog initialized
+[2025-09-23 15:45:44] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 15:57:24] [INFO] Feedback cog logging initialized
+[2025-09-23 15:57:24] [INFO] Feedback cog initialized
+[2025-09-23 15:57:24] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 16:00:39] [INFO] Feedback cog logging initialized
+[2025-09-23 16:00:39] [INFO] Feedback cog initialized
+[2025-09-23 16:00:39] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 16:03:37] [INFO] Feedback cog logging initialized
+[2025-09-23 16:03:37] [INFO] Feedback cog initialized
+[2025-09-23 16:03:37] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 16:05:23] [INFO] Feedback cog logging initialized
+[2025-09-23 16:05:23] [INFO] Feedback cog initialized
+[2025-09-23 16:05:23] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 16:08:55] [INFO] Feedback cog logging initialized
+[2025-09-23 16:08:55] [INFO] Feedback cog initialized
+[2025-09-23 16:08:55] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView

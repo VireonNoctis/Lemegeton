@@ -1,5 +1,12 @@
 {
     "python.analysis.extraPaths": [
-        "./helpers"
-    ]
+        "./helpers",
+        "./utils"
+    ],
+    "files.associations": {
+        "templates/**/*.html": "jinja-html"
+    },
+    "emmet.includeLanguages": {
+        "jinja-html": "html"
+    }
 }

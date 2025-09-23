@@ -13,6 +13,8 @@ from database import init_db
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from config import TOKEN, GUILD_ID, BOT_ID, ADMIN_DISCORD_ID
+import hashlib
+import json
 
 # ------------------------------------------------------
 # Logging Setup
@@ -70,12 +72,30 @@ logger.info("="*50)
 
 # Import monitoring integration (optional)
 try:
-    from bot_monitoring import setup_bot_monitoring
+    from utils.bot_monitoring import setup_bot_monitoring
     MONITORING_ENABLED = True
     logger.info("✅ Bot monitoring system available")
 except ImportError:
     MONITORING_ENABLED = False
     logger.warning("⚠️ Bot monitoring system not available")
+
+# ------------------------------------------------------
+# Command Sync Optimization Functions
+# ------------------------------------------------------
+def get_command_signature(command):
+    """Generate a signature for command comparison"""
+    return {
+        'name': command.name,
+        'description': command.description,
+        'type': str(type(command)),
+        'params': len(command.parameters) if hasattr(command, 'parameters') else 0
+    }
+
+def commands_hash(commands):
+    """Generate hash of command signatures for fast comparison"""
+    signatures = [get_command_signature(cmd) for cmd in commands]
+    signatures.sort(key=lambda x: x['name'])  # Sort for consistent hash
+    return hashlib.md5(json.dumps(signatures, sort_keys=True).encode()).hexdigest()
 
 # ------------------------------------------------------
 # Intents and Bot Setup
@@ -593,37 +613,61 @@ async def on_ready():
         for guild in bot.guilds:
             logger.debug(f"Connected to guild: {guild.name} (ID: {guild.id}) - {guild.member_count} members")
         
-        # Sync all global commands (no guild-specific commands anymore)
+        # Sync all global commands with smart optimization
         logger.info("Starting global command synchronization")
-        guild = discord.Object(id=GUILD_ID)
         
         try:
-            # Clear any remaining guild-specific commands
-            logger.debug("Clearing any existing guild-specific commands")
-            bot.tree.clear_commands(guild=guild)
-            await bot.tree.sync(guild=guild)
-            logger.debug("Guild command tree cleared")
+            # Get current commands from loaded cogs
+            current_commands = bot.tree.get_commands()
+            logger.debug(f"Found {len(current_commands)} local commands")
             
-            # Get all available commands from loaded cogs (they're all global now)
-            global_commands = bot.tree.get_commands()
-            logger.debug(f"Found {len(global_commands)} commands ready for global sync")
+            if not current_commands:
+                logger.warning("No commands found to sync")
+                return
             
-            # Sync all commands globally to make them available everywhere
-            logger.debug("Syncing all commands globally")
-            global_synced = await bot.tree.sync()
-            logger.info(f"✅ Successfully synced {len(global_synced)} global commands")
-            logger.info("🌍 ALL COMMANDS are now available in EVERY server the bot joins!")
+            # Ultra-fast sync detection using command hashing
+            needs_sync = True
+            current_hash = commands_hash(current_commands)
             
-            # Log each synced global command
-            for cmd in global_synced:
-                logger.info(f"Global command available: {cmd.name}")
+            try:
+                # Try to get existing commands for comparison
+                existing_commands = await bot.tree.fetch_commands()
+                if existing_commands:
+                    existing_hash = commands_hash(existing_commands)
+                    
+                    if current_hash == existing_hash:
+                        needs_sync = False
+                        logger.info(f"🚀 FAST SYNC: No changes detected - skipping sync ({len(current_commands)} commands)")
+                        logger.info("🌍 All commands already up-to-date globally!")
+                        
+                        # Still log available commands for verification
+                        for cmd in current_commands:
+                            logger.info(f"Global command available: {cmd.name}")
                 
+            except Exception as fetch_error:
+                logger.debug(f"Could not fetch existing commands for comparison: {fetch_error}")
+                # Fall back to full sync for safety
+            
+            if needs_sync:
+                logger.info("📤 Command changes detected - performing sync...")
+                start_time = asyncio.get_event_loop().time()
+                
+                global_synced = await bot.tree.sync()
+                
+                sync_time = asyncio.get_event_loop().time() - start_time
+                logger.info(f"✅ Successfully synced {len(global_synced)} global commands in {sync_time:.2f}s")
+                logger.info("🌍 ALL COMMANDS are now available in EVERY server the bot joins!")
+                
+                # Log each synced global command
+                for cmd in global_synced:
+                    logger.info(f"Global command available: {cmd.name}")
+            
         except discord.HTTPException as http_error:
             logger.error(f"HTTP error syncing global commands: {http_error}")
+            if http_error.status == 429:  # Rate limited
+                logger.error("Rate limited! Consider using the smart sync to reduce API calls.")
         except Exception as sync_error:
             logger.error(f"Error syncing global commands: {sync_error}", exc_info=True)
-        except Exception as global_sync_error:
-            logger.error(f"Error syncing global commands: {global_sync_error}", exc_info=True)
         
         # Start background tasks
         logger.info("Starting background tasks")
