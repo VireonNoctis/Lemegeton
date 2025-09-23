@@ -593,24 +593,22 @@ async def on_ready():
         for guild in bot.guilds:
             logger.debug(f"Connected to guild: {guild.name} (ID: {guild.id}) - {guild.member_count} members")
         
-        # Force ALL commands to be global by copying from guild to global and clearing guild tree
+        # Sync all global commands (no guild-specific commands anymore)
         logger.info("Starting global command synchronization")
         guild = discord.Object(id=GUILD_ID)
         
         try:
-            # First clear any existing global commands
-            bot.tree.clear_commands(guild=None)
-            logger.debug("Cleared existing global commands")
+            # Clear any remaining guild-specific commands
+            logger.debug("Clearing any existing guild-specific commands")
+            bot.tree.clear_commands(guild=guild)
+            await bot.tree.sync(guild=guild)
+            logger.debug("Guild command tree cleared")
             
-            # Copy all commands from the guild tree to the global tree
-            guild_commands = bot.tree.get_commands(guild=guild)
-            if guild_commands:
-                logger.debug(f"Found {len(guild_commands)} guild commands to copy to global")
-                for cmd in guild_commands:
-                    bot.tree.add_command(cmd, guild=None)
-                    logger.debug(f"Copied command '{cmd.name}' to global scope")
+            # Get all available commands from loaded cogs (they're all global now)
+            global_commands = bot.tree.get_commands()
+            logger.debug(f"Found {len(global_commands)} commands ready for global sync")
             
-            # Now sync everything globally to make ALL commands available everywhere
+            # Sync all commands globally to make them available everywhere
             logger.debug("Syncing all commands globally")
             global_synced = await bot.tree.sync()
             logger.info(f"✅ Successfully synced {len(global_synced)} global commands")
