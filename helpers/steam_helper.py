@@ -1,0 +1,561 @@
+"""
+Steam API Helper Functions
+Centralized functions for Steam API interactions, data processing, and image generation
+"""
+
+import asyncio
+import io
+import logging
+import math
+import random
+from pathlib import Path
+from typing import Dict, List, Optional, Any, Tuple
+
+import aiohttp
+import discord
+from bs4 import BeautifulSoup
+
+# Optional Pillow for friend-grid image rendering
+try:
+    from PIL import Image, ImageDraw, ImageFont
+    PIL_AVAILABLE = True
+except (ImportError, Exception):
+    PIL_AVAILABLE = False
+
+# Configuration constants
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "steam_helper.log"
+
+# Ensure logs directory exists
+LOG_DIR.mkdir(exist_ok=True)
+
+# Set up file-based logging
+logger = logging.getLogger("SteamHelper")
+logger.setLevel(logging.DEBUG)
+
+# Clear handlers to avoid duplicates
+logger.handlers.clear()
+
+# Create file handler
+file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+file_handler.setLevel(logging.DEBUG)
+
+# Create formatter
+formatter = logging.Formatter(
+    fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S"
+)
+file_handler.setFormatter(formatter)
+
+# Add handler to logger
+logger.addHandler(file_handler)
+
+logger.info("Steam Helper logging system initialized")
+
+
+# ===== HTTP REQUEST HELPERS =====
+
+async def safe_json(session: aiohttp.ClientSession, url: str, params: Optional[Dict] = None, timeout: int = 15) -> Optional[Dict]:
+    """
+    Safely make HTTP request and return JSON response.
+    """
+    try:
+        async with session.get(url, params=params, timeout=timeout) as resp:
+            if resp.status != 200:
+                logger.debug(f"safe_json - {url} returned {resp.status}")
+                return None
+            return await resp.json()
+    except Exception as e:
+        logger.exception(f"safe_json failed for {url}: {e}")
+        return None
+
+
+async def fetch_text(session: aiohttp.ClientSession, url: str, timeout: int = 15) -> Optional[str]:
+    """
+    Safely fetch text content from URL.
+    """
+    try:
+        async with session.get(url, timeout=timeout) as resp:
+            if resp.status != 200:
+                logger.debug(f"fetch_text - {url} returned {resp.status}")
+                return None
+            return await resp.text()
+    except Exception as e:
+        logger.exception(f"fetch_text failed for {url}: {e}")
+        return None
+
+
+async def fetch_steam_avatar(session: aiohttp.ClientSession, avatar_url: str) -> Optional[bytes]:
+    """
+    Fetch Steam avatar image as bytes.
+    """
+    if not avatar_url:
+        return None
+    
+    try:
+        async with session.get(avatar_url) as resp:
+            if resp.status == 200:
+                return await resp.read()
+    except Exception as e:
+        logger.debug(f"Failed to fetch avatar {avatar_url}: {e}")
+    
+    return None
+
+
+# ===== STEAM API HELPERS =====
+
+async def resolve_vanity_url(session: aiohttp.ClientSession, api_key: str, vanity_name: str) -> Optional[str]:
+    """
+    Resolve Steam vanity URL to SteamID64.
+    """
+    data = await safe_json(
+        session,
+        "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
+        params={"key": api_key, "vanityurl": vanity_name}
+    )
+    
+    if data and data.get("response", {}).get("success") == 1:
+        return data["response"]["steamid"]
+    
+    return None
+
+
+async def get_player_summaries(session: aiohttp.ClientSession, api_key: str, steamids: str) -> List[Dict]:
+    """
+    Get player summaries from Steam API.
+    """
+    data = await safe_json(
+        session,
+        "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/",
+        params={"key": api_key, "steamids": steamids}
+    )
+    
+    if data:
+        return data.get("response", {}).get("players", [])
+    
+    return []
+
+
+async def get_user_friends(session: aiohttp.ClientSession, api_key: str, steamid: str) -> List[Dict]:
+    """
+    Get user's friends list from Steam API.
+    """
+    data = await safe_json(
+        session,
+        "https://api.steampowered.com/ISteamUser/GetFriendList/v1/",
+        params={"key": api_key, "steamid": steamid}
+    )
+    
+    if data:
+        return data.get("friendslist", {}).get("friends", [])
+    
+    return []
+
+
+async def get_owned_games(session: aiohttp.ClientSession, api_key: str, steamid: str, include_appinfo: bool = True) -> List[Dict]:
+    """
+    Get user's owned games from Steam API.
+    """
+    params = {
+        "key": api_key,
+        "steamid": steamid,
+        "include_appinfo": 1 if include_appinfo else 0,
+        "include_played_free_games": 1
+    }
+    
+    data = await safe_json(
+        session,
+        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/",
+        params=params
+    )
+    
+    if data:
+        return data.get("response", {}).get("games", [])
+    
+    return []
+
+
+async def get_recently_played_games(session: aiohttp.ClientSession, api_key: str, steamid: str) -> List[Dict]:
+    """
+    Get user's recently played games from Steam API.
+    """
+    data = await safe_json(
+        session,
+        "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/",
+        params={"key": api_key, "steamid": steamid}
+    )
+    
+    if data:
+        return data.get("response", {}).get("games", [])
+    
+    return []
+
+
+async def search_steam_apps(session: aiohttp.ClientSession, query: str, max_results: int = 10) -> List[Dict]:
+    """
+    Search Steam apps using store search.
+    """
+    try:
+        search_url = f"https://store.steampowered.com/search/suggest"
+        params = {
+            "term": query,
+            "f": "games",
+            "cc": "US",
+            "l": "english"
+        }
+        
+        html = await fetch_text(session, search_url, timeout=10)
+        if not html:
+            return []
+        
+        soup = BeautifulSoup(html, 'html.parser')
+        results = []
+        
+        for item in soup.find_all('a', class_='match')[:max_results]:
+            try:
+                app_id = None
+                href = item.get('href', '')
+                if '/app/' in href:
+                    app_id = href.split('/app/')[1].split('/')[0]
+                
+                name = item.find('span', class_='match_name')
+                name = name.get_text(strip=True) if name else "Unknown"
+                
+                img = item.find('img')
+                img_url = img.get('src') if img else None
+                
+                if app_id:
+                    results.append({
+                        "appid": int(app_id),
+                        "name": name,
+                        "img_icon_url": img_url
+                    })
+            except Exception as e:
+                logger.debug(f"Error parsing search result: {e}")
+                continue
+        
+        return results
+    
+    except Exception as e:
+        logger.error(f"Error searching Steam apps: {e}")
+        return []
+
+
+# ===== DATA PROCESSING HELPERS =====
+
+def chunk_list(lst: List, n: int) -> List[List]:
+    """
+    Split list into chunks of size n.
+    """
+    return [lst[i:i + n] for i in range(0, len(lst), n)]
+
+
+def safe_text(s: Any, fallback: str = "N/A") -> str:
+    """
+    Safely convert value to string with fallback.
+    """
+    if not s:
+        return fallback
+    return str(s)
+
+
+def human_hours(minutes: int) -> str:
+    """
+    Convert minutes to human-readable hours format.
+    """
+    if minutes < 60:
+        return f"{minutes}m"
+    return f"{minutes // 60}h"
+
+
+def format_playtime(minutes: int) -> str:
+    """
+    Format playtime minutes into readable string.
+    """
+    if minutes == 0:
+        return "Never played"
+    elif minutes < 60:
+        return f"{minutes} minutes"
+    elif minutes < 1440:  # Less than 24 hours
+        hours = minutes // 60
+        mins = minutes % 60
+        if mins == 0:
+            return f"{hours} hour{'s' if hours != 1 else ''}"
+        return f"{hours}h {mins}m"
+    else:  # 24+ hours
+        hours = minutes // 60
+        return f"{hours:,.1f} hours"
+
+
+def get_steam_app_url(app_id: int) -> str:
+    """
+    Generate Steam store URL for app.
+    """
+    return f"https://store.steampowered.com/app/{app_id}/"
+
+
+def get_steam_profile_url(steamid: str) -> str:
+    """
+    Generate Steam profile URL.
+    """
+    return f"https://steamcommunity.com/profiles/{steamid}/"
+
+
+def get_steam_avatar_url(avatar_hash: str, size: str = "full") -> str:
+    """
+    Generate Steam avatar URL from hash.
+    """
+    if not avatar_hash:
+        return ""
+    
+    size_suffix = ""
+    if size == "small":
+        size_suffix = ""
+    elif size == "medium":
+        size_suffix = "_medium"
+    elif size == "full":
+        size_suffix = "_full"
+    
+    return f"https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/{avatar_hash[:2]}/{avatar_hash}{size_suffix}.jpg"
+
+
+# ===== DISCORD UTILITIES =====
+
+def random_color() -> discord.Color:
+    """
+    Get random Discord color from predefined palette.
+    """
+    palette = [
+        discord.Color.blurple(), discord.Color.blue(), discord.Color.teal(),
+        discord.Color.green(), discord.Color.gold(), discord.Color.purple(),
+        discord.Color.dark_blue(), discord.Color.dark_teal()
+    ]
+    return random.choice(palette)
+
+
+def create_steam_profile_embed(player_data: Dict, games_count: int = 0, playtime_total: int = 0) -> discord.Embed:
+    """
+    Create Discord embed for Steam profile.
+    """
+    name = player_data.get("personaname", "Unknown")
+    steamid = player_data.get("steamid", "")
+    avatar = player_data.get("avatarfull", "")
+    profile_url = player_data.get("profileurl", "")
+    
+    # Parse persona state
+    state = player_data.get("personastate", 0)
+    status_map = {
+        0: "Offline",
+        1: "Online",
+        2: "Busy",
+        3: "Away",
+        4: "Snooze",
+        5: "Looking to trade",
+        6: "Looking to play"
+    }
+    status = status_map.get(state, "Unknown")
+    
+    # Create embed
+    embed = discord.Embed(
+        title=f"Steam Profile: {name}",
+        url=profile_url,
+        color=random_color()
+    )
+    
+    if avatar:
+        embed.set_thumbnail(url=avatar)
+    
+    embed.add_field(name="Status", value=status, inline=True)
+    embed.add_field(name="SteamID", value=steamid, inline=True)
+    
+    if games_count > 0:
+        embed.add_field(name="Games Owned", value=f"{games_count:,}", inline=True)
+    
+    if playtime_total > 0:
+        embed.add_field(name="Total Playtime", value=format_playtime(playtime_total), inline=True)
+    
+    # Add profile creation date if available
+    if "timecreated" in player_data:
+        import datetime
+        created = datetime.datetime.fromtimestamp(player_data["timecreated"])
+        embed.add_field(name="Member Since", value=created.strftime("%B %Y"), inline=True)
+    
+    return embed
+
+
+def create_game_search_embed(games: List[Dict], query: str) -> discord.Embed:
+    """
+    Create Discord embed for game search results.
+    """
+    embed = discord.Embed(
+        title=f"Steam Search: {query}",
+        color=random_color()
+    )
+    
+    if not games:
+        embed.description = "No games found."
+        return embed
+    
+    results = []
+    for game in games[:10]:  # Limit to 10 results
+        name = game.get("name", "Unknown")
+        app_id = game.get("appid", "")
+        url = get_steam_app_url(app_id) if app_id else ""
+        
+        if url:
+            results.append(f"[{name}]({url})")
+        else:
+            results.append(name)
+    
+    embed.description = "\n".join(results)
+    embed.set_footer(text=f"Showing {len(results)} of {len(games)} results")
+    
+    return embed
+
+
+# ===== IMAGE GENERATION HELPERS =====
+
+def make_friend_grid_image(friends_slice: List[Dict], thumb_size: int = 96, per_row: int = 5) -> Optional[io.BytesIO]:
+    """
+    Generate friend grid image using Pillow (optional).
+    Returns BytesIO png or None if PIL not available.
+    """
+    if not PIL_AVAILABLE:
+        logger.warning("PIL not available for friend grid generation")
+        return None
+    
+    if not friends_slice:
+        return None
+    
+    # Calculate grid dimensions
+    cols = min(per_row, max(1, len(friends_slice)))
+    rows = math.ceil(len(friends_slice) / per_row)
+    padding = 12
+    name_height = 20
+    width = cols * (thumb_size + padding) + padding
+    height = rows * (thumb_size + name_height + padding) + padding
+
+    # Create image
+    image = Image.new("RGBA", (width, height), (30, 30, 30, 255))
+    draw = ImageDraw.Draw(image)
+
+    # Try to use a TTF font if available
+    try:
+        font = ImageFont.truetype("arial.ttf", 14)
+    except Exception:
+        try:
+            font = ImageFont.load_default()
+        except Exception:
+            font = None
+
+    # Draw friends
+    x = padding
+    y = padding
+    idx = 0
+    
+    for friend in friends_slice:
+        avatar_bytes = friend.get("avatar_bytes")
+        
+        try:
+            if avatar_bytes:
+                av = Image.open(io.BytesIO(avatar_bytes)).convert("RGBA")
+                av = av.resize((thumb_size, thumb_size))
+                image.paste(av, (x, y), av)
+            else:
+                # Draw placeholder rectangle
+                draw.rectangle([x, y, x + thumb_size, y + thumb_size], fill=(60, 60, 60))
+        except Exception as e:
+            logger.debug(f"Error processing friend avatar: {e}")
+            # Draw placeholder rectangle
+            draw.rectangle([x, y, x + thumb_size, y + thumb_size], fill=(60, 60, 60))
+        
+        # Draw name under avatar
+        name = (friend.get("name") or "Unknown")[:22]
+        tx = x
+        ty = y + thumb_size + 4
+        draw.text((tx, ty), name, fill=(240, 240, 240), font=font)
+        
+        # Move to next position
+        x += thumb_size + padding
+        idx += 1
+        
+        if idx % per_row == 0:
+            x = padding
+            y += thumb_size + name_height + padding
+
+    # Save to BytesIO
+    out = io.BytesIO()
+    image.save(out, "PNG")
+    out.seek(0)
+    return out
+
+
+# ===== VALIDATION HELPERS =====
+
+def is_valid_steamid64(steamid: str) -> bool:
+    """
+    Validate SteamID64 format.
+    """
+    if not steamid or not steamid.isdigit():
+        return False
+    
+    # SteamID64 should be 17 digits and start with 765
+    return len(steamid) == 17 and steamid.startswith("765")
+
+
+def is_valid_vanity_name(vanity: str) -> bool:
+    """
+    Validate Steam vanity name format.
+    """
+    if not vanity or len(vanity) < 3 or len(vanity) > 32:
+        return False
+    
+    # Basic alphanumeric check (Steam allows some special chars but this is a safe subset)
+    import re
+    return bool(re.match(r'^[a-zA-Z0-9_-]+$', vanity))
+
+
+# ===== CACHE HELPERS =====
+
+def get_app_icon_url(app_id: int, icon_hash: str) -> str:
+    """
+    Generate Steam app icon URL.
+    """
+    if not icon_hash:
+        return ""
+    
+    return f"https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/{app_id}/{icon_hash}.jpg"
+
+
+def get_app_header_url(app_id: int) -> str:
+    """
+    Generate Steam app header image URL.
+    """
+    return f"https://steamcdn-a.akamaihd.net/steam/apps/{app_id}/header.jpg"
+
+
+# ===== ASYNC UTILITIES =====
+
+async def batch_fetch_player_data(
+    session: aiohttp.ClientSession,
+    api_key: str,
+    steamids: List[str],
+    batch_size: int = 100
+) -> List[Dict]:
+    """
+    Fetch player data for multiple SteamIDs in batches.
+    """
+    all_players = []
+    
+    for i in range(0, len(steamids), batch_size):
+        batch = steamids[i:i + batch_size]
+        steamids_str = ",".join(batch)
+        
+        players = await get_player_summaries(session, api_key, steamids_str)
+        all_players.extend(players)
+        
+        # Small delay between batches to be nice to Steam API
+        if i + batch_size < len(steamids):
+            await asyncio.sleep(0.1)
+    
+    return all_players

@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 
 from helpers.media_helper import fetch_watchlist
-from database import get_user
+from database import get_user_guild_aware
 
 # ------------------------------------------------------
 # Logging Setup - Clears on each bot run
@@ -111,7 +111,7 @@ class Watchlist(commands.Cog):
         # Case 1: Discord user
         if user:
             logger.info(f"Looking up Discord user: {user} (ID: {user.id})")
-            db_user = await get_user(user.id)
+            db_user = await get_user_guild_aware(user.id, interaction.guild.id)
             if not db_user:
                 logger.warning(f"Discord user {user} (ID: {user.id}) not found in database")
                 await interaction.followup.send(
@@ -125,7 +125,7 @@ class Watchlist(commands.Cog):
         # Case 2: Default to self if no args
         elif not username:
             logger.info(f"No parameters provided, checking command user's registration: {interaction.user}")
-            db_user = await get_user(interaction.user.id)
+            db_user = await get_user_guild_aware(interaction.user.id, interaction.guild.id)
             if db_user:
                 username = db_user[2]
                 logger.info(f"Found AniList username for command user: {username}")

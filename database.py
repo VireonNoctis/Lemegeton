@@ -187,12 +187,14 @@ async def migrate_to_multi_guild_schema():
         await execute_db_operation("create new users table", new_table_query)
         
         # 2. Copy data from old table to new table
+        # Use environment variable for default guild ID
+        default_guild_id = os.getenv("GUILD_ID", "897814031346319382")
         copy_query = """
             INSERT INTO users_new (id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at)
-            SELECT id, discord_id, COALESCE(guild_id, 897814031346319382), username, anilist_username, anilist_id, created_at, updated_at
+            SELECT id, discord_id, COALESCE(guild_id, ?), username, anilist_username, anilist_id, created_at, updated_at
             FROM users
         """
-        await execute_db_operation("copy data to new users table", copy_query)
+        await execute_db_operation("copy data to new users table", copy_query, (default_guild_id,))
         
         # 3. Drop old table
         await execute_db_operation("drop old users table", "DROP TABLE users")
@@ -269,8 +271,8 @@ async def init_users_table():
                 has_guild_data = count_result[0] > 0 if count_result else False
                 
                 if not has_guild_data:
-                    # Migrate existing users to use default guild_id
-                    default_guild_id = 897814031346319382  # Your server ID
+                    # Migrate existing users to use default guild_id from environment
+                    default_guild_id = os.getenv("GUILD_ID", "897814031346319382")
                     migrate_query = "UPDATE users SET guild_id = ? WHERE guild_id IS NULL"
                     await execute_db_operation("migrate existing users to default guild", migrate_query, (default_guild_id,))
                     logger.info(f"✅ Migrated existing users to default guild ID: {default_guild_id}")
@@ -771,7 +773,8 @@ async def init_challenge_rules_table():
         await execute_db_operation("challenge rules table creation", create_query)
         
         # Add missing timestamp columns if they don't exist
-        for column_name, column_type in [("created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP"), ("updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP")]:
+        # SQLite doesn't support DEFAULT CURRENT_TIMESTAMP with ALTER TABLE, so we use NULL default
+        for column_name, column_type in [("created_at", "DATETIME"), ("updated_at", "DATETIME")]:
             try:
                 alter_query = f"ALTER TABLE challenge_rules ADD COLUMN {column_name} {column_type}"
                 await execute_db_operation(f"add {column_name} to challenge_rules", alter_query)
@@ -779,6 +782,10 @@ async def init_challenge_rules_table():
             except aiosqlite.OperationalError as e:
                 if "duplicate column name" in str(e).lower():
                     logger.debug(f"Column '{column_name}' already exists in challenge_rules table")
+                else:
+                    logger.warning(f"Could not add column '{column_name}' to challenge_rules: {e}")
+            except Exception as e:
+                logger.warning(f"Could not add column '{column_name}' to challenge_rules: {e}")
         
         logger.info("✅ Challenge rules table initialization completed")
         
@@ -1396,6 +1403,55 @@ async def init_steam_users_table():
         logger.info("Steam users table ready.")
 
 
+async def init_guild_challenge_roles_table():
+    """Initialize the guild challenge roles table for multi-guild support."""
+    logger.info("🔧 Initializing guild challenge roles table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_challenge_roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                challenge_id INTEGER NOT NULL,
+                threshold REAL NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, challenge_id, threshold)
+            )
+        """)
+        await db.commit()
+        
+        # Migrate default roles for primary guild if they don't exist
+        await migrate_default_challenge_roles()
+        
+        logger.info("✅ Guild challenge roles table ready.")
+
+
+async def migrate_default_challenge_roles():
+    """Migrate default challenge roles from config.py to the database for the primary guild."""
+    try:
+        primary_guild_id = int(os.getenv("GUILD_ID"))
+        
+        # Check if roles already exist for primary guild
+        existing_roles = await get_guild_challenge_roles(primary_guild_id)
+        
+        if existing_roles:
+            logger.info(f"Default challenge roles already exist for primary guild {primary_guild_id}")
+            return
+        
+        # Migrate roles from config.CHALLENGE_ROLE_IDS
+        logger.info(f"Migrating default challenge roles for primary guild {primary_guild_id}")
+        
+        for challenge_id, thresholds in config.CHALLENGE_ROLE_IDS.items():
+            for threshold, role_id in thresholds.items():
+                await set_guild_challenge_role(primary_guild_id, challenge_id, threshold, role_id)
+                logger.info(f"Migrated: Challenge {challenge_id}, threshold {threshold} -> role {role_id}")
+        
+        logger.info(f"✅ Successfully migrated {len(config.CHALLENGE_ROLE_IDS)} default challenge roles")
+        
+    except Exception as e:
+        logger.error(f"Error migrating default challenge roles: {e}", exc_info=True)
 
 
 # ------------------------------------------------------
@@ -1418,6 +1474,7 @@ async def init_db():
         ("Manga Challenges", init_manga_challenges_table),
         ("User Progress", init_user_progress_table),
         ("Global Challenges", init_global_challenges_table),
+        ("Guild Challenge Roles", init_guild_challenge_roles_table),
         ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
@@ -2020,3 +2077,148 @@ async def get_guild_challenge_leaderboard_data(guild_id: int):
     except Exception as e:
         logger.error(f"❌ Error getting challenge leaderboard for guild {guild_id}: {e}", exc_info=True)
         raise
+
+
+# ------------------------------------------------------
+# Guild Challenge Roles Management Functions
+# ------------------------------------------------------
+
+async def set_guild_challenge_role(guild_id: int, challenge_id: int, threshold: float, role_id: int):
+    """Set a challenge role for a specific guild."""
+    logger.info(f"Setting challenge role for guild {guild_id}, challenge {challenge_id}, threshold {threshold} -> role {role_id}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        if not isinstance(challenge_id, int) or challenge_id <= 0:
+            raise ValueError(f"Invalid challenge_id: {challenge_id}")
+        if not isinstance(role_id, int) or role_id <= 0:
+            raise ValueError(f"Invalid role_id: {role_id}")
+        if not isinstance(threshold, (int, float)) or threshold <= 0:
+            raise ValueError(f"Invalid threshold: {threshold}")
+        
+        query = """
+            INSERT OR REPLACE INTO guild_challenge_roles 
+            (guild_id, challenge_id, threshold, role_id, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """
+        
+        await execute_db_operation(
+            f"set challenge role for guild {guild_id}",
+            query,
+            (guild_id, challenge_id, threshold, role_id)
+        )
+        
+        logger.info(f"✅ Set challenge role for guild {guild_id}, challenge {challenge_id} -> role {role_id}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error setting guild challenge role: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error setting challenge role for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def get_guild_challenge_roles(guild_id: int) -> Dict[int, Dict[float, int]]:
+    """Get all challenge roles for a specific guild."""
+    logger.info(f"Getting challenge roles for guild {guild_id}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        
+        query = """
+            SELECT challenge_id, threshold, role_id 
+            FROM guild_challenge_roles 
+            WHERE guild_id = ?
+            ORDER BY challenge_id, threshold
+        """
+        
+        result = await execute_db_operation(
+            f"get challenge roles for guild {guild_id}",
+            query,
+            (guild_id,),
+            fetch_type='all'
+        )
+        
+        # Format as nested dictionary: {challenge_id: {threshold: role_id}}
+        roles = {}
+        if result:
+            for challenge_id, threshold, role_id in result:
+                if challenge_id not in roles:
+                    roles[challenge_id] = {}
+                roles[challenge_id][threshold] = role_id
+        
+        logger.info(f"✅ Retrieved {len(roles)} challenge role configurations for guild {guild_id}")
+        return roles
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error getting guild challenge roles: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error getting challenge roles for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def remove_guild_challenge_role(guild_id: int, challenge_id: int, threshold: float = None):
+    """Remove challenge role(s) for a specific guild."""
+    logger.info(f"Removing challenge role for guild {guild_id}, challenge {challenge_id}, threshold {threshold}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        if not isinstance(challenge_id, int) or challenge_id <= 0:
+            raise ValueError(f"Invalid challenge_id: {challenge_id}")
+        
+        if threshold is not None:
+            # Remove specific threshold
+            query = "DELETE FROM guild_challenge_roles WHERE guild_id = ? AND challenge_id = ? AND threshold = ?"
+            params = (guild_id, challenge_id, threshold)
+        else:
+            # Remove all thresholds for this challenge
+            query = "DELETE FROM guild_challenge_roles WHERE guild_id = ? AND challenge_id = ?"
+            params = (guild_id, challenge_id)
+        
+        await execute_db_operation(
+            f"remove challenge role for guild {guild_id}",
+            query,
+            params
+        )
+        
+        logger.info(f"✅ Removed challenge role for guild {guild_id}, challenge {challenge_id}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error removing guild challenge role: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error removing challenge role for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def get_challenge_role_ids_for_guild(guild_id: int) -> Dict[int, Dict[float, int]]:
+    """
+    Get challenge role IDs for a specific guild.
+    Falls back to config.CHALLENGE_ROLE_IDS if guild has no custom configuration.
+    """
+    try:
+        # Try to get guild-specific roles from database
+        guild_roles = await get_guild_challenge_roles(guild_id)
+        
+        if guild_roles:
+            logger.debug(f"Using database challenge roles for guild {guild_id}")
+            return guild_roles
+        
+        # Check if this is the primary guild - use config as fallback
+        primary_guild_id = int(os.getenv("GUILD_ID"))
+        if guild_id == primary_guild_id:
+            logger.debug(f"Using config fallback challenge roles for primary guild {guild_id}")
+            return config.CHALLENGE_ROLE_IDS
+        
+        # For other guilds, return empty dict (no roles configured)
+        logger.info(f"No challenge roles configured for guild {guild_id}")
+        return {}
+        
+    except Exception as e:
+        logger.error(f"Error getting challenge role IDs for guild {guild_id}: {e}", exc_info=True)
+        # Return config as ultimate fallback
+        return config.CHALLENGE_ROLE_IDS

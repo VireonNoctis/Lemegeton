@@ -1,0 +1,5 @@
+[2025-09-23 23:10:09] [INFO    ] [CacheHelper] Cache Helper logging system initialized
+[2025-09-23 23:10:09] [DEBUG   ] [CacheHelper] Loaded JSON cache 'recommendation' with 38 entries
+[2025-09-23 23:10:09] [INFO    ] [CacheHelper] Loaded 38 valid recommendation cache entries
+[2025-09-23 23:10:09] [DEBUG   ] [CacheHelper] Loaded JSON cache 'popular_titles' with 22 entries
+[2025-09-23 23:10:09] [INFO    ] [CacheHelper] Loaded 22 popular titles from cache

@@ -476,3 +476,36 @@
 [2025-09-23 17:09:24,871] [INFO] Loaded 38 valid cache entries from persistent storage
 [2025-09-23 17:09:24,871] [INFO] Loaded 22 popular titles from persistent storage
 [2025-09-23 17:09:24,872] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-23 23:59:04,161] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-23 23:59:04,162] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-23 23:59:04,163] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:02:05,023] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:02:05,026] [INFO] Recommendation caches saved successfully
+[2025-09-24 00:02:05,066] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:02:05,068] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:02:05,070] [INFO] Recommendation caches saved successfully
+[2025-09-24 00:02:57,911] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-24 00:02:57,912] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-24 00:02:57,913] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:02:59,672] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:02:59,675] [INFO] Recommendation caches saved successfully
+[2025-09-24 00:03:06,043] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-24 00:03:06,045] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-24 00:03:06,046] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:04:22,490] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:04:22,493] [INFO] Recommendation caches saved successfully
+[2025-09-24 00:11:43,327] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-24 00:11:43,328] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-24 00:11:43,329] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:11:58,602] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:11:58,605] [INFO] Recommendation caches saved successfully
+[2025-09-24 00:13:41,978] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-24 00:13:41,979] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-24 00:13:41,980] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:15:06,664] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:15:06,668] [INFO] Recommendation caches saved successfully
+[2025-09-24 00:17:04,001] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-24 00:17:04,002] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-24 00:17:04,003] [INFO] Recommendations cog initialized with persistent cache system
+[2025-09-24 00:17:51,916] [INFO] Saving recommendation caches before cog unload...
+[2025-09-24 00:17:51,919] [INFO] Recommendation caches saved successfully

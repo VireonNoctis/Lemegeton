@@ -10,8 +10,14 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 ADMIN_DISCORD_ID = int(os.getenv("ADMIN_DISCORD_ID"))
 
+# Primary Guild ID for backwards compatibility and default operations
+PRIMARY_GUILD_ID = int(os.getenv("GUILD_ID"))
+
 # Database path - Railway compatible
 DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "data", "database.db"))
+
+# Default Challenge Role IDs for the primary guild (backwards compatibility)
+# These will be automatically migrated to the database on first run
 CHALLENGE_ROLE_IDS = {
     # challenge_id: {threshold: role_id}
     1: {  # Challenge ID 1
