@@ -473,3 +473,6 @@
 [2025-09-23 16:15:48,299] [INFO] #10: The Celestial Returned from Hell (id=132457) — Votes: 25, occurrences: 4
 [2025-09-23 16:15:48,300] [INFO] Top sizes -> Manga: 10, Manhwa: 10, Manhua: 9
 [2025-09-23 16:15:48,300] [INFO] Created recommendation data -> Manga: 10, Manhwa: 10, Manhua: 9
+[2025-09-23 17:09:24,871] [INFO] Loaded 38 valid cache entries from persistent storage
+[2025-09-23 17:09:24,871] [INFO] Loaded 22 popular titles from persistent storage
+[2025-09-23 17:09:24,872] [INFO] Recommendations cog initialized with persistent cache system

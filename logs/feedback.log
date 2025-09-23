@@ -58,3 +58,6 @@
 [2025-09-23 16:08:55] [INFO] Feedback cog logging initialized
 [2025-09-23 16:08:55] [INFO] Feedback cog initialized
 [2025-09-23 16:08:55] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
+[2025-09-23 17:09:24] [INFO] Feedback cog logging initialized
+[2025-09-23 17:09:24] [INFO] Feedback cog initialized
+[2025-09-23 17:09:24] [INFO] ✅ Persistent views re-registered: FeedbackView, CloseThreadView, ConfirmCloseView
