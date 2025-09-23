@@ -593,36 +593,37 @@ async def on_ready():
         for guild in bot.guilds:
             logger.debug(f"Connected to guild: {guild.name} (ID: {guild.id}) - {guild.member_count} members")
         
-        # Sync guild commands with detailed logging
-        logger.info("Starting command synchronization")
+        # Force ALL commands to be global by copying from guild to global and clearing guild tree
+        logger.info("Starting global command synchronization")
         guild = discord.Object(id=GUILD_ID)
         
         try:
-            logger.debug(f"Syncing commands for guild ID: {GUILD_ID}")
-            synced = await bot.tree.sync(guild=guild)
-            logger.info(f"✅ Successfully synced {len(synced)} guild commands")
+            # First clear any existing global commands
+            bot.tree.clear_commands(guild=None)
+            logger.debug("Cleared existing global commands")
             
-            # Log each synced command
-            for cmd in synced:
-                logger.debug(f"Guild command synced: {cmd.name}")
-                
-        except discord.HTTPException as http_error:
-            logger.error(f"HTTP error syncing guild commands: {http_error}")
-        except Exception as guild_sync_error:
-            logger.error(f"Error syncing guild commands: {guild_sync_error}", exc_info=True)
-        
-        # Sync global commands with detailed logging
-        try:
-            logger.debug("Syncing global commands")
+            # Copy all commands from the guild tree to the global tree
+            guild_commands = bot.tree.get_commands(guild=guild)
+            if guild_commands:
+                logger.debug(f"Found {len(guild_commands)} guild commands to copy to global")
+                for cmd in guild_commands:
+                    bot.tree.add_command(cmd, guild=None)
+                    logger.debug(f"Copied command '{cmd.name}' to global scope")
+            
+            # Now sync everything globally to make ALL commands available everywhere
+            logger.debug("Syncing all commands globally")
             global_synced = await bot.tree.sync()
             logger.info(f"✅ Successfully synced {len(global_synced)} global commands")
+            logger.info("🌍 ALL COMMANDS are now available in EVERY server the bot joins!")
             
             # Log each synced global command
             for cmd in global_synced:
-                logger.debug(f"Global command synced: {cmd.name}")
+                logger.info(f"Global command available: {cmd.name}")
                 
         except discord.HTTPException as http_error:
             logger.error(f"HTTP error syncing global commands: {http_error}")
+        except Exception as sync_error:
+            logger.error(f"Error syncing global commands: {sync_error}", exc_info=True)
         except Exception as global_sync_error:
             logger.error(f"Error syncing global commands: {global_sync_error}", exc_info=True)
         
