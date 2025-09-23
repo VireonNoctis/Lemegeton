@@ -8,8 +8,6 @@ import re
 import logging
 from pathlib import Path
 
-from config import GUILD_ID
-
 # ------------------------------------------------------
 # Logging Setup - Clears on each bot run
 # ------------------------------------------------------
@@ -59,7 +57,6 @@ class Trending(commands.Cog):
         self.bot = bot
         logger.info("Trending cog initialized")
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="trending",
         description="🔥 View the currently trending anime, manga, or light novels on AniList"

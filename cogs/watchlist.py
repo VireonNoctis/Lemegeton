@@ -6,7 +6,6 @@ import logging
 import os
 from pathlib import Path
 
-from config import GUILD_ID
 from helpers.media_helper import fetch_watchlist
 from database import get_user
 
@@ -90,7 +89,6 @@ class Watchlist(commands.Cog):
         self.bot = bot
         logger.info("Watchlist cog initialized")
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="watchlist",
         description="📺 Show what someone is currently watching or reading on AniList"

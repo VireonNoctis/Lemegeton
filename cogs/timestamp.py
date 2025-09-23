@@ -9,8 +9,6 @@ import asyncio
 from typing import Optional, List, Tuple
 import time
 
-from config import GUILD_ID
-
 # Set up logging
 log_file_path = Path(__file__).parent.parent / "logs" / "timestamp.log"
 log_file_path.parent.mkdir(exist_ok=True)
@@ -54,7 +52,6 @@ class TimestampConverter(commands.Cog):
         
         logger.info("TimestampConverter cog initialized")
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(name="timestamp_watch", description="Toggle automatic timestamp conversion for all channels")
     @app_commands.default_permissions(administrator=True)
     @app_commands.guild_only()

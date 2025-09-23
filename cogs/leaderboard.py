@@ -16,7 +16,7 @@ from database import (
     upsert_user_stats_guild_aware
 )
 from helpers.media_helper import fetch_user_stats
-from config import GUILD_ID, DB_PATH
+from config import DB_PATH
 
 # ------------------------------------------------------
 # Logging Setup - Clears on each bot run
@@ -979,7 +979,6 @@ class Leaderboard(commands.Cog):
             logger.error(f"Error generating {medium} leaderboard data: {e}", exc_info=True)
             return []
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.choices(medium=[
         app_commands.Choice(name="📖 Manga", value="manga"),
         app_commands.Choice(name="🎬 Anime", value="anime"),

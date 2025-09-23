@@ -5,7 +5,6 @@ import aiohttp
 import logging
 from typing import List, Dict, Optional
 from discord.ui import View, Button
-from config import GUILD_ID
 from database import get_all_users
 
 logger = logging.getLogger("BrowseCog")
@@ -123,7 +122,6 @@ class BrowseCog(commands.Cog):
     # --------------------------------------------------
     # /Browse Command
     # --------------------------------------------------
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="browse",
         description="Search Anime, Manga, Light Novels and General Novels"

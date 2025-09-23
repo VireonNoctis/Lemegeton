@@ -3460,3 +3460,223 @@ sqlite3.OperationalError: no such table: users
                     
 [2025-09-23 01:13:07] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('zFX6KGvA', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417209847346102312, -1, 1)
 [2025-09-23 01:13:07] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:07] [INFO] [Database] <module>:60 - ==================================================
+[2025-09-23 04:09:07] [INFO] [Database] <module>:61 - Database logging system initialized
+[2025-09-23 04:09:07] [INFO] [Database] <module>:62 - Log file: logs\database.log
+[2025-09-23 04:09:07] [INFO] [Database] <module>:63 - ==================================================
+[2025-09-23 04:09:07] [INFO] [Database] <module>:70 - Database configuration initialized
+[2025-09-23 04:09:07] [INFO] [Database] <module>:71 - Database file path: C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\data\database.db
+[2025-09-23 04:09:07] [INFO] [Database] <module>:72 - Database file exists: True
+[2025-09-23 04:09:07] [INFO] [Database] <module>:75 - Database file size: 638,976 bytes (0.61 MB)
+[2025-09-23 04:09:07] [DEBUG] [Database] execute_db_operation:115 - Executing load channel settings
+[2025-09-23 04:09:07] [DEBUG] [Database] execute_db_operation:116 - Query: SELECT guild_id, announcement_channel_id FROM invite_tracker_settings
+[2025-09-23 04:09:07] [DEBUG] [Database] execute_db_operation:142 - load channel settings completed in 0.014s
+[2025-09-23 04:09:07] [DEBUG] [Database] execute_db_operation:148 - Query returned 1 rows
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('3D78HtzAvU', 897814031346319382, 331164413623009281, 'Kyerstorm', 897814032180994070, -1, 70)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.007s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('84NfpySHPZ', 897814031346319382, 369957492962099201, 'xuehua', 897814032180994070, -1, 4)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('BWE5EdnV', 897814031346319382, 528583472663494656, 'Jay', 897814032180994070, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('FQKEruYX', 897814031346319382, 820255198697619466, 'ＤＡＮＩＳＨ', 897814032180994070, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('HWWMmjKQ', 897814031346319382, 569552732856385536, 'Chef Luca', 898972125044543549, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('hGNsuDxM', 897814031346319382, 461675352952012801, 'mrtester.', 897814032180994070, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('mM8ZjPdG', 897814031346319382, 772776679608156180, 'Ruebin', 898185471056830504, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('xUGD7krzws', 897814031346319382, 331164413623009281, 'Kyerstorm', 898184958542233600, -1, 294)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('628xd7Sa', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, 1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('A8Un8tA2', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, 1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('AWZ4mqN7', 1417205672847736955, 902052855123443743, 'Emiya Kun', 1417339097411747853, -1, 2)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('BM4TWaw9', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417210716318072944, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('EF9ePMG8', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, 1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('EeQtpma6', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417329317397926010, -1, 5)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('HEGVx495', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, 1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('HXt8GDc7', 1417205672847736955, 902052855123443743, 'Emiya Kun', 1417205674059763805, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('HwHu3fKv', 1417205672847736955, 695087864450383912, 'lili', 1417534932724486265, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('Y9Yq7ufy', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('aDWyseRm', 1417205672847736955, 786295324154134558, 'xsjz 🍡🦋', 1417205674059763805, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('cAZXfDTc', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417271760499511347, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('fSuFfGvr', 1417205672847736955, 365529294065369088, 'DsF ULYSSE', 1417205674059763805, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('rRpCcb9N', 1417205672847736955, 964639984667721810, 'Brainy', 1417210265954684968, -1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('sSTAtTJH', 1417205672847736955, 786295324154134558, 'xsjz 🍡🦋', 1417673227366436997, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('vYtDjBux', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, 1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('vfwD3rVk', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417339097411747853, 1, 0)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.005s
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:115 - Executing upsert invite
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:116 - Query: 
+                    INSERT OR REPLACE INTO invites 
+                    (invite_code, guild_id, inviter_id, inviter_name, channel_id, max_uses, uses)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:118 - Parameters: ('zFX6KGvA', 1417205672847736955, 1089679920923422761, 'Monogatari Enthusiast', 1417209847346102312, -1, 1)
+[2025-09-23 04:09:11] [DEBUG] [Database] execute_db_operation:142 - upsert invite completed in 0.006s

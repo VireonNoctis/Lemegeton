@@ -7,7 +7,6 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional, List, Tuple
-from config import GUILD_ID
 from database import DB_PATH
 
 # Configuration constants
@@ -625,7 +624,6 @@ class ChallengeManage(commands.Cog):
             raise
 
     @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="challenge-manage",
         description="🎯 Interactive challenge management - add, remove, and manage manga in challenges"

@@ -47,7 +47,7 @@ class EmbedView(View):
         delete_button.callback = delete_callback
         self.add_item(delete_button)
 
-        # Schedule delete button expiry after 2h
+        # Expire delete button after 2h
         asyncio.create_task(self._expire_delete())
 
     async def _expire_delete(self):
@@ -85,8 +85,7 @@ class EmbedCog(commands.Cog):
     # ------------------------
     def _match_supported_url(self, content: str) -> str | None:
         for pattern in REWRITE_MAP.keys():
-            match = re.search(pattern, content)
-            if match:
+            if re.search(pattern, content):
                 urls = re.findall(r"https?://[^\s]+", content)
                 return urls[0] if urls else None
         return None
@@ -104,12 +103,24 @@ class EmbedCog(commands.Cog):
                 if re.search(pattern, url):
                     url = re.sub(pattern, fixed, url)
                     break
-            data = {"url": url, "title": "Post", "author": {"name": "Unknown", "icon": None}, "stats": {}}
+            data = {
+                "url": url,
+                "title": "Post",
+                "description": "",
+                "author": {"name": "Unknown", "icon": None},
+                "stats": {"comments": "N/A", "likes": "N/A", "views": "N/A", "reposts": "N/A"},
+                "site": "Unknown",
+                "logo": "",
+                "date": "Unknown Date",
+            }
 
         embed = self._build_embed(data)
-        view = EmbedView(message.author, url)
+        view = EmbedView(message.author, data.get("url", url))
         sent = await message.channel.send(embed=embed, view=view)
         view.message = sent
+
+        # Also paste raw fixed URL below embed
+        await message.channel.send(data.get("url", url))
 
     # ------------------------
     # Call EmbedEZ API
@@ -147,9 +158,11 @@ class EmbedCog(commands.Cog):
             color=discord.Color.blurple()
         )
 
+        # Author pfp + name
         if author:
             embed.set_author(name=author.get("name", "Unknown"), icon_url=author.get("icon", ""))
 
+        # Stats line
         stats_line = (
             f"💬 {stats.get('comments', 'N/A')}   "
             f"❤️ {stats.get('likes', 'N/A')}   "
@@ -158,6 +171,7 @@ class EmbedCog(commands.Cog):
         )
         embed.add_field(name="", value=stats_line, inline=False)
 
+        # Footer
         embed.set_footer(text=f"{site} • {date}", icon_url=logo)
         return embed
 

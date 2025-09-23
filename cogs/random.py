@@ -8,7 +8,6 @@ import aiohttp
 from pathlib import Path
 from typing import List, Dict, Optional
 
-from config import GUILD_ID
 from helpers.media_helper import fetch_random_media
 from database import get_all_users
 
@@ -418,7 +417,6 @@ class Random(commands.Cog):
             """Remove all buttons when view times out."""
             self.clear_items()
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="random",
         description="🎲 Get a completely random Anime, Manga, Light Novel, or All suggestion from AniList"

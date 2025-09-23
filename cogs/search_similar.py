@@ -6,7 +6,6 @@ import random
 import logging
 from pathlib import Path
 
-from config import GUILD_ID
 from helpers.media_helper import fetch_media_by_title
 
 # ------------------------------------------------------
@@ -57,7 +56,6 @@ class SearchSimilar(commands.Cog):
         self.bot = bot
         logger.info("SearchSimilar cog initialized")
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="search_similar",
         description="🔍 Find similar series based on a given title"

@@ -9,7 +9,7 @@ import logging
 from typing import Dict, Tuple, List, Optional, Callable, Awaitable, Any
 import random
 
-from config import GUILD_ID, CHANNEL_ID
+from config import CHANNEL_ID
 from database import get_user
 
 logger = logging.getLogger("Recommendations")
@@ -275,7 +275,6 @@ class Recommendations(commands.Cog):
         logger.info(f"Fetched global rec totals for {len(results)} candidates (requested {len(candidate_ids)}). Rate-limited/exhausted hits may be reflected as 0 totals.")
         return results
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(name="recommendations", description="Top recommendations based on a user's highly-rated manga (>=7/10)")
     @app_commands.describe(member="Discord member (defaults to you)")
     async def recommendations(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):

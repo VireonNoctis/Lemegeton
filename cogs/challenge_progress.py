@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiosqlite
-from config import CHALLENGE_ROLE_IDS, GUILD_ID, DB_PATH
+from config import CHALLENGE_ROLE_IDS, DB_PATH
 from database import (
     get_challenge_rules,
     # Guild-aware functions
@@ -164,7 +164,6 @@ class MangaChallenges(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="challenge-progress",
         description="📚 View your progress in all global manga challenges (optionally for another user)"

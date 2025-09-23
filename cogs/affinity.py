@@ -8,7 +8,7 @@ import logging
 import os
 import math
 from pathlib import Path
-from config import GUILD_ID, DB_PATH
+from config import DB_PATH
 
 # ------------------------------------------------------
 # Logging Setup - Auto-clearing
@@ -549,7 +549,6 @@ class Affinity(commands.Cog):
     # ---------------------------------------------------------
     # Slash Command: /affinity
     # ---------------------------------------------------------
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="affinity",
         description="Compare your affinity with all registered AniList users"

@@ -12,7 +12,6 @@ from database import (
     get_user_guild_aware, get_user_achievements_guild_aware,
     save_user_guild_aware, upsert_user_stats_guild_aware
 )
-from config import GUILD_ID
 
 ANILIST_API_URL = "https://graphql.anilist.co"
 
@@ -557,7 +556,6 @@ class Profile(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(name="profile", description="View your AniList profile (with stats & achievements) or another user's.")
     @app_commands.describe(user="Optional: Discord user whose profile to view")
     async def profile(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):

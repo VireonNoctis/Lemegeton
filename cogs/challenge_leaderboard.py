@@ -5,7 +5,7 @@ import aiosqlite
 import logging
 from pathlib import Path
 
-from config import GUILD_ID, DB_PATH
+from config import DB_PATH
 from database import get_guild_challenge_leaderboard_data
 
 # ------------------------------------------------------
@@ -190,7 +190,6 @@ class ChallengeLeaderboard(commands.Cog):
             logger.error(f"Database error fetching leaderboard data for guild {guild_id}: {e}", exc_info=True)
             return []
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="challenge-leaderboard",
         description="🏆 View the top users ranked by manga challenge points"

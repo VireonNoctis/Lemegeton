@@ -4,7 +4,7 @@ from discord.ext import commands
 from discord import app_commands
 import aiohttp
 import aiosqlite
-from config import STEAM_API_KEY, DB_PATH, GUILD_ID
+from config import STEAM_API_KEY, DB_PATH
 from bs4 import BeautifulSoup
 import logging
 import math
@@ -67,7 +67,6 @@ class Steam(commands.Cog):
         self.bot = bot
 
     steam_group = app_commands.Group(name="steam", description="Steam commands")
-    steam_group = app_commands.guilds(discord.Object(id=GUILD_ID))(steam_group)
 
     # ---------------- REGISTER ----------------
     @steam_group.command(name="register", description="Register your Steam vanity name")

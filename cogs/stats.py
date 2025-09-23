@@ -11,7 +11,6 @@ from database import (
     # Guild-aware functions
     get_user_guild_aware, save_user_guild_aware, upsert_user_stats_guild_aware
 )
-from config import GUILD_ID
 
 # -----------------------------
 # Logging Setup
@@ -29,7 +28,6 @@ class Stats(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(name="stats", description="Show AniList stats if you are registered")
     async def stats(self, interaction: discord.Interaction):
         logger.info(f"Fetching stats for Discord user: {interaction.user.id} in guild: {interaction.guild.id}")

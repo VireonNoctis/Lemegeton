@@ -9,7 +9,7 @@ import asyncio
 import aiohttp
 import os
 
-from config import DB_PATH, GUILD_ID
+from config import DB_PATH
 from helpers.challenge_helper import (
     calculate_manga_points,
     calculate_challenge_completion_bonus,
@@ -87,7 +87,6 @@ class ChallengeUpdate(commands.Cog):
         self.bot = bot
         self.cancel_flags = {}
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @commands.has_permissions(administrator=True)
     @app_commands.command(
         name="challenge-update",

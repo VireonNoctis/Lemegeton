@@ -7,7 +7,6 @@ import aiohttp
 from pathlib import Path
 from typing import Optional
 
-from config import GUILD_ID
 from database import (
     add_user, get_user, update_username, remove_user,
     # New guild-aware functions
@@ -367,7 +366,6 @@ class Login(commands.Cog):
         await register_user_guild_aware(user_id, guild_id, discord_user, anilist_username, anilist_id)
         logger.info(f"Added new user to database: {discord_user} (ID: {user_id}) in guild {guild_id}")
 
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="login",
         description="🔐 Manage your account - register, update, or unregister"

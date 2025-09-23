@@ -9,7 +9,6 @@ import asyncio
 from datetime import datetime
 import random
 
-from config import GUILD_ID
 from database import DB_PATH, execute_db_operation
 
 # ------------------------------------------------------
@@ -415,7 +414,6 @@ class InviteTracker(commands.Cog):
         self.invite_cache[invite.guild.id] = [inv for inv in guild_invites if inv.code != invite.code]
         logger.info(f"Removed deleted invite {invite.code} from cache")
     
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="set_invite_channel",
         description="🔧 Set the channel for invite tracking messages (Admin only)"
@@ -499,7 +497,6 @@ class InviteTracker(commands.Cog):
             except:
                 logger.error("Failed to send error message - interaction may have expired")
     
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="invite_channel_info",
         description="ℹ️ View current invite tracking channel settings"
@@ -569,7 +566,6 @@ class InviteTracker(commands.Cog):
         embed.set_footer(text="Invite data is always tracked regardless of channel configuration")
         await interaction.response.send_message(embed=embed)
     
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="recruitment_stats",
         description="🏮 Check recruitment statistics for the sect"
@@ -693,7 +689,6 @@ class InviteTracker(commands.Cog):
             except:
                 logger.error("Failed to send error message - interaction may have expired")
     
-    @app_commands.guilds(discord.Object(id=GUILD_ID))
     @app_commands.command(
         name="sect_analytics",
         description="📊 View detailed sect analytics and statistics"
