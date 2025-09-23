@@ -8,7 +8,7 @@ import logging
 import os
 import math
 from pathlib import Path
-from config import GUILD_ID
+from config import GUILD_ID, DB_PATH
 
 # ------------------------------------------------------
 # Logging Setup - Auto-clearing
@@ -46,7 +46,6 @@ logger.info("Affinity cog logging initialized - log file cleared")
 # Constants
 # ------------------------------------------------------
 API_URL = "https://graphql.anilist.co"
-DB_PATH = "database.db"
 MAX_RETRIES = 3
 RETRY_DELAY = 2
 REQUEST_TIMEOUT = 10

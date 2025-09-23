@@ -4,9 +4,9 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiosqlite
-from config import CHALLENGE_ROLE_IDS, GUILD_ID
+from config import CHALLENGE_ROLE_IDS, GUILD_ID, DB_PATH
 from database import (
-    DB_PATH, get_challenge_rules,
+    get_challenge_rules,
     # Guild-aware functions
     set_user_manga_progress_guild_aware, 
     upsert_user_manga_progress_guild_aware,

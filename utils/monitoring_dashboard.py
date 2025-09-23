@@ -12,11 +12,19 @@ import asyncio
 import os
 from pathlib import Path
 
-app = Flask(__name__)
+# Flask app with proper template and static directory paths
+project_root = Path(__file__).parent.parent
+app = Flask(__name__, 
+            template_folder=str(project_root / 'templates'),
+            static_folder=str(project_root / 'static'))
 
 class DashboardData:
-    def __init__(self, database_path="database.db"):
-        self.database_path = database_path
+    def __init__(self, database_path=None):
+        # Default to data folder database
+        if database_path is None:
+            self.database_path = str(project_root / 'data' / 'database.db')
+        else:
+            self.database_path = database_path
         self.metrics_file = "monitoring_metrics.json"
         
     def get_system_stats(self):

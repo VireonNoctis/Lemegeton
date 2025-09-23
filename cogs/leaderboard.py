@@ -10,13 +10,13 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
 from database import (
-    get_all_users, upsert_user_stats, DB_PATH,
+    get_all_users, upsert_user_stats,
     # Guild-aware functions
     get_guild_leaderboard_data, get_all_users_guild_aware,
     upsert_user_stats_guild_aware
 )
 from helpers.media_helper import fetch_user_stats
-from config import GUILD_ID
+from config import GUILD_ID, DB_PATH
 
 # ------------------------------------------------------
 # Logging Setup - Clears on each bot run

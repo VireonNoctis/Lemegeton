@@ -1,7 +1,9 @@
 import sqlite3
+import os
 
-# Connect to database
-conn = sqlite3.connect('database.db')
+# Connect to database using correct path
+database_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'database.db')
+conn = sqlite3.connect(database_path)
 cursor = conn.cursor()
 
 print('=== INVITE TRACKER SETTINGS TABLE SCHEMA ===')

@@ -15,11 +15,15 @@ Run this script to validate the multi-guild migration worked correctly.
 import asyncio
 import aiosqlite
 import sys
+import os
 from database import (
     get_user_guild_aware, add_user_guild_aware, register_user_guild_aware,
     is_user_registered_in_guild, get_guild_user_count, get_guild_leaderboard,
     get_user_progress_guild_aware, get_user_achievements_guild_aware
 )
+
+# Get correct database path
+DATABASE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'database.db')
 
 # Test guild IDs
 TEST_GUILD_1 = 123456789012345678  # Fake guild 1
@@ -162,7 +166,7 @@ async def cleanup_test_data():
     print("\n🧹 Cleaning up test data...")
     
     try:
-        async with aiosqlite.connect("database.db") as db:
+        async with aiosqlite.connect(DATABASE_PATH) as db:
             # Remove test users
             test_user_ids = [user[0] for user in TEST_USERS] + [999999999999999999]
             

@@ -5,7 +5,7 @@ import aiosqlite
 import logging
 from pathlib import Path
 
-from config import GUILD_ID
+from config import GUILD_ID, DB_PATH
 from database import get_guild_challenge_leaderboard_data
 
 # ------------------------------------------------------
@@ -46,7 +46,6 @@ logger.info("Challenge Leaderboard cog logging initialized - log file cleared")
 # ------------------------------------------------------
 # Configuration Constants
 # ------------------------------------------------------
-DB_PATH = "database.db"
 DEFAULT_PAGE_SIZE = 10
 VIEW_TIMEOUT = 60  # seconds
 

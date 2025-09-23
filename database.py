@@ -7,6 +7,7 @@ import os
 import time
 from typing import List, Dict, Optional
 from datetime import datetime
+import config
 
 # ------------------------------------------------------
 # Logging Setup with File-based System
@@ -64,8 +65,7 @@ logger.info("="*50)
 # ------------------------------------------------------
 # Database Configuration with Enhanced Connection Management
 # ------------------------------------------------------
-DB_NAME = "database.db"
-DB_PATH = Path(DB_NAME).resolve()
+DB_PATH = Path(config.DB_PATH).resolve()
 
 logger.info(f"Database configuration initialized")
 logger.info(f"Database file path: {DB_PATH}")
@@ -1078,7 +1078,7 @@ async def save_user(discord_id: int, username: str):
 # MANGA CHALLENGES TABLE
 # ------------------------------------------------------
 async def init_manga_challenges_table():
-    async with aiosqlite.connect("database.db") as db:
+    async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS manga_challenges (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
