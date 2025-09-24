@@ -109,10 +109,42 @@ class Finisher(commands.Cog):
     @app_commands.command(name="forceupdate", description="Force a manga completion update (Mod Only)")
     @app_commands.checks.has_role(MOD_ROLE_ID)
     async def forceupdate(self, interaction: discord.Interaction):
-        await interaction.response.send_message("⏳ Fetching latest manga updates...", ephemeral=True)
+        # Step 1: Start
+        await interaction.response.send_message(
+            "⏳ (1) **Starting Update** → `[0%]` Preparing request to AniList...",
+            ephemeral=True
+        )
+
+        # Step 2: Fetch Data
+        manga_list = self.fetch_manga()
+        await interaction.edit_original_response(
+            content=f"📡 (2) **Fetching Data** → `[25%]` Retrieved **{len(manga_list)}** manga entries from AniList."
+        )
+
+        # Step 3: Load Previous
+        prev_ids = self.load_previous()
+        await interaction.edit_original_response(
+            content=f"🗂 (3) **Comparing Data** → `[50%]` Found **{len(prev_ids)}** previously tracked manga."
+        )
+
+        # Step 4: Filter
+        new_manga = self.filter_new_manga(manga_list, prev_ids)
+        await interaction.edit_original_response(
+            content=f"⚖️ (4) **Filtering Results** → `[75%]` After filtering ➝ **{len(new_manga)}** new manga updates."
+        )
+
+        # Step 5: Post Updates
         channel = self.bot.get_channel(CHANNEL_ID)
-        await self.post_updates(channel)
-        await interaction.followup.send("✅ Update posted!", ephemeral=True)
+        if new_manga:
+            await self.post_updates(channel)
+            await interaction.edit_original_response(
+                content=f"✅ (5) **Completed!** → `[100%]` Successfully posted **{len(new_manga)}** manga updates to <#{CHANNEL_ID}> 🎉"
+            )
+        else:
+            await interaction.edit_original_response(
+                content=f"📭 (5) **Completed!** → `[100%]` No new manga updates to post today."
+            )
+
 
     @forceupdate.error
     async def forceupdate_error(self, interaction: discord.Interaction, error):
