@@ -12,6 +12,7 @@ from config import CHANNEL_ID, MOD_ROLE_ID
 ANILIST_URL = "https://graphql.anilist.co"
 SAVE_FILE = "data/manga_scan.json"
 CHANNEL_SAVE_FILE = "data/manga_channel.json"  # stores mapping {guild_id: channel_id}
+LAST_RUN_FILE = "data/manga_scan_meta.json"  # stores metadata like last run timestamp
 
 # ---------------- Logging ----------------
 LOG_DIR = "logs"
@@ -50,6 +51,36 @@ query {
   }
 }
 """
+
+
+def mod_only():
+    """App command check that allows only users with the configured MOD_ROLE_ID
+    or users with administrative/manage permissions as a fallback.
+    Use as: @mod_only() on an app command.
+    """
+    async def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.guild is None:
+            return False
+        try:
+            # Prefer configured role id if present
+            if MOD_ROLE_ID:
+                member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
+                for r in getattr(member, 'roles', []):
+                    if getattr(r, 'id', None) == MOD_ROLE_ID:
+                        return True
+                return False
+
+            # Fallback to permission checks
+            member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
+            perms = getattr(member, 'guild_permissions', None)
+            if perms:
+                return perms.manage_roles or perms.manage_guild or perms.administrator
+        except Exception:
+            return False
+        return False
+
+    return app_commands.check(predicate)
+
 
 class Finisher(commands.Cog):
     def __init__(self, bot):
@@ -227,6 +258,44 @@ class Finisher(commands.Cog):
         except Exception:
             self.logger.debug("Saved configured channel mapping")
 
+    # === Last-run persistence (to ensure runs are once-per-24h) ===
+    async def load_last_run(self) -> datetime.datetime | None:
+        """Return the last run datetime or None."""
+        def _read():
+            try:
+                if os.path.exists(LAST_RUN_FILE):
+                    with open(LAST_RUN_FILE, "r", encoding="utf-8") as f:
+                        data = json.load(f) or {}
+                        s = data.get("last_run")
+                        if s:
+                            return datetime.datetime.fromisoformat(s)
+                return None
+            except Exception:
+                return None
+
+        return await asyncio.to_thread(_read)
+
+    async def save_last_run(self, dt: datetime.datetime):
+        """Persist the last run datetime atomically."""
+        def _write(ts: str):
+            temp = LAST_RUN_FILE + ".tmp"
+            try:
+                with open(temp, "w", encoding="utf-8") as f:
+                    json.dump({"last_run": ts}, f)
+                os.replace(temp, LAST_RUN_FILE)
+            finally:
+                try:
+                    if os.path.exists(temp):
+                        os.remove(temp)
+                except Exception:
+                    pass
+
+        await asyncio.to_thread(_write, dt.isoformat())
+        try:
+            self.logger.info(f"Saved last run timestamp {dt.isoformat()} to {LAST_RUN_FILE}")
+        except Exception:
+            self.logger.debug("Saved last run timestamp")
+
     async def _user_is_mod(self, interaction: discord.Interaction) -> bool:
         """Return True if the invoking user should be considered a moderator.
 
@@ -259,6 +328,7 @@ class Finisher(commands.Cog):
         return False
 
     # === Admin commands to configure channel ===
+    @mod_only()
     @app_commands.command(name="set_manga_channel", description="Set channel to receive manga updates (Mod only)")
     async def set_manga_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         if interaction.guild is None:
@@ -355,37 +425,61 @@ class Finisher(commands.Cog):
     # === Daily Scheduled Task ===
     @tasks.loop(minutes=1)
     async def daily_check(self):
-        now = datetime.datetime.now()
-        if now.hour == 12 and now.minute == 0:  # runs daily at 12:00
-            self.logger.info("Running daily_check scheduled task")
-            # Load mapping and post to each configured guild channel
-            try:
-                mapping = await self.load_all_defined_channels()
-                if mapping:
-                    for gid, cid in mapping.items():
-                        try:
-                            channel = self.bot.get_channel(int(cid)) if cid else None
-                            if channel:
-                                await self.post_updates(channel)
-                            else:
-                                self.logger.warning(f"Configured channel {cid} for guild {gid} not visible to bot")
-                        except Exception:
-                            self.logger.exception(f"Failed to post updates for guild {gid}")
+        # Enforce an at-most-once-per-24-hour run using a persisted timestamp.
+        now = datetime.datetime.utcnow()
+        try:
+            last_run = await self.load_last_run()
+        except Exception:
+            last_run = None
+
+        should_run = False
+        if last_run is None:
+            should_run = True
+        else:
+            elapsed = now - last_run
+            if elapsed.total_seconds() >= 24 * 3600:
+                should_run = True
+
+        if not should_run:
+            self.logger.debug("Skipping daily_check; last run was within 24 hours")
+            return
+
+        self.logger.info("Running daily_check scheduled task (24h interval reached)")
+        # Load mapping and post to each configured guild channel
+        try:
+            mapping = await self.load_all_defined_channels()
+            if mapping:
+                for gid, cid in mapping.items():
+                    try:
+                        channel = self.bot.get_channel(int(cid)) if cid else None
+                        if channel:
+                            await self.post_updates(channel)
+                        else:
+                            self.logger.warning(f"Configured channel {cid} for guild {gid} not visible to bot")
+                    except Exception:
+                        self.logger.exception(f"Failed to post updates for guild {gid}")
+            else:
+                # No per-guild mapping; try global fallback once
+                channel = self.bot.get_channel(CHANNEL_ID)
+                if channel:
+                    await self.post_updates(channel)
                 else:
-                    # No per-guild mapping; try global fallback once
-                    channel = self.bot.get_channel(CHANNEL_ID)
-                    if channel:
-                        await self.post_updates(channel)
-                    else:
-                        self.logger.warning("No configured channels found and global CHANNEL_ID not available to bot")
-            except Exception:
-                self.logger.exception("Failed to load configured channels for daily_check")
+                    self.logger.warning("No configured channels found and global CHANNEL_ID not available to bot")
+        except Exception:
+            self.logger.exception("Failed to load configured channels for daily_check")
+
+        # Persist the run timestamp so we don't run again for 24h
+        try:
+            await self.save_last_run(now)
+        except Exception:
+            self.logger.exception("Failed to save last run timestamp after daily_check")
 
     @daily_check.before_loop
     async def before_check(self):
         await self.bot.wait_until_ready()
 
     # === Slash Command for Mods Only ===
+    @mod_only()
     @app_commands.command(name="forceupdate", description="Force a manga completion update (Mod Only)")
     async def forceupdate(self, interaction: discord.Interaction):
         # Use defer to acknowledge interaction and update progress via edit_original_response
@@ -414,6 +508,12 @@ class Finisher(commands.Cog):
             cid = await self.load_defined_channel(interaction.guild.id)
             channel = self.bot.get_channel(cid) if cid else self.bot.get_channel(CHANNEL_ID)
             await self.post_updates(channel)
+
+            # Record that we just ran a manual/forced update
+            try:
+                await self.save_last_run(datetime.datetime.utcnow())
+            except Exception:
+                self.logger.exception("Failed to persist last_run after forceupdate")
 
             if new_manga:
                 target = channel.mention if channel else f"<#{CHANNEL_ID}>"
