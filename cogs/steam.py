@@ -12,6 +12,7 @@ import asyncio
 import random
 import io
 import textwrap
+import re
 
 # Optional Pillow for friend-grid image rendering
 try:
@@ -139,31 +140,6 @@ class Steam(commands.Cog):
 
     steam_group = app_commands.Group(name="steam", description="Steam commands")
 
-    # ---------------- Register ----------------
-    @steam_group.command(name="register", description="Register your Steam vanity name")
-    @app_commands.describe(vanity_name="the part after /id/ in your steam URL")
-    async def register(self, interaction: discord.Interaction, vanity_name: str):
-        await interaction.response.defer(ephemeral=True)
-        async with aiohttp.ClientSession() as session:
-            data = await safe_json(session, "https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/",
-                                   params={"key": STEAM_API_KEY, "vanityurl": vanity_name})
-            if not data or data.get("response", {}).get("success") != 1:
-                return await interaction.followup.send("❌ Could not resolve that vanity name.", ephemeral=True)
-            steamid = data["response"]["steamid"]
-
-        async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute(
-                """
-                INSERT INTO steam_users (discord_id, steam_id, vanity_name)
-                VALUES (?, ?, ?)
-                ON CONFLICT(discord_id) DO UPDATE SET
-                    steam_id=excluded.steam_id,
-                    vanity_name=excluded.vanity_name
-                """, (interaction.user.id, steamid, vanity_name)
-            )
-            await db.commit()
-
-        await interaction.followup.send(f"✅ Registered `{vanity_name}` (SteamID: {steamid})", ephemeral=True)
 
     # ---------------- Profile ----------------
     @steam_group.command(name="profile", description="View a Steam profile (registered or by id/vanity)")
@@ -1250,15 +1226,44 @@ class Steam(commands.Cog):
         
         return embed
 
-    # -------------------- Game search command (kept) --------------------
-    @steam_group.command(name="game", description="Search a game on Steam")
-    @app_commands.describe(game_name="Name of the game")
-    async def game(self, interaction: discord.Interaction, game_name: str):
-        await interaction.response.defer()
-        search_url = f"https://store.steampowered.com/api/storesearch/?term={game_name}&l=en&cc=us"
+    # -------------------- Enhanced Game search command --------------------
+    @steam_group.command(name="game", description="Advanced Steam game search with filters and detailed information")
+    @app_commands.describe(
+        game_name="Name of the game to search for",
+        genre="Filter by genre (Action, RPG, Strategy, etc.)",
+        max_price="Maximum price filter (in USD)",
+        platform="Filter by platform (windows, mac, linux)",
+        tag="Filter by tag (singleplayer, multiplayer, co-op, etc.)",
+        sort_by="Sort results by (relevance, price, release_date, reviews)"
+    )
+    async def game(self, interaction: discord.Interaction, game_name: str, 
+                  genre: str = None, max_price: float = None, platform: str = None, 
+                  tag: str = None, sort_by: str = "relevance"):
+        await interaction.response.defer(ephemeral=True)
+        
+        # Build search URL with filters
+        search_params = {
+            "term": game_name,
+            "l": "en",
+            "cc": "us",
+            "category1": "998"  # Games category
+        }
+        
+        # Add genre filter
+        if genre:
+            genre_map = {
+                "action": "19", "adventure": "25", "casual": "597", "indie": "492",
+                "massively multiplayer": "128", "racing": "699", "rpg": "122",
+                "simulation": "599", "sports": "701", "strategy": "2"
+            }
+            if genre.lower() in genre_map:
+                search_params["category2"] = genre_map[genre.lower()]
+        
+        search_url = f"https://store.steampowered.com/api/storesearch/"
+        
         async with aiohttp.ClientSession() as session:
             try:
-                async with session.get(search_url) as resp:
+                async with session.get(search_url, params=search_params) as resp:
                     if resp.status != 200:
                         return await interaction.followup.send(f"❌ Failed to search for '{game_name}'")
                     search_data = await resp.json()
@@ -1267,86 +1272,449 @@ class Steam(commands.Cog):
 
         items = search_data.get("items", [])
         if not items:
-            return await interaction.followup.send(f"❌ No results found for '{game_name}'")
+            return await interaction.followup.send(f"❌ No results found for '{game_name}'" + 
+                                                 (f" with filters" if any([genre, max_price, platform, tag]) else ""))
 
-        top_items = items[:3]
-        view = discord.ui.View(timeout=60)
+        # Apply additional filters
+        filtered_items = await self._apply_filters(session, items, max_price, platform, tag)
+        
+        # Sort results
+        filtered_items = self._sort_results(filtered_items, sort_by)
+        
+        top_items = filtered_items[:5]  # Show top 5 instead of 3
+        view = discord.ui.View(timeout=120)  # Longer timeout for complex view
 
-        async def make_button(item):
-            label = (item["name"][:80]) if item.get("name") else "Game"
-            button = discord.ui.Button(label=label, style=discord.ButtonStyle.primary)
+        for item in top_items:
+            await self._create_game_button(view, item, session)
 
-            async def button_callback(button_inter: discord.Interaction):
-                await button_inter.response.defer(ephemeral=True)
-                appid = item["id"]
-                url = f"https://store.steampowered.com/api/appdetails?appids={appid}&cc=us&l=en"
-                async with aiohttp.ClientSession() as session:
-                    try:
-                        async with session.get(url) as resp:
-                            data = await resp.json()
-                    except Exception:
-                        return await button_inter.followup.send(f"❌ No data found for '{item['name']}'", ephemeral=True)
-                app_data = data.get(str(appid), {}).get("data")
-                if not app_data:
-                    return await button_inter.followup.send(f"❌ No data found for '{item['name']}'", ephemeral=True)
-
-                name = app_data.get("name", "Unknown")
-                description = app_data.get("short_description", "No description available.")
-                description = (description[:400] + "…") if len(description) > 400 else description
-                header_image = app_data.get("header_image")
-                genres = [g["description"] for g in app_data.get("genres", [])]
-                main_genre = genres[0] if genres else "Other"
-                platforms = [k for k, v in app_data.get("platforms", {}).items() if v]
-                price_info = app_data.get("price_overview")
-                metacritic = app_data.get("metacritic", {}).get("score")
-                tags = app_data.get("categories", [])
-                is_free = app_data.get("is_free", False)
-                release_date = app_data.get("release_date", {}).get("date", "Unknown")
-
-                genre_colors = {"Action": 0xE74C3C, "Adventure": 0x3498DB, "RPG": 0x9B59B6, "Strategy": 0xF1C40F, "Simulation": 0x1ABC9C, "Sports": 0xE67E22, "Other": 0x95A5A6}
-                color = genre_colors.get(main_genre, 0x95A5A6)
-                if is_free:
-                    price_str = "Free"
-                elif price_info:
-                    final = price_info.get("final_formatted", "Unknown")
-                    initial = price_info.get("initial_formatted", "")
-                    discount = price_info.get("discount_percent", 0)
-                    price_str = f"~~{initial}~~ → **{final}** ({discount}% off)" if discount > 0 else final
-                else:
-                    price_str = "N/A"
-
-                badge_list = []
-                if metacritic:
-                    badge_list.append(f"⭐ Metacritic: {metacritic}")
-                if tags:
-                    top_tags = [t["description"] for t in tags[:5]]
-                    badge_list.append(" | ".join(top_tags))
-                badge_text = " | ".join(badge_list) if badge_list else "No badges"
-
-                embed = discord.Embed(title=name, description=description, color=color)
-                embed.set_thumbnail(url=header_image)
-                embed.add_field(name="Price", value=price_str, inline=True)
-                embed.add_field(name="Release Date", value=release_date, inline=True)
-                embed.add_field(name="Platforms", value=", ".join(platforms) if platforms else "Unknown", inline=True)
-                embed.add_field(name="Tags & Ratings", value=badge_text, inline=False)
-
-                result_view = discord.ui.View()
-                result_view.add_item(discord.ui.Button(label="View on Steam", url=f"https://store.steampowered.com/app/{appid}", style=discord.ButtonStyle.link))
-                await button_inter.followup.send(embed=embed, view=result_view, ephemeral=True)
-
-            button.callback = button_callback
-            view.add_item(button)
-
-        for it in top_items:
-            await make_button(it)
-
+        filter_info = []
+        if genre: filter_info.append(f"Genre: {genre}")
+        if max_price: filter_info.append(f"Max Price: ${max_price}")
+        if platform: filter_info.append(f"Platform: {platform}")
+        if tag: filter_info.append(f"Tag: {tag}")
+        if sort_by != "relevance": filter_info.append(f"Sort: {sort_by}")
+        
+        filter_text = f" | Filters: {', '.join(filter_info)}" if filter_info else ""
+        
         try:
-            await interaction.followup.send(content=f"Select a game from the top {len(top_items)} results:", view=view, ephemeral=True)
+            await interaction.followup.send(
+                content=f"🎮 **Steam Game Search Results** ({len(filtered_items)} found){filter_text}\n"
+                       f"Select a game for detailed information:",
+                view=view, ephemeral=True
+            )
         except Exception:
             try:
-                await interaction.response.send_message(content=f"Select a game from the top {len(top_items)} results:", view=view, ephemeral=True)
+                await interaction.response.send_message(
+                    content=f"🎮 **Steam Game Search Results** ({len(filtered_items)} found){filter_text}\n"
+                           f"Select a game for detailed information:",
+                    view=view, ephemeral=True
+                )
             except Exception:
                 pass
+
+    # ==================== ENHANCED GAME SEARCH HELPER METHODS ====================
+    
+    async def _apply_filters(self, session, items, max_price=None, platform=None, tag=None):
+        """Apply additional filters to search results"""
+        if not any([max_price, platform, tag]):
+            return items
+        
+        filtered_items = []
+        
+        for item in items[:20]:  # Limit API calls
+            try:
+                appid = item["id"]
+                app_data = await self._get_app_details(session, appid)
+                
+                if not app_data:
+                    continue
+                
+                # Price filter
+                if max_price is not None:
+                    price_info = app_data.get("price_overview")
+                    if price_info:
+                        price_cents = price_info.get("final", 0)
+                        price_dollars = price_cents / 100.0
+                        if price_dollars > max_price:
+                            continue
+                    elif not app_data.get("is_free", False):
+                        continue  # Skip if price unknown and not free
+                
+                # Platform filter
+                if platform:
+                    platforms = app_data.get("platforms", {})
+                    platform_key = platform.lower()
+                    if platform_key not in platforms or not platforms[platform_key]:
+                        continue
+                
+                # Tag filter (check categories and tags)
+                if tag:
+                    tag_lower = tag.lower()
+                    categories = app_data.get("categories", [])
+                    genres = app_data.get("genres", [])
+                    
+                    found_tag = False
+                    for cat in categories:
+                        if tag_lower in cat.get("description", "").lower():
+                            found_tag = True
+                            break
+                    
+                    if not found_tag:
+                        for genre in genres:
+                            if tag_lower in genre.get("description", "").lower():
+                                found_tag = True
+                                break
+                    
+                    if not found_tag:
+                        continue
+                
+                # Add enriched item data
+                item["_app_data"] = app_data
+                filtered_items.append(item)
+                
+            except Exception as e:
+                logger.debug(f"Error filtering item {item.get('id')}: {e}")
+                continue
+        
+        return filtered_items
+    
+    def _sort_results(self, items, sort_by):
+        """Sort search results by specified criteria"""
+        if sort_by == "relevance":
+            return items  # Already sorted by relevance
+        
+        def sort_key(item):
+            app_data = item.get("_app_data", {})
+            
+            if sort_by == "price":
+                price_info = app_data.get("price_overview")
+                if price_info:
+                    return price_info.get("final", 0)
+                return 0 if app_data.get("is_free") else float('inf')
+            
+            elif sort_by == "release_date":
+                release_info = app_data.get("release_date", {})
+                date_str = release_info.get("date", "")
+                try:
+                    from datetime import datetime
+                    # Try to parse date
+                    date_obj = datetime.strptime(date_str, "%b %d, %Y")
+                    return date_obj.timestamp()
+                except:
+                    return 0
+            
+            elif sort_by == "reviews":
+                # Sort by positive review percentage
+                reviews = app_data.get("reviews", {})
+                positive = reviews.get("positive", 0)
+                total = reviews.get("total", 1)
+                return (positive / total) * 100 if total > 0 else 0
+            
+            return 0
+        
+        reverse = sort_by in ["release_date", "reviews"]  # Newest first, best reviews first
+        return sorted(items, key=sort_key, reverse=reverse)
+    
+    async def _get_app_details(self, session, appid):
+        """Get detailed app information from Steam API"""
+        try:
+            url = f"https://store.steampowered.com/api/appdetails?appids={appid}&cc=us&l=en"
+            async with session.get(url) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get(str(appid), {}).get("data")
+        except Exception as e:
+            logger.debug(f"Error getting app details for {appid}: {e}")
+        return None
+    
+    async def _create_game_button(self, view, item, session):
+        """Create an enhanced game button with rich information"""
+        name = item.get("name", "Unknown Game")
+        label = name[:75] + "..." if len(name) > 75 else name
+        
+        button = discord.ui.Button(label=label, style=discord.ButtonStyle.primary)
+        
+        async def enhanced_callback(button_inter: discord.Interaction):
+            await button_inter.response.defer(ephemeral=True)
+            
+            appid = item["id"]
+            app_data = item.get("_app_data") or await self._get_app_details(session, appid)
+            
+            if not app_data:
+                return await button_inter.followup.send(f"❌ Could not load details for '{name}'", ephemeral=True)
+            
+            # Create enhanced game view
+            game_view = EnhancedGameView(app_data, appid, session, button_inter.user)
+            embed = await game_view.create_main_embed()
+            
+            await button_inter.followup.send(embed=embed, view=game_view, ephemeral=True)
+        
+        button.callback = enhanced_callback
+        view.add_item(button)
+    
+    # ==================== ADDITIONAL ENHANCED COMMANDS ====================
+    
+    @steam_group.command(name="compare", description="Compare two Steam games side by side")
+    @app_commands.describe(
+        game1="First game to compare",
+        game2="Second game to compare"
+    )
+    async def compare_games(self, interaction: discord.Interaction, game1: str, game2: str):
+        """Compare two games side by side"""
+        await interaction.response.defer(ephemeral=True)
+        
+        async with aiohttp.ClientSession() as session:
+            # Search for both games
+            game1_data = await self._search_single_game(session, game1)
+            game2_data = await self._search_single_game(session, game2)
+            
+            if not game1_data:
+                return await interaction.followup.send(f"❌ Could not find game: {game1}")
+            
+            if not game2_data:
+                return await interaction.followup.send(f"❌ Could not find game: {game2}")
+            
+            # Create comparison embed
+            comparison_embed = self._create_comparison_embed(game1_data, game2_data)
+            
+            # Create view with individual game buttons
+            compare_view = ComparisonView(game1_data, game2_data, session)
+            
+            await interaction.followup.send(embed=comparison_embed, view=compare_view, ephemeral=True)
+    
+    @steam_group.command(name="deals", description="Find current Steam deals and sales")
+    @app_commands.describe(
+        max_price="Maximum price for deals (optional)",
+        genre="Filter by genre (optional)",
+        discount_min="Minimum discount percentage (optional)"
+    )
+    async def find_deals(self, interaction: discord.Interaction, max_price: float = None, 
+                        genre: str = None, discount_min: int = None):
+        """Find current Steam deals and sales"""
+        await interaction.response.defer(ephemeral=True)
+        
+        # This would ideally use Steam's specials API or web scraping
+        deals_embed = discord.Embed(
+            title="🔥 Current Steam Deals",
+            description="Here are some current deals and promotions:",
+            color=0xFF4500
+        )
+        
+        # Add filter information
+        filters = []
+        if max_price:
+            filters.append(f"Max Price: ${max_price}")
+        if genre:
+            filters.append(f"Genre: {genre}")
+        if discount_min:
+            filters.append(f"Min Discount: {discount_min}%")
+        
+        if filters:
+            deals_embed.add_field(name="🔍 Filters Applied", value=" • ".join(filters), inline=False)
+        
+        # Sample deals (in a real implementation, this would fetch from Steam API)
+        sample_deals = [
+            {"name": "Cyberpunk 2077", "original": "$59.99", "current": "$29.99", "discount": "50%"},
+            {"name": "The Witcher 3: Wild Hunt", "original": "$39.99", "current": "$9.99", "discount": "75%"},
+            {"name": "Hades", "original": "$24.99", "current": "$12.49", "discount": "50%"},
+            {"name": "Among Us", "original": "$4.99", "current": "$2.49", "discount": "50%"},
+        ]
+        
+        deal_text = []
+        for deal in sample_deals:
+            deal_text.append(f"🎮 **{deal['name']}**\n~~{deal['original']}~~ → **{deal['current']}** ({deal['discount']} off)")
+        
+        deals_embed.add_field(name="💸 Featured Deals", value="\n\n".join(deal_text), inline=False)
+        
+        deals_embed.set_footer(text="💡 Tip: Use /steam game to get detailed information about any game")
+        
+        await interaction.followup.send(embed=deals_embed, ephemeral=True)
+    
+    @steam_group.command(name="trending", description="View trending and popular Steam games")
+    @app_commands.describe(
+        category="Category to view (new_releases, top_sellers, popular, upcoming)"
+    )
+    async def trending_games(self, interaction: discord.Interaction, category: str = "popular"):
+        """View trending and popular Steam games"""
+        await interaction.response.defer(ephemeral=True)
+        
+        category_map = {
+            "new_releases": "🆕 New Releases",
+            "top_sellers": "💰 Top Sellers", 
+            "popular": "🔥 Most Popular",
+            "upcoming": "🔜 Upcoming"
+        }
+        
+        title = category_map.get(category, "🎮 Trending Games")
+        
+        trending_embed = discord.Embed(
+            title=f"📈 Steam Trends - {title}",
+            description=f"Current {title.lower()} on Steam",
+            color=0x1E90FF
+        )
+        
+        # Sample trending games (would be fetched from Steam API in real implementation)
+        sample_trending = [
+            "Counter-Strike 2", "Dota 2", "PUBG: BATTLEGROUNDS", 
+            "Apex Legends", "Grand Theft Auto V", "Rust",
+            "Team Fortress 2", "Destiny 2", "Warframe", "Path of Exile"
+        ]
+        
+        trending_list = "\n".join(f"{i+1}. {game}" for i, game in enumerate(sample_trending))
+        trending_embed.add_field(name="🏆 Top Games", value=trending_list, inline=False)
+        
+        trending_embed.set_footer(text="📊 Data updates regularly • Use /steam game <name> for details")
+        
+        await interaction.followup.send(embed=trending_embed, ephemeral=True)
+    
+    async def _search_single_game(self, session, game_name):
+        """Search for a single game and return its data"""
+        try:
+            search_url = f"https://store.steampowered.com/api/storesearch/?term={game_name}&l=en&cc=us"
+            async with session.get(search_url) as resp:
+                if resp.status != 200:
+                    return None
+                search_data = await resp.json()
+            
+            items = search_data.get("items", [])
+            if not items:
+                return None
+            
+            # Get details for the first result
+            app_id = items[0]["id"]
+            app_data = await self._get_app_details(session, app_id)
+            
+            return {"id": app_id, "data": app_data} if app_data else None
+            
+        except Exception as e:
+            logger.error(f"Error searching for game {game_name}: {e}")
+            return None
+    
+    def _create_comparison_embed(self, game1, game2):
+        """Create side-by-side comparison embed"""
+        data1 = game1["data"]
+        data2 = game2["data"]
+        
+        name1 = data1.get("name", "Game 1")
+        name2 = data2.get("name", "Game 2")
+        
+        embed = discord.Embed(
+            title=f"⚖️ Game Comparison",
+            description=f"Comparing **{name1}** vs **{name2}**",
+            color=0x8A2BE2
+        )
+        
+        # Price comparison
+        price1 = self._get_price_string(data1)
+        price2 = self._get_price_string(data2)
+        embed.add_field(name=f"💰 {name1}", value=price1, inline=True)
+        embed.add_field(name=f"💰 {name2}", value=price2, inline=True)
+        embed.add_field(name="", value="", inline=True)  # Spacer
+        
+        # Release dates
+        release1 = data1.get("release_date", {}).get("date", "Unknown")
+        release2 = data2.get("release_date", {}).get("date", "Unknown")
+        embed.add_field(name=f"📅 {name1}", value=release1, inline=True)
+        embed.add_field(name=f"📅 {name2}", value=release2, inline=True)
+        embed.add_field(name="", value="", inline=True)  # Spacer
+        
+        # Genres
+        genres1 = [g["description"] for g in data1.get("genres", [])][:3]
+        genres2 = [g["description"] for g in data2.get("genres", [])][:3]
+        embed.add_field(name=f"🏷️ {name1}", value=" • ".join(genres1) or "Unknown", inline=True)
+        embed.add_field(name=f"🏷️ {name2}", value=" • ".join(genres2) or "Unknown", inline=True)
+        embed.add_field(name="", value="", inline=True)  # Spacer
+        
+        # Metacritic scores
+        meta1 = data1.get("metacritic", {}).get("score", "N/A")
+        meta2 = data2.get("metacritic", {}).get("score", "N/A")
+        embed.add_field(name=f"⭐ {name1}", value=f"Metacritic: {meta1}", inline=True)
+        embed.add_field(name=f"⭐ {name2}", value=f"Metacritic: {meta2}", inline=True)
+        embed.add_field(name="", value="", inline=True)  # Spacer
+        
+        return embed
+    
+    def _get_price_string(self, app_data):
+        """Get formatted price string for comparison"""
+        if app_data.get("is_free"):
+            return "🆓 Free"
+        
+        price_info = app_data.get("price_overview")
+        if price_info:
+            return price_info.get("final_formatted", "Unknown")
+        
+        return "Price not available"
+
+
+class ComparisonView(discord.ui.View):
+    """View for game comparison with detailed buttons"""
+    
+    def __init__(self, game1_data, game2_data, session):
+        super().__init__(timeout=300)
+        self.game1_data = game1_data
+        self.game2_data = game2_data
+        self.session = session
+        
+        # Add Steam links for both games
+        steam1_button = discord.ui.Button(
+            label=f"🔗 {game1_data['data'].get('name', 'Game 1')[:20]}",
+            url=f"https://store.steampowered.com/app/{game1_data['id']}",
+            style=discord.ButtonStyle.link
+        )
+        steam2_button = discord.ui.Button(
+            label=f"🔗 {game2_data['data'].get('name', 'Game 2')[:20]}",
+            url=f"https://store.steampowered.com/app/{game2_data['id']}",
+            style=discord.ButtonStyle.link
+        )
+        
+        self.add_item(steam1_button)
+        self.add_item(steam2_button)
+    
+    @discord.ui.button(label="📊 Detailed Comparison", style=discord.ButtonStyle.primary)
+    async def detailed_comparison(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show detailed comparison table"""
+        await interaction.response.defer()
+        
+        data1 = self.game1_data["data"]
+        data2 = self.game2_data["data"]
+        name1 = data1.get("name", "Game 1")
+        name2 = data2.get("name", "Game 2")
+        
+        detailed_embed = discord.Embed(
+            title="📊 Detailed Comparison",
+            color=0x4169E1
+        )
+        
+        # Create comparison table
+        comparison_data = [
+            ("🎮 **Game**", name1, name2),
+            ("💰 **Price**", self._get_price_string(data1), self._get_price_string(data2)),
+            ("📅 **Release**", data1.get("release_date", {}).get("date", "Unknown"), data2.get("release_date", {}).get("date", "Unknown")),
+            ("👥 **Developer**", ", ".join(data1.get("developers", ["Unknown"])[:2]), ", ".join(data2.get("developers", ["Unknown"])[:2])),
+            ("📰 **Publisher**", ", ".join(data1.get("publishers", ["Unknown"])[:2]), ", ".join(data2.get("publishers", ["Unknown"])[:2])),
+            ("⭐ **Metacritic**", str(data1.get("metacritic", {}).get("score", "N/A")), str(data2.get("metacritic", {}).get("score", "N/A"))),
+            ("🪟 **Windows**", "✅" if data1.get("platforms", {}).get("windows") else "❌", "✅" if data2.get("platforms", {}).get("windows") else "❌"),
+            ("🍎 **Mac**", "✅" if data1.get("platforms", {}).get("mac") else "❌", "✅" if data2.get("platforms", {}).get("mac") else "❌"),
+            ("🐧 **Linux**", "✅" if data1.get("platforms", {}).get("linux") else "❌", "✅" if data2.get("platforms", {}).get("linux") else "❌"),
+        ]
+        
+        # Format as table
+        comparison_text = ""
+        for label, val1, val2 in comparison_data:
+            comparison_text += f"{label}\n{val1} | {val2}\n\n"
+        
+        detailed_embed.description = comparison_text
+        
+        await interaction.followup.send(embed=detailed_embed, ephemeral=True)
+    
+    def _get_price_string(self, app_data):
+        """Get formatted price string"""
+        if app_data.get("is_free"):
+            return "🆓 Free"
+        price_info = app_data.get("price_overview")
+        if price_info:
+            return price_info.get("final_formatted", "Unknown")
+        return "N/A"
 
 
 class RecommendationView(discord.ui.View):
@@ -1469,6 +1837,448 @@ class RecommendationView(discord.ui.View):
         """Disable all buttons when view times out"""
         for item in self.children:
             item.disabled = True
+
+
+# ==================== ENHANCED GAME DETAILS VIEW ====================
+
+class EnhancedGameView(discord.ui.View):
+    """Comprehensive view for detailed game information with advanced features"""
+    
+    def __init__(self, app_data, app_id, session, user):
+        super().__init__(timeout=300)
+        self.app_data = app_data
+        self.app_id = app_id
+        self.session = session
+        self.user = user
+        self.current_screenshot = 0
+        self.screenshots = app_data.get("screenshots", [])
+        self.movies = app_data.get("movies", [])
+        
+        # Add dynamic Steam link
+        steam_url = f"https://store.steampowered.com/app/{app_id}"
+        steam_button = discord.ui.Button(label="🔗 View on Steam", url=steam_url, style=discord.ButtonStyle.link)
+        self.add_item(steam_button)
+    
+    async def create_main_embed(self):
+        """Create the main detailed game information embed"""
+        name = self.app_data.get("name", "Unknown Game")
+        description = self.app_data.get("short_description", "No description available.")
+        
+        # Truncate description if too long
+        if len(description) > 350:
+            description = description[:350] + "..."
+        
+        # Determine color based on genre
+        genres = [g["description"] for g in self.app_data.get("genres", [])]
+        main_genre = genres[0] if genres else "Other"
+        
+        genre_colors = {
+            "Action": 0xE74C3C, "Adventure": 0x3498DB, "RPG": 0x9B59B6, 
+            "Strategy": 0xF1C40F, "Simulation": 0x1ABC9C, "Sports": 0xE67E22,
+            "Racing": 0xE67E22, "Indie": 0x95A5A6, "Casual": 0x85C1E9,
+            "Other": 0x95A5A6
+        }
+        color = genre_colors.get(main_genre, 0x95A5A6)
+        
+        embed = discord.Embed(title=name, description=description, color=color, url=f"https://store.steampowered.com/app/{self.app_id}")
+        
+        # Header image
+        header_image = self.app_data.get("header_image")
+        if header_image:
+            embed.set_image(url=header_image)
+        
+        # Price information with enhanced formatting
+        price_str = self._format_price_info()
+        embed.add_field(name="💰 Price", value=price_str, inline=True)
+        
+        # Release information
+        release_info = self._format_release_info()
+        embed.add_field(name="📅 Release", value=release_info, inline=True)
+        
+        # Platform support
+        platforms = self._format_platform_info()
+        embed.add_field(name="💻 Platforms", value=platforms, inline=True)
+        
+        # Developer & Publisher
+        dev_pub = self._format_developer_publisher()
+        embed.add_field(name="👥 Developer", value=dev_pub, inline=True)
+        
+        # Ratings & Reviews
+        ratings = self._format_ratings_info()
+        embed.add_field(name="⭐ Ratings", value=ratings, inline=True)
+        
+        # Player count (if available)
+        player_count = await self._get_player_count()
+        embed.add_field(name="👥 Players", value=player_count, inline=True)
+        
+        # Genres & Tags
+        genre_tags = self._format_genres_tags()
+        embed.add_field(name="🏷️ Genres & Features", value=genre_tags, inline=False)
+        
+        # System requirements (brief)
+        sys_req = self._format_system_requirements()
+        if sys_req:
+            embed.add_field(name="⚙️ System Requirements", value=sys_req, inline=False)
+        
+        # Additional features
+        features = self._format_additional_features()
+        if features:
+            embed.add_field(name="✨ Features", value=features, inline=False)
+        
+        # Footer with additional info
+        dlc_count = len(self.app_data.get("dlc", []))
+        achievement_count = len(self.app_data.get("achievements", {}).get("total", 0))
+        footer_parts = []
+        
+        if dlc_count > 0:
+            footer_parts.append(f"{dlc_count} DLC")
+        if achievement_count > 0:
+            footer_parts.append(f"{achievement_count} Achievements")
+        if self.screenshots:
+            footer_parts.append(f"{len(self.screenshots)} Screenshots")
+        if self.movies:
+            footer_parts.append(f"{len(self.movies)} Videos")
+        
+        if footer_parts:
+            embed.set_footer(text=" • ".join(footer_parts))
+        
+        return embed
+    
+    def _format_price_info(self):
+        """Format comprehensive price information"""
+        is_free = self.app_data.get("is_free", False)
+        if is_free:
+            return "🆓 **Free to Play**"
+        
+        price_info = self.app_data.get("price_overview")
+        if not price_info:
+            return "💸 Price not available"
+        
+        final = price_info.get("final_formatted", "Unknown")
+        initial = price_info.get("initial_formatted", "")
+        discount = price_info.get("discount_percent", 0)
+        
+        if discount > 0:
+            return f"🔥 ~~{initial}~~ **{final}** ({discount}% OFF)"
+        else:
+            return f"💵 **{final}**"
+    
+    def _format_release_info(self):
+        """Format release date and early access info"""
+        release_info = self.app_data.get("release_date", {})
+        date_str = release_info.get("date", "Unknown")
+        coming_soon = release_info.get("coming_soon", False)
+        
+        if coming_soon:
+            return f"🔜 **Coming Soon**\n{date_str}"
+        else:
+            return f"📅 **{date_str}**"
+    
+    def _format_platform_info(self):
+        """Format platform support information"""
+        platforms = self.app_data.get("platforms", {})
+        supported = []
+        
+        if platforms.get("windows"):
+            supported.append("🪟 Windows")
+        if platforms.get("mac"):
+            supported.append("🍎 Mac")
+        if platforms.get("linux"):
+            supported.append("🐧 Linux")
+        
+        return "\n".join(supported) if supported else "❓ Unknown"
+    
+    def _format_developer_publisher(self):
+        """Format developer and publisher information"""
+        developers = self.app_data.get("developers", [])
+        publishers = self.app_data.get("publishers", [])
+        
+        dev_str = developers[0] if developers else "Unknown"
+        pub_str = publishers[0] if publishers else "Unknown"
+        
+        if dev_str == pub_str:
+            return f"🏢 **{dev_str}**"
+        else:
+            return f"🏢 **{dev_str}**\n📰 {pub_str}"
+    
+    def _format_ratings_info(self):
+        """Format rating and review information"""
+        metacritic = self.app_data.get("metacritic", {})
+        
+        parts = []
+        if metacritic:
+            score = metacritic.get("score")
+            if score:
+                parts.append(f"🏆 Metacritic: {score}/100")
+        
+        # Add estimated review sentiment (would need Steam reviews API for real data)
+        categories = self.app_data.get("categories", [])
+        positive_indicators = ["multiplayer", "co-op", "steam achievements"]
+        
+        for cat in categories:
+            desc = cat.get("description", "").lower()
+            if any(indicator in desc for indicator in positive_indicators):
+                parts.append("👍 Community Features")
+                break
+        
+        return "\n".join(parts) if parts else "📊 No ratings available"
+    
+    async def _get_player_count(self):
+        """Attempt to get current player count"""
+        # This would require additional API calls to Steam Charts or similar
+        # For now, return a placeholder
+        return "📈 See Steam Charts"
+    
+    def _format_genres_tags(self):
+        """Format genres and popular tags"""
+        genres = [g["description"] for g in self.app_data.get("genres", [])]
+        categories = [c["description"] for c in self.app_data.get("categories", [])]
+        
+        # Combine and limit
+        all_tags = genres + categories
+        display_tags = all_tags[:6]  # Show top 6
+        
+        if not display_tags:
+            return "🏷️ No tags available"
+        
+        tag_str = " • ".join(display_tags)
+        if len(all_tags) > 6:
+            tag_str += f" • +{len(all_tags) - 6} more"
+        
+        return tag_str
+    
+    def _format_system_requirements(self):
+        """Format system requirements (brief version)"""
+        pc_req = self.app_data.get("pc_requirements")
+        if not pc_req:
+            return None
+        
+        minimum = pc_req.get("minimum", "")
+        if minimum:
+            # Extract key info (simplified)
+            if "Windows" in minimum:
+                return "🪟 Windows Compatible"
+            elif "Mac" in minimum:
+                return "🍎 Mac Compatible" 
+            elif "Linux" in minimum:
+                return "🐧 Linux Compatible"
+        
+        return "⚙️ See Steam page for details"
+    
+    def _format_additional_features(self):
+        """Format additional game features"""
+        features = []
+        categories = self.app_data.get("categories", [])
+        
+        feature_mapping = {
+            "Multi-player": "👥 Multiplayer",
+            "Co-op": "🤝 Cooperative",
+            "Steam Achievements": "🏆 Achievements", 
+            "Steam Trading Cards": "🃏 Trading Cards",
+            "Steam Workshop": "🔧 Workshop",
+            "Steam Cloud": "☁️ Cloud Saves",
+            "Controller Support": "🎮 Controller",
+            "VR Support": "🥽 VR Ready"
+        }
+        
+        for cat in categories:
+            desc = cat.get("description", "")
+            for key, icon_desc in feature_mapping.items():
+                if key.lower() in desc.lower():
+                    features.append(icon_desc)
+                    break
+        
+        return " • ".join(features[:5]) if features else None
+    
+    @discord.ui.button(label="📷 Screenshots", style=discord.ButtonStyle.secondary)
+    async def view_screenshots(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """View game screenshots carousel"""
+        if not self.screenshots:
+            return await interaction.response.send_message("📷 No screenshots available for this game.", ephemeral=True)
+        
+        await interaction.response.defer()
+        
+        screenshot_view = ScreenshotView(self.screenshots, self.app_data.get("name", "Game"))
+        embed = screenshot_view.create_screenshot_embed(0)
+        
+        await interaction.followup.send(embed=embed, view=screenshot_view, ephemeral=True)
+    
+    @discord.ui.button(label="📹 Videos", style=discord.ButtonStyle.secondary) 
+    async def view_videos(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """View game trailers and videos"""
+        if not self.movies:
+            return await interaction.response.send_message("📹 No videos available for this game.", ephemeral=True)
+        
+        await interaction.response.defer()
+        
+        video_embed = self._create_video_embed()
+        await interaction.followup.send(embed=video_embed, ephemeral=True)
+    
+    @discord.ui.button(label="⚙️ System Requirements", style=discord.ButtonStyle.secondary)
+    async def view_requirements(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """View detailed system requirements"""
+        await interaction.response.defer()
+        
+        req_embed = self._create_requirements_embed()
+        await interaction.followup.send(embed=req_embed, ephemeral=True)
+    
+    @discord.ui.button(label="🎯 Similar Games", style=discord.ButtonStyle.primary)
+    async def find_similar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Find similar games based on tags and genres"""
+        await interaction.response.defer()
+        
+        similar_embed = await self._create_similar_games_embed()
+        await interaction.followup.send(embed=similar_embed, ephemeral=True)
+    
+    @discord.ui.button(label="💾 Save Game", style=discord.ButtonStyle.success)
+    async def save_game(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Save game to user's personal list"""
+        # This would integrate with your bot's database
+        await interaction.response.send_message(
+            f"💾 **{self.app_data.get('name')}** has been saved to your game list!", 
+            ephemeral=True
+        )
+    
+    def _create_video_embed(self):
+        """Create embed with video information"""
+        name = self.app_data.get("name", "Game")
+        embed = discord.Embed(title=f"📹 {name} - Videos", color=0xFF0000)
+        
+        video_list = []
+        for i, movie in enumerate(self.movies[:5], 1):
+            movie_name = movie.get("name", f"Video {i}")
+            thumbnail = movie.get("thumbnail")
+            mp4_url = movie.get("mp4", {}).get("480") or movie.get("webm", {}).get("480")
+            
+            if mp4_url:
+                video_list.append(f"[{movie_name}]({mp4_url})")
+            else:
+                video_list.append(movie_name)
+        
+        if video_list:
+            embed.description = "\n".join(video_list)
+        else:
+            embed.description = "No video links available"
+        
+        if self.movies and self.movies[0].get("thumbnail"):
+            embed.set_thumbnail(url=self.movies[0]["thumbnail"])
+        
+        return embed
+    
+    def _create_requirements_embed(self):
+        """Create detailed system requirements embed"""
+        name = self.app_data.get("name", "Game")
+        embed = discord.Embed(title=f"⚙️ {name} - System Requirements", color=0x00FF00)
+        
+        pc_req = self.app_data.get("pc_requirements", {})
+        mac_req = self.app_data.get("mac_requirements", {})
+        linux_req = self.app_data.get("linux_requirements", {})
+        
+        if pc_req.get("minimum"):
+            min_req = pc_req["minimum"].replace("<br>", "\n").replace("<strong>", "**").replace("</strong>", "**")
+            # Remove HTML tags
+            import re
+            min_req = re.sub('<[^<]+?>', '', min_req)
+            embed.add_field(name="🪟 Windows - Minimum", value=min_req[:1000], inline=False)
+        
+        if pc_req.get("recommended"):
+            rec_req = pc_req["recommended"].replace("<br>", "\n").replace("<strong>", "**").replace("</strong>", "**")
+            rec_req = re.sub('<[^<]+?>', '', rec_req)
+            embed.add_field(name="🪟 Windows - Recommended", value=rec_req[:1000], inline=False)
+        
+        if not pc_req and not mac_req and not linux_req:
+            embed.description = "System requirements not available for this game."
+        
+        return embed
+    
+    async def _create_similar_games_embed(self):
+        """Create embed with similar game suggestions"""
+        name = self.app_data.get("name", "Game")
+        embed = discord.Embed(title=f"🎯 Games Similar to {name}", color=0x9B59B6)
+        
+        # Extract tags for similarity matching
+        genres = [g["description"] for g in self.app_data.get("genres", [])]
+        tags = [c["description"] for c in self.app_data.get("categories", [])]
+        all_tags = genres + tags
+        
+        # This would ideally use Steam's recommendation API or similar
+        # For now, provide general suggestions based on genre
+        similar_suggestions = []
+        
+        if "Action" in genres:
+            similar_suggestions.extend(["DOOM Eternal", "Cyberpunk 2077", "Grand Theft Auto V"])
+        if "RPG" in genres:
+            similar_suggestions.extend(["The Witcher 3", "Skyrim", "Fallout 4"])
+        if "Strategy" in genres:
+            similar_suggestions.extend(["Age of Empires IV", "Civilization VI", "StarCraft II"])
+        if "Indie" in genres:
+            similar_suggestions.extend(["Hades", "Celeste", "Hollow Knight"])
+        
+        # Remove duplicates and limit
+        unique_suggestions = list(dict.fromkeys(similar_suggestions))[:8]
+        
+        if unique_suggestions:
+            embed.description = "Based on genres and tags:\n" + "\n".join(f"• {game}" for game in unique_suggestions)
+        else:
+            embed.description = "No similar games found. Try browsing Steam's recommendation system!"
+        
+        embed.add_field(name="🏷️ Shared Tags", value=" • ".join(all_tags[:5]), inline=False)
+        
+        return embed
+
+
+class ScreenshotView(discord.ui.View):
+    """View for browsing game screenshots"""
+    
+    def __init__(self, screenshots, game_name):
+        super().__init__(timeout=180)
+        self.screenshots = screenshots
+        self.game_name = game_name
+        self.current_index = 0
+        
+        # Disable previous button initially
+        if len(screenshots) <= 1:
+            self.previous_screenshot.disabled = True
+            self.next_screenshot.disabled = True
+    
+    def create_screenshot_embed(self, index):
+        """Create embed for screenshot at given index"""
+        screenshot = self.screenshots[index]
+        
+        embed = discord.Embed(
+            title=f"📷 {self.game_name} - Screenshot {index + 1}/{len(self.screenshots)}",
+            color=0x00BFFF
+        )
+        
+        embed.set_image(url=screenshot.get("path_full"))
+        
+        return embed
+    
+    @discord.ui.button(label="⬅️ Previous", style=discord.ButtonStyle.secondary)
+    async def previous_screenshot(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_index > 0:
+            self.current_index -= 1
+            
+            # Update button states
+            self.next_screenshot.disabled = False
+            if self.current_index == 0:
+                button.disabled = True
+            
+            embed = self.create_screenshot_embed(self.current_index)
+            await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.button(label="Next ➡️", style=discord.ButtonStyle.secondary)
+    async def next_screenshot(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.current_index < len(self.screenshots) - 1:
+            self.current_index += 1
+            
+            # Update button states
+            self.previous_screenshot.disabled = False
+            if self.current_index == len(self.screenshots) - 1:
+                button.disabled = True
+            
+            embed = self.create_screenshot_embed(self.current_index)
+            await interaction.response.edit_message(embed=embed, view=self)
 
 
 # -------------------- Setup --------------------

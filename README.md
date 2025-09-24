@@ -1,11 +1,13 @@
-# 🎌 Lemegeton - Discord Anime & Gaming Bot
+# 🎌 Lemegeton - Multi-Guild Discord Anime & Gaming Bot
 
-A comprehensive Discord bot that combines anime/manga tracking with AI-powered recommendations, featuring interactive UIs, personalized suggestions, and community challenges.
+A comprehensive Discord bot that combines anime/manga tracking with AI-powered recommendations, featuring interactive UIs, personalized suggestions, community challenges, and **full multi-guild deployment support**.
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
-![Discord.py](https://img.shields.io/badge/discord.py-2.0+-blue.svg)
+![Discord.py](https://img.shields.io/badge/discord.py-2.6.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+![Status](https://img.shields.io/badge/status-production--ready-success.svg)
+![Multi-Guild](https://img.shields.io/badge/multi--guild-ready-brightgreen.svg)
+![Railway](https://img.shields.io/badge/railway-deployable-purple.svg)
 
 ## ✨ Key Features
 
@@ -18,11 +20,28 @@ A comprehensive Discord bot that combines anime/manga tracking with AI-powered r
 - **Trending Lists** - Stay updated with the latest popular series
 
 ### 🏆 Community Features
+
 - **Global Challenges** - Participate in community-wide anime/manga challenges
 - **Leaderboards** - Compete with other users across various metrics
 - **User Comparison** - Compare profiles and statistics with friends
 - **Achievement System** - Unlock achievements for various milestones
-- **Multi-Guild Support** - Works across unlimited Discord servers with complete data isolation
+
+### 🌐 Multi-Guild Support & Configuration
+
+- **Multi-Server Ready** - Deploy across unlimited Discord servers with complete data isolation
+- **Guild-Specific Settings** - Each server maintains independent challenge roles and configurations
+- **Flexible Role Management** - Configure different challenge roles for each server
+- **Cross-Guild User Data** - Users maintain their profiles across all servers while respecting server-specific settings
+
+#### Guild Configuration Commands (Requires "Manage Roles" Permission)
+
+- **`/setup_challenge_role`** - Configure challenge roles for your server
+  - Set roles for different challenge types and difficulty levels
+  - Assign multiple roles per challenge category
+- **`/list_challenge_roles`** - View current challenge roles configuration
+  - Display all configured roles for your server
+- **`/remove_challenge_role`** - Remove specific challenge role assignments
+  - Clean up outdated or incorrect role configurations
 
 ### 🤖 Utility Commands
 - **Timestamp Converter** - Convert timestamps between formats
@@ -31,14 +50,19 @@ A comprehensive Discord bot that combines anime/manga tracking with AI-powered r
 - **AniList Username Verification** - Check username validity before registration
 - **Feedback System** - Report issues and suggest improvements
 
-## 🚀 Quick Start (Railway - Recommended)
+## 🚀 Multi-Guild Deployment (Railway - Recommended)
 
-The easiest way to deploy Lemegeton is using Railway's free hosting:
+**✨ Deploy once, use everywhere!** Lemegeton now supports multiple Discord servers with a single deployment.
+
+The easiest way to deploy Lemegeton for multiple guilds is using Railway's free hosting:
 
 1. **Fork this repository** to your GitHub account
 2. **Create a Railway account** at [railway.app](https://railway.app)
 3. **Deploy from GitHub** - Select your forked repository
 4. **Set environment variables** (see [Railway Deployment Guide](docs/RAILWAY_DEPLOYMENT.md))
+   - Set `PRIMARY_GUILD_ID` for backward compatibility with existing setups
+   - The bot will automatically work across all servers it's invited to
+5. **Invite the bot** to multiple servers - Each server can configure independent challenge roles
 5. **Deploy!** Your bot will be online 24/7
 
 📖 **Full Railway Guide**: [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md)
@@ -107,6 +131,8 @@ ENVIRONMENT=development
 
 ## 🎯 Commands
 
+> **💡 Multi-Guild Note:** All commands work across multiple Discord servers. Server administrators can use guild configuration commands to customize challenge roles for their specific server.
+
 ### Account Management
 - `/login` - Register your AniList username
 - `/check_anilist` - Verify if an AniList username exists
@@ -127,6 +153,12 @@ ENVIRONMENT=development
 - `/challenge_progress` - View your current challenge progress
 - `/challenge_leaderboard` - See challenge rankings
 - `/leaderboard` - View various community leaderboards
+
+### Guild Configuration (Requires "Manage Roles" Permission)
+
+- `/setup_challenge_role` - Configure challenge roles for your server
+- `/list_challenge_roles` - View current challenge roles configuration  
+- `/remove_challenge_role` - Remove specific challenge role assignments
 
 ### Utilities
 - `/timestamp` - Convert and format timestamps
@@ -166,17 +198,25 @@ lemegeton-test/
 | Variable | Description | Required | Example |
 |----------|-------------|----------|---------|
 | `DISCORD_TOKEN` | Discord bot token | ✅ | `MTk4NjIyNDgzNDcxOTI1MjQ4...` |
-| `GUILD_ID` | Discord server ID | ✅ | `123456789012345678` |
+| `PRIMARY_GUILD_ID` | Primary Discord server ID (for backward compatibility) | ✅ | `123456789012345678` |
+| `GUILD_ID` | Legacy guild ID (maintained for compatibility) | ❌ | `123456789012345678` |
 | `BOT_ID` | Discord bot user ID | ✅ | `987654321098765432` |
-| `CHANNEL_ID` | Main channel ID | ✅ | `555666777888999000` |
+| `CHANNEL_ID` | Main channel ID (for primary guild) | ✅ | `555666777888999000` |
 | `DATABASE_PATH` | Database file path | ❌ | `/app/database.db` |
 | `ENVIRONMENT` | Runtime environment | ❌ | `production` |
+
+**Multi-Guild Notes:**
+- The bot now supports deployment across multiple Discord servers
+- `PRIMARY_GUILD_ID` is used for backward compatibility with existing single-guild configurations
+- Each guild maintains independent challenge role configurations
+- User data is shared across guilds while respecting server-specific settings
 
 ### Bot Configuration (`config.py`)
 
 ```python
-# Discord settings
-GUILD_ID = int(os.getenv("GUILD_ID"))
+# Multi-Guild Discord settings
+PRIMARY_GUILD_ID = int(os.getenv("PRIMARY_GUILD_ID", os.getenv("GUILD_ID", 0)))
+GUILD_ID = PRIMARY_GUILD_ID  # Backward compatibility
 CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 
 # Database
@@ -193,9 +233,18 @@ DB_PATH = os.getenv("DATABASE_PATH", "database.db")
 - **Permissions**: Ensure proper file permissions
 
 #### "Bot not responding to commands"
+
 - **Permissions**: Check bot has necessary permissions in Discord
 - **Token**: Verify Discord bot token is correct
-- **Guild ID**: Ensure GUILD_ID matches your Discord server
+- **Guild ID**: Ensure PRIMARY_GUILD_ID matches your Discord server (for multi-guild deployments)
+- **Slash Commands**: Commands may take up to 1 hour to sync on new guilds
+
+#### "Multi-Guild Configuration Issues"
+
+- **Challenge Roles**: Use `/setup_challenge_role` in each server to configure server-specific roles
+- **Permissions**: Ensure users have "Manage Roles" permission to configure guild settings
+- **Data Isolation**: User data is shared across guilds, but guild configurations are independent
+- **Environment Variables**: Ensure PRIMARY_GUILD_ID is set for backward compatibility
 
 #### "Database errors"
 - **File permissions**: Ensure bot can write to database directory
@@ -270,4 +319,6 @@ This project is licensed under the MIT License - see the [LICENSE](docs/LICENSE)
 
 ---
 
-**Made with ❤️ for the anime community**
+Made with ❤️ for the anime community
+ 
+ 
