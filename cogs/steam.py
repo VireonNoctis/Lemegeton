@@ -7,6 +7,7 @@ import aiosqlite
 from config import STEAM_API_KEY, DB_PATH
 from bs4 import BeautifulSoup
 import logging
+import os
 import math
 import asyncio
 import random
@@ -20,16 +21,34 @@ try:
     PIL_AVAILABLE = True
 except (ImportError, Exception):
     PIL_AVAILABLE = False
+LOG_DIR = "logs"
+LOG_FILE = f"{LOG_DIR}/steam.log"
+os.makedirs(LOG_DIR, exist_ok=True)
+
 logger = logging.getLogger("steam")
-logger.setLevel(logging.INFO)
-if not logger.hasHandlers():
-    h = logging.StreamHandler()
-    h.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
-    logger.addHandler(h)
+logger.setLevel(logging.DEBUG)
+
+# Avoid duplicate handlers on reload
+if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == os.path.abspath(LOG_FILE)
+           for h in logger.handlers):
+    fh = logging.FileHandler(LOG_FILE, encoding="utf-8")
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    logger.addHandler(fh)
+
+# Ensure at least one stream handler for console
+if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.INFO)
+    sh.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
+    logger.addHandler(sh)
+
+logger.info("Steam cog logging initialized")
 
 
 # -------------------- Helpers --------------------
 async def safe_json(session, url, params=None, timeout=15):
+    logger.debug(f"safe_json requested: {url} params={params}")
     try:
         async with session.get(url, params=params, timeout=timeout) as resp:
             if resp.status != 200:
@@ -42,6 +61,7 @@ async def safe_json(session, url, params=None, timeout=15):
 
 
 async def fetch_text(session, url, timeout=15):
+    logger.debug(f"fetch_text requested: {url}")
     try:
         async with session.get(url, timeout=timeout) as resp:
             if resp.status != 200:
@@ -80,6 +100,7 @@ def safe_text(s, fallback="N/A"):
 def make_friend_grid_image(friends_slice, thumb_size=96, per_row=5):
     if not PIL_AVAILABLE:
         return None
+    logger.debug(f"make_friend_grid_image called for {len(friends_slice)} friends (thumb={thumb_size}, per_row={per_row})")
     # friend entries should be dicts with keys: name, avatar_bytes
     cols = min(per_row, max(1, len(friends_slice)))
     rows = math.ceil(len(friends_slice) / per_row)
@@ -128,6 +149,7 @@ def make_friend_grid_image(friends_slice, thumb_size=96, per_row=5):
     out = io.BytesIO()
     image.save(out, "PNG")
     out.seek(0)
+    logger.debug("make_friend_grid_image generated image bytes")
     return out
 
 
@@ -145,7 +167,7 @@ class Steam(commands.Cog):
     @steam_group.command(name="profile", description="View a Steam profile (registered or by id/vanity)")
     @app_commands.describe(user="SteamID64 or vanity (optional if registered)")
     async def profile(self, interaction: discord.Interaction, user: str = None):
-        logger.info(f"/steam profile by {interaction.user} user={user}")
+        logger.info(f"/steam profile invoked by user={interaction.user} arg_user={user} guild={getattr(interaction.guild,'id',None)}")
         await interaction.response.defer(ephemeral=True)
 
         # resolve steam id
@@ -153,13 +175,27 @@ class Steam(commands.Cog):
         vanity = None
         if not user:
             async with aiosqlite.connect(DB_PATH) as db:
-                cur = await db.execute("SELECT steam_id, vanity_name FROM steam_users WHERE discord_id = ?", (interaction.user.id,))
-                row = await cur.fetchone()
-                await cur.close()
+                # Try to use guild-aware lookup if running in a guild
+                guild_id = getattr(interaction.guild, 'id', None)
+                row = None
+                if guild_id is not None:
+                    try:
+                        cur = await db.execute("SELECT steam_id, vanity_name FROM steam_users WHERE discord_id = ? AND guild_id = ?", (interaction.user.id, guild_id))
+                        row = await cur.fetchone()
+                        await cur.close()
+                    except Exception:
+                        row = None
+
+                if not row:
+                    cur = await db.execute("SELECT steam_id, vanity_name FROM steam_users WHERE discord_id = ?", (interaction.user.id,))
+                    row = await cur.fetchone()
+                    await cur.close()
+
                 if not row:
                     return await interaction.followup.send("❌ You have not registered a Steam account. Use `/steam register <vanity>`.", ephemeral=True)
                 steamid, vanity = row
                 user = vanity
+        logger.debug(f"Resolved steam identifier: steamid={steamid} vanity={vanity} (user param now={user})")
 
         async with aiohttp.ClientSession() as session:
             if user and not user.isdigit():
@@ -174,8 +210,10 @@ class Steam(commands.Cog):
                                  params={"key": STEAM_API_KEY, "steamids": steamid})
             players = ps.get("response", {}).get("players", []) if ps else []
             if not players:
+                logger.warning(f"No players data returned for steamid={steamid}")
                 return await interaction.followup.send("❌ No profile data found.", ephemeral=True)
             player = players[0]
+            logger.debug(f"Fetched player summary for steamid={steamid} -> personaname={player.get('personaname')}")
 
             # level
             lv = await safe_json(session, "https://api.steampowered.com/IPlayerService/GetSteamLevel/v1/",
@@ -200,6 +238,7 @@ class Steam(commands.Cog):
                                            params={"key": STEAM_API_KEY, "steamid": steamid, "relationship": "all"})
             friends_list = friends_json.get("friendslist", {}).get("friends", []) if friends_json else []
             friend_ids = [f["steamid"] for f in friends_list]
+            logger.debug(f"Found {len(friend_ids)} friends for steamid={steamid}")
 
             # try fetch badge count (scrape badges page for count)
             badge_count = None
@@ -974,8 +1013,20 @@ class Steam(commands.Cog):
         # Get user's Steam ID
         steamid = None
         async with aiosqlite.connect(DB_PATH) as db:
-            cur = await db.execute("SELECT steam_id FROM steam_users WHERE discord_id = ?", (interaction.user.id,))
-            row = await cur.fetchone()
+            # Prefer guild-scoped lookup when in a guild
+            guild_id = getattr(interaction.guild, 'id', None)
+            row = None
+            if guild_id is not None:
+                try:
+                    cur = await db.execute("SELECT steam_id FROM steam_users WHERE discord_id = ? AND guild_id = ?", (interaction.user.id, guild_id))
+                    row = await cur.fetchone()
+                    await cur.close()
+                except Exception:
+                    row = None
+
+            if not row:
+                cur = await db.execute("SELECT steam_id FROM steam_users WHERE discord_id = ?", (interaction.user.id,))
+                row = await cur.fetchone()
             await cur.close()
             if not row:
                 return await interaction.followup.send("❌ You have not registered a Steam account. Use `/steam register <vanity>`.", ephemeral=True)
@@ -1418,13 +1469,46 @@ class Steam(commands.Cog):
     async def _get_app_details(self, session, appid):
         """Get detailed app information from Steam API"""
         try:
-            url = f"https://store.steampowered.com/api/appdetails?appids={appid}&cc=us&l=en"
-            async with session.get(url) as resp:
+            url = "https://store.steampowered.com/api/appdetails"
+            params = {"appids": appid, "cc": "us", "l": "en"}
+            headers = {"User-Agent": "Mozilla/5.0 (compatible; LemegetonBot/1.0)", "Accept-Language": "en-US,en;q=0.9"}
+            logger.debug(f"_get_app_details requesting appid={appid} params={params} headers={headers}")
+            async with session.get(url, params=params, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                logger.debug(f"_get_app_details resp.status={resp.status} for appid={appid}")
                 if resp.status == 200:
-                    data = await resp.json()
-                    return data.get(str(appid), {}).get("data")
+                    try:
+                        data = await resp.json()
+                    except Exception as e:
+                        text = await resp.text()
+                        logger.debug(f"_get_app_details failed parsing json for {appid}; text[:200]={text[:200]!r}")
+                        raise
+                    entry = data.get(str(appid))
+                    if entry is None:
+                        logger.debug(f"_get_app_details no entry for {appid} in response")
+                        return None
+                    # entry may be {success: bool, data: {...}}
+                    if not entry.get("success", False):
+                        logger.debug(f"_get_app_details success=false for {appid}; attempting fallback without cc")
+                        # Retry without country code (some apps are region-locked or return success:false)
+                        params2 = {"appids": appid, "l": "en"}
+                        async with session.get(url, params=params2, headers=headers, timeout=aiohttp.ClientTimeout(total=15)) as resp2:
+                            logger.debug(f"_get_app_details retry resp.status={resp2.status} for appid={appid}")
+                            if resp2.status == 200:
+                                try:
+                                    data2 = await resp2.json()
+                                except Exception:
+                                    logger.debug("_get_app_details retry failed to parse json")
+                                    return None
+                                entry2 = data2.get(str(appid))
+                                if entry2 and entry2.get("success", False):
+                                    logger.debug(f"_get_app_details retry succeeded for {appid}")
+                                    return entry2.get("data")
+                        return None
+                    appdata = entry.get("data")
+                    logger.debug(f"_get_app_details found data for {appid}: {bool(appdata)}")
+                    return appdata
         except Exception as e:
-            logger.debug(f"Error getting app details for {appid}: {e}")
+            logger.exception(f"Error getting app details for {appid}: {e}")
         return None
     
     async def _create_game_button(self, view, item, session):
@@ -1435,19 +1519,55 @@ class Steam(commands.Cog):
         button = discord.ui.Button(label=label, style=discord.ButtonStyle.primary)
         
         async def enhanced_callback(button_inter: discord.Interaction):
-            await button_inter.response.defer(ephemeral=True)
+            # Defer publicly so the detailed embed is posted to the channel (not ephemeral)
+            await button_inter.response.defer(ephemeral=False)
             
             appid = item["id"]
-            app_data = item.get("_app_data") or await self._get_app_details(session, appid)
-            
+            app_data = item.get("_app_data")
+
+            # Prefer cached data; otherwise try to use the provided session if it's still open.
             if not app_data:
-                return await button_inter.followup.send(f"❌ Could not load details for '{name}'", ephemeral=True)
+                try:
+                    use_session = None
+                    if session is not None and not getattr(session, "closed", False):
+                        use_session = session
+                    if use_session is not None:
+                        app_data = await self._get_app_details(use_session, appid)
+                    else:
+                        logger.debug(f"enhanced_callback: provided session closed or None for appid={appid}; creating temp session")
+                        async with aiohttp.ClientSession() as tmp_sess:
+                            app_data = await self._get_app_details(tmp_sess, appid)
+                except Exception:
+                    logger.exception(f"enhanced_callback: exception while fetching app details for appid={appid}")
+                    # final attempt with a fresh session
+                    try:
+                        async with aiohttp.ClientSession() as tmp_sess:
+                            app_data = await self._get_app_details(tmp_sess, appid)
+                    except Exception:
+                        logger.exception(f"enhanced_callback: final attempt failed for appid={appid}")
+
+            if not app_data:
+                logger.warning(f"enhanced_callback: failed to load app_data for appid={appid} name={name}")
+                return await button_inter.followup.send(f"❌ Could not load details for '{name}'", ephemeral=False)
             
-            # Create enhanced game view
-            game_view = EnhancedGameView(app_data, appid, session, button_inter.user)
-            embed = await game_view.create_main_embed()
-            
-            await button_inter.followup.send(embed=embed, view=game_view, ephemeral=True)
+            # Create enhanced game view and send embed; guard against embed creation errors
+            try:
+                game_view = EnhancedGameView(app_data, appid, session, button_inter.user)
+                embed = await game_view.create_main_embed()
+                # Send non-ephemeral so the embed is visible to the channel
+                await button_inter.followup.send(embed=embed, view=game_view, ephemeral=False)
+                logger.debug(f"enhanced_callback: sent enhanced embed for appid={appid} name={name}")
+            except Exception as e:
+                logger.exception(f"enhanced_callback: failed to build/send embed for appid={appid} name={name}: {e}")
+                # Fallback: send a simple text/embed with basic info so the user gets something
+                try:
+                    simple_embed = discord.Embed(title=name, url=f"https://store.steampowered.com/app/{appid}", description="Details unavailable; displaying a quick link.", color=discord.Color.dark_gray())
+                    await button_inter.followup.send(embed=simple_embed, ephemeral=False)
+                except Exception:
+                    try:
+                        await button_inter.followup.send(f"❌ Could not display detailed info for '{name}', but you can view it on the store: https://store.steampowered.com/app/{appid}", ephemeral=False)
+                    except Exception:
+                        logger.exception(f"enhanced_callback: failed to send fallback message for appid={appid} name={name}")
         
         button.callback = enhanced_callback
         view.add_item(button)
@@ -1570,19 +1690,25 @@ class Steam(commands.Cog):
     async def _search_single_game(self, session, game_name):
         """Search for a single game and return its data"""
         try:
-            search_url = f"https://store.steampowered.com/api/storesearch/?term={game_name}&l=en&cc=us"
-            async with session.get(search_url) as resp:
+            search_url = "https://store.steampowered.com/api/storesearch/"
+            params = {"term": game_name, "l": "en", "cc": "us"}
+            logger.debug(f"_search_single_game searching for '{game_name}' with params={params}")
+            async with session.get(search_url, params=params, timeout=aiohttp.ClientTimeout(total=15)) as resp:
+                logger.debug(f"_search_single_game resp.status={resp.status} for '{game_name}'")
                 if resp.status != 200:
                     return None
                 search_data = await resp.json()
             
             items = search_data.get("items", [])
+            logger.debug(f"_search_single_game found {len(items)} search items for '{game_name}'")
             if not items:
                 return None
             
             # Get details for the first result
             app_id = items[0]["id"]
+            logger.debug(f"_search_single_game selected app_id={app_id} title={items[0].get('name')}")
             app_data = await self._get_app_details(session, app_id)
+            logger.debug(f"_search_single_game app_data loaded: {bool(app_data)} for app_id={app_id}")
             
             return {"id": app_id, "data": app_data} if app_data else None
             
@@ -1804,8 +1930,19 @@ class RecommendationView(discord.ui.View):
         if steam_cog:
             # Get user's Steam ID
             async with aiosqlite.connect(DB_PATH) as db:
-                cur = await db.execute("SELECT steam_id FROM steam_users WHERE discord_id = ?", (interaction.user.id,))
-                row = await cur.fetchone()
+                guild_id = getattr(interaction.guild, 'id', None)
+                row = None
+                if guild_id is not None:
+                    try:
+                        cur = await db.execute("SELECT steam_id FROM steam_users WHERE discord_id = ? AND guild_id = ?", (interaction.user.id, guild_id))
+                        row = await cur.fetchone()
+                        await cur.close()
+                    except Exception:
+                        row = None
+
+                if not row:
+                    cur = await db.execute("SELECT steam_id FROM steam_users WHERE discord_id = ?", (interaction.user.id,))
+                    row = await cur.fetchone()
                 await cur.close()
                 if row:
                     steamid = row[0]
@@ -1927,7 +2064,25 @@ class EnhancedGameView(discord.ui.View):
         
         # Footer with additional info
         dlc_count = len(self.app_data.get("dlc", []))
-        achievement_count = len(self.app_data.get("achievements", {}).get("total", 0))
+        # achievements.total can be an int (count) or an iterable/list in some responses.
+        # Safely handle both shapes to avoid TypeError from len(int).
+        ach = self.app_data.get("achievements", {}).get("total", 0)
+        if isinstance(ach, int):
+            achievement_count = ach
+        elif hasattr(ach, "__len__"):
+            try:
+                achievement_count = len(ach)
+            except Exception:
+                try:
+                    achievement_count = int(ach)
+                except Exception:
+                    achievement_count = 0
+        else:
+            try:
+                achievement_count = int(ach)
+            except Exception:
+                achievement_count = 0
+
         footer_parts = []
         
         if dlc_count > 0:

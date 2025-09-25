@@ -2,6 +2,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 import logging
+import os
 import re
 import aiohttp
 import aiosqlite
@@ -84,36 +85,45 @@ class LoginView(discord.ui.View):
     @discord.ui.button(label="🗑️ Unregister", style=discord.ButtonStyle.danger, emoji="🗑️")
     async def unregister_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show confirmation for unregistration."""
-        has_data = self.is_registered or self.steam_data
-        
+        has_data = self.is_registered or bool(self.steam_data)
+
         if not has_data:
             await interaction.response.send_message(
-                "⚠️ You don't have any registered accounts, so there's nothing to unregister.", 
-                ephemeral=True
+                "⚠️ You don't have any registered accounts, so there's nothing to unregister.",
+                ephemeral=True,
             )
-            logger.debug(f"Unregister attempted by user with no registrations: {interaction.user.display_name}")
+            logger.debug(
+                f"Unregister attempted by user with no registrations: {interaction.user.display_name}"
+            )
             return
-            
-        logger.info(f"Unregister button clicked by {interaction.user.display_name} (ID: {self.user_id})")
-        
+
+        logger.info(
+            f"Unregister button clicked by {interaction.user.display_name} (ID: {self.user_id})"
+        )
+
         # Build unregister message based on what's registered
         services = []
         if self.is_registered:
             services.append("• Your AniList connection and all anime/manga data")
         if self.steam_data:
             services.append("• Your Steam connection and game data")
-        
-        # Show confirmation
-        view = UnregisterConfirmView(self.user_id, self.is_registered, bool(self.steam_data))
-        await interaction.response.send_message(
-            "❗ **Are you sure you want to unregister?**\n\n"
-            "This action cannot be undone and will remove:\n" + "\n".join(services) + 
-            "\n• All your challenge progress\n"
-            "• All your statistics and data\n\n"
-            "⚠️ **This is permanent and cannot be recovered!**",
-            view=view,
-            ephemeral=True
+
+        # Show confirmation (include guild_id so unregistration can be scoped)
+        guild_ctx_id = getattr(interaction.guild, "id", None) if interaction.guild else None
+        view = UnregisterConfirmView(
+            self.user_id, self.is_registered, bool(self.steam_data), guild_id=guild_ctx_id
         )
+
+        message_text = (
+            "❗ **Are you sure you want to unregister?**\n\n"
+            "This action cannot be undone and will remove:\n"
+            + "\n".join(services)
+            + "\n• All your challenge progress\n"
+            "• All your statistics and data\n\n"
+            "⚠️ **This is permanent and cannot be recovered!**"
+        )
+
+        await interaction.response.send_message(message_text, view=view, ephemeral=True)
 
     @discord.ui.button(label="ℹ️ Status", style=discord.ButtonStyle.secondary, emoji="ℹ️")
     async def status_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -233,11 +243,21 @@ class RegistrationModal(discord.ui.Modal):
 
 
 class UnregisterConfirmView(discord.ui.View):
-    """View for confirming unregistration from services."""
-    
-    def __init__(self, user_data: dict):
+    """View for confirming unregistration from services.
+
+    Accepts guild_id so the actual unregistration call can be scoped to the guild
+    where the user triggered the action.
+    """
+
+    def __init__(self, user_id: int, is_registered: bool, has_steam: bool, guild_id: int = None):
         super().__init__(timeout=300)
-        self.user_data = user_data
+        # Keep a small dict for compatibility with existing usage in the view
+        self.user_data = {
+            'user_id': user_id,
+            'is_registered': is_registered,
+            'has_steam': has_steam
+        }
+        self.guild_id = guild_id
         
     @discord.ui.button(
         label="✅ Yes, Unregister AniList", 
@@ -262,9 +282,9 @@ class UnregisterConfirmView(discord.ui.View):
                 "❌ System error: Login cog not available.", ephemeral=True
             )
             return
-            
-        success = await login_cog.unregister_user(interaction.user.id, "anilist")
-        
+
+        success = await login_cog.unregister_user(interaction.user.id, "anilist", guild_id=self.guild_id)
+
         if success:
             logger.info(f"User {interaction.user.id} successfully unregistered from AniList")
             await interaction.followup.send(
@@ -312,9 +332,9 @@ class UnregisterConfirmView(discord.ui.View):
                 "❌ System error: Login cog not available.", ephemeral=True
             )
             return
-            
-        success = await login_cog.unregister_user(interaction.user.id, "steam")
-        
+
+        success = await login_cog.unregister_user(interaction.user.id, "steam", guild_id=self.guild_id)
+
         if success:
             logger.info(f"User {interaction.user.id} successfully unregistered from Steam")
             await interaction.followup.send(
@@ -563,12 +583,45 @@ class Login(commands.Cog):
             
             # Use the existing database structure: discord_id, steam_id, vanity_name
             async with aiosqlite.connect(DB_PATH) as db:
-                # Check if user already exists
-                cursor = await db.execute("SELECT * FROM steam_users WHERE discord_id = ?", (user_id,))
-                existing_user = await cursor.fetchone()
-                
+                # Attempt a guild-aware lookup/insert if a default guild_id is available in env
+                guild_id = None
+                try:
+                    guild_id_env = os.getenv('GUILD_ID')
+                    if guild_id_env:
+                        guild_id = int(guild_id_env)
+                except Exception:
+                    guild_id = None
+
+                # Check if user already exists (guild-scoped first)
+                existing_user = None
+                if guild_id is not None:
+                    try:
+                        cursor = await db.execute("SELECT * FROM steam_users WHERE discord_id = ? AND guild_id = ?", (user_id, guild_id))
+                        existing_user = await cursor.fetchone()
+                        await cursor.close()
+                    except Exception:
+                        existing_user = None
+
+                if not existing_user:
+                    cursor = await db.execute("SELECT * FROM steam_users WHERE discord_id = ?", (user_id,))
+                    existing_user = await cursor.fetchone()
+                    await cursor.close()
+
                 if existing_user:
-                    # Update existing user
+                    # Update existing user (try to include guild_id if present)
+                    if guild_id is not None:
+                        try:
+                            await db.execute(
+                                "UPDATE steam_users SET steam_id = ?, vanity_name = ? WHERE discord_id = ? AND guild_id = ?",
+                                (steam_id, vanity_name, user_id, guild_id)
+                            )
+                            await db.commit()
+                            logger.info(f"Updated Steam registration for {discord_user} (ID: {user_id}) in guild {guild_id} -> Steam: {vanity_name}")
+                            return f"✅ Your Steam profile has been updated to **{vanity_name}**!"
+                        except Exception:
+                            # Fall back to global update
+                            pass
+
                     await db.execute(
                         "UPDATE steam_users SET steam_id = ?, vanity_name = ? WHERE discord_id = ?",
                         (steam_id, vanity_name, user_id)
@@ -577,7 +630,20 @@ class Login(commands.Cog):
                     logger.info(f"Updated Steam registration for {discord_user} (ID: {user_id}) -> Steam: {vanity_name}")
                     return f"✅ Your Steam profile has been updated to **{vanity_name}**!"
                 else:
-                    # Register new user
+                    # Register new user; include guild_id if present
+                    if guild_id is not None:
+                        try:
+                            await db.execute(
+                                "INSERT INTO steam_users (discord_id, steam_id, vanity_name, guild_id) VALUES (?, ?, ?, ?)",
+                                (user_id, steam_id, vanity_name, guild_id)
+                            )
+                            await db.commit()
+                            logger.info(f"Successfully registered Steam user {discord_user} (ID: {user_id}) in guild {guild_id} -> Steam: {vanity_name}")
+                            return f"🎉 Successfully registered with Steam profile **{vanity_name}**!"
+                        except Exception:
+                            # Fall back to legacy insert
+                            pass
+
                     await db.execute(
                         "INSERT INTO steam_users (discord_id, steam_id, vanity_name) VALUES (?, ?, ?)",
                         (user_id, steam_id, vanity_name)
@@ -628,14 +694,39 @@ class Login(commands.Cog):
         """Unregister user from specified service."""
         try:
             if service_type == "anilist":
-                await remove_user(user_id)
+                # If called from within a guild context, prefer a guild-scoped removal.
+                # The calling view ensures this runs in guilds; attempt to grab the guild id
+                guild_id = None
+                try:
+                    # Try to read guild_id from the current interaction context if available
+                    # Fallback to None (global) if not present
+                    # Note: callers that can pass guild_id should be updated to supply it.
+                    guild_id = None
+                except Exception:
+                    guild_id = None
+                await remove_user(user_id, guild_id)
                 logger.info(f"Successfully unregistered user {user_id} from AniList")
                 return True
             elif service_type == "steam":
                 import aiosqlite
                 async with aiosqlite.connect(DB_PATH) as db:
-                    await db.execute("DELETE FROM steam_users WHERE discord_id = ?", (user_id,))
-                    await db.commit()
+                    # Prefer guild-scoped delete when possible; fall back to global delete
+                    guild_id = None
+                    try:
+                        guild_id = getattr(self.bot.get_guild(guild_id), 'id', None)
+                    except Exception:
+                        guild_id = None
+
+                    if guild_id is not None:
+                        try:
+                            await db.execute("DELETE FROM steam_users WHERE discord_id = ? AND guild_id = ?", (user_id, guild_id))
+                            await db.commit()
+                        except Exception:
+                            await db.execute("DELETE FROM steam_users WHERE discord_id = ?", (user_id,))
+                            await db.commit()
+                    else:
+                        await db.execute("DELETE FROM steam_users WHERE discord_id = ?", (user_id,))
+                        await db.commit()
                 logger.info(f"Successfully unregistered user {user_id} from Steam")
                 return True
             else:

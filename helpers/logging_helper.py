@@ -1,3 +1,104 @@
+"""Logging helper for the project.
+
+Provides a small factory to create per-module loggers that:
+- write to `logs/<module>.log` by default using RotatingFileHandler
+- use a single FileHandler per logger (avoid duplicate handlers on reload)
+- use an ISO-like UTC timestamp in the formatter
+
+Usage:
+    from helpers.logging_helper import get_logger
+    logger = get_logger("Recommendations", level=logging.DEBUG)
+    logger.info("started")
+"""
+from __future__ import annotations
+
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+import time
+from typing import Optional
+
+
+DEFAULT_MAX_BYTES = 5_000_000
+DEFAULT_BACKUP_COUNT = 5
+
+
+def _utc_formatter(fmt: Optional[str] = None) -> logging.Formatter:
+    fmt = fmt or "%(asctime)s %(levelname)s [%(name)s] %(message)s"
+    formatter = logging.Formatter(fmt)
+    # Use UTC time for timestamps
+    formatter.converter = time.gmtime
+    return formatter
+
+
+def get_logger(
+    name: str,
+    logfile: Optional[str] = None,
+    level: int = logging.INFO,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    backup_count: int = DEFAULT_BACKUP_COUNT,
+    console: bool = False,
+) -> logging.Logger:
+    """Return a configured logger for `name`.
+
+    - If `logfile` is not provided, uses `logs/{name.lower()}.log`.
+    - Ensures the `logs/` directory exists.
+    - Avoids adding duplicate FileHandlers when the cog/module is reloaded.
+    - Optionally adds a console StreamHandler when `console=True` (useful for local dev).
+    """
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # Ensure logs directory exists
+    logs_dir = os.path.join(os.getcwd(), "logs")
+    try:
+        os.makedirs(logs_dir, exist_ok=True)
+    except Exception:
+        # If we can't create logs dir, fall back to current working directory
+        logs_dir = os.getcwd()
+
+    if logfile:
+        # allow both absolute and relative paths
+        logfile_path = logfile if os.path.isabs(logfile) else os.path.join(logs_dir, logfile)
+    else:
+        logfile_path = os.path.join(logs_dir, f"{name.lower()}.log")
+
+    # Check whether a RotatingFileHandler for this path is already attached
+    file_handler_exists = False
+    for h in logger.handlers:
+        if isinstance(h, RotatingFileHandler):
+            try:
+                existing = os.path.abspath(getattr(h, "baseFilename", ""))
+                if existing == os.path.abspath(logfile_path):
+                    file_handler_exists = True
+                    break
+            except Exception:
+                # Some handlers may not have baseFilename or be inaccessible; ignore
+                continue
+
+    if not file_handler_exists:
+        fh = RotatingFileHandler(logfile_path, maxBytes=max_bytes, backupCount=backup_count, encoding="utf-8")
+        fh.setLevel(level)
+        fh.setFormatter(_utc_formatter())
+        logger.addHandler(fh)
+
+    # Optionally add a console handler (only one)
+    if console:
+        has_console = any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
+        if not has_console:
+            ch = logging.StreamHandler()
+            ch.setLevel(level)
+            ch.setFormatter(_utc_formatter())
+            logger.addHandler(ch)
+
+    # Avoid propagating to root logger so logs don't double-print
+    logger.propagate = False
+
+    return logger
+
+
+__all__ = ["get_logger"]
 """
 Logging Helper Functions
 Centralized logging configuration and utilities for the bot

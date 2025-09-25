@@ -10,6 +10,10 @@ CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 ADMIN_DISCORD_ID = int(os.getenv("ADMIN_DISCORD_ID"))
 
+# Moderator role id used by cogs that restrict commands to moderators.
+# Set MOD_ROLE_ID in your .env as the numeric role id. If unset, will be None.
+MOD_ROLE_ID = int(os.getenv("MOD_ROLE_ID")) if os.getenv("MOD_ROLE_ID") else None
+
 # Primary Guild ID for backwards compatibility and default operations
 PRIMARY_GUILD_ID = int(os.getenv("GUILD_ID"))
 

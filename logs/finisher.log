@@ -1,0 +1,184 @@
+[2025-09-24 20:02:53,768] [INFO] Finisher cog initialized
+[2025-09-24 20:02:57,763] [INFO] Finisher cog initialized
+[2025-09-24 20:02:57,768] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp064oy_0h\manga_scan_test.json
+[2025-09-24 20:02:57,773] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp064oy_0h\manga_scan_test.json
+[2025-09-24 20:04:47,874] [INFO] Finisher cog initialized
+[2025-09-24 20:04:47,879] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp3x183ksl\manga_scan_test.json
+[2025-09-24 20:04:47,881] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmp3x183ksl\manga_channel_test.json
+[2025-09-24 20:04:47,882] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 20:04:47,884] [INFO] Posting updates to channel dummy
+[2025-09-24 20:04:47,884] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 20:04:47,884] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 20:04:47,885] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp3x183ksl\manga_scan_test.json
+[2025-09-24 20:04:47,885] [INFO] Post updates complete and state saved
+[2025-09-24 20:08:34,532] [INFO] Finisher cog initialized
+[2025-09-24 20:08:34,537] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpcyu17mzj\manga_scan_test.json
+[2025-09-24 20:08:34,539] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmpcyu17mzj\manga_channel_test.json
+[2025-09-24 20:08:34,540] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 20:08:34,540] [INFO] Posting updates to channel dummy
+[2025-09-24 20:08:34,541] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 20:08:34,541] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 20:08:34,542] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpcyu17mzj\manga_scan_test.json
+[2025-09-24 20:08:34,542] [INFO] Post updates complete and state saved
+[2025-09-24 20:09:50,251] [INFO] Finisher cog initialized
+[2025-09-24 20:10:13,560] [INFO] /set_manga_channel invoked by kyerstorm in guild 897814031346319382 -> channel 1420448966423609407
+[2025-09-24 20:10:13,905] [INFO] Saved configured channel 1420448966423609407 for guild 897814031346319382 to data/manga_channel.json
+[2025-09-24 20:10:13,906] [INFO] Configured manga updates for guild 897814031346319382 -> channel 1420448966423609407
+[2025-09-24 20:10:28,538] [INFO] Fetching manga list from AniList
+[2025-09-24 20:10:28,854] [INFO] AniList returned 25 media entries
+[2025-09-24 20:10:31,394] [INFO] Loaded configured channel 1420448966423609407 for guild 897814031346319382
+[2025-09-24 20:10:31,394] [INFO] Posting updates to channel embed
+[2025-09-24 20:10:31,395] [INFO] Fetching manga list from AniList
+[2025-09-24 20:10:31,707] [INFO] AniList returned 25 media entries
+[2025-09-24 20:10:31,708] [INFO] Found 4 new manga updates after filtering
+[2025-09-24 20:10:31,708] [INFO] Posting update for manga id=175186 title=Three's a (Nice) Crowd status=FINISHED
+[2025-09-24 20:10:31,949] [INFO] Posting update for manga id=186672 title=Heated Exchange status=FINISHED
+[2025-09-24 20:10:32,379] [INFO] Posting update for manga id=181287 title=The Sacred Serpent's Seduction status=FINISHED
+[2025-09-24 20:10:32,603] [INFO] Posting update for manga id=180997 title=How Far Can We Go? status=FINISHED
+[2025-09-24 20:10:32,820] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-24 20:10:32,820] [INFO] Post updates complete and state saved
+[2025-09-24 20:17:49,916] [INFO] Finisher cog initialized
+[2025-09-24 20:18:52,651] [INFO] Finisher cog initialized
+[2025-09-24 20:19:00,516] [INFO] Fetching manga list from AniList
+[2025-09-24 20:19:00,872] [INFO] AniList returned 25 media entries
+[2025-09-24 20:19:01,673] [INFO] Loaded configured channel 1420448966423609407 for guild 897814031346319382
+[2025-09-24 20:19:01,673] [INFO] Posting updates to channel embed
+[2025-09-24 20:19:01,674] [INFO] Fetching manga list from AniList
+[2025-09-24 20:19:01,992] [INFO] AniList returned 25 media entries
+[2025-09-24 20:19:01,993] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 20:19:01,993] [INFO] Posting update for manga id=186672 title=Heated Exchange status=FINISHED
+[2025-09-24 20:19:02,315] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-24 20:19:02,316] [INFO] Post updates complete and state saved
+[2025-09-24 20:19:31,013] [INFO] Finisher cog initialized
+[2025-09-24 20:19:34,174] [INFO] Finisher cog initialized
+[2025-09-24 20:19:34,181] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpthvh2z8h\manga_scan_test.json
+[2025-09-24 20:19:34,183] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmpthvh2z8h\manga_channel_test.json
+[2025-09-24 20:19:34,184] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 20:19:34,184] [INFO] Posting updates to channel dummy
+[2025-09-24 20:19:34,185] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 20:19:34,185] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 20:19:34,186] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpthvh2z8h\manga_scan_test.json
+[2025-09-24 20:19:34,186] [INFO] Post updates complete and state saved
+[2025-09-24 20:20:29,513] [INFO] Finisher cog initialized
+[2025-09-24 20:27:27,017] [INFO] Finisher cog initialized
+[2025-09-24 20:27:59,309] [INFO] Finisher cog initialized
+[2025-09-24 20:27:59,314] [INFO] Running daily_check scheduled task (24h interval reached)
+[2025-09-24 20:27:59,315] [INFO] Loaded channel mapping for 1 guild(s)
+[2025-09-24 20:27:59,315] [INFO] Posting updates to channel embed
+[2025-09-24 20:27:59,315] [INFO] Fetching manga list from AniList
+[2025-09-24 20:27:59,643] [INFO] AniList returned 25 media entries
+[2025-09-24 20:27:59,644] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 20:27:59,644] [INFO] Posting update for manga id=186672 title=Heated Exchange status=FINISHED
+[2025-09-24 20:27:59,962] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-24 20:27:59,962] [INFO] Post updates complete and state saved
+[2025-09-24 20:27:59,963] [INFO] Saved last run timestamp 2025-09-24T19:27:59.314290 to data/manga_scan_meta.json
+[2025-09-24 20:28:07,416] [INFO] Finisher cog initialized
+[2025-09-24 20:28:09,897] [INFO] Finisher cog initialized
+[2025-09-24 20:28:09,903] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp3j1pa2ey\manga_scan_test.json
+[2025-09-24 20:28:09,905] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmp3j1pa2ey\manga_channel_test.json
+[2025-09-24 20:28:09,906] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 20:28:09,907] [INFO] Posting updates to channel dummy
+[2025-09-24 20:28:09,907] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 20:28:09,907] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 20:28:09,908] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp3j1pa2ey\manga_scan_test.json
+[2025-09-24 20:28:09,908] [INFO] Post updates complete and state saved
+[2025-09-24 20:29:28,129] [INFO] Finisher cog initialized
+[2025-09-24 20:58:32,565] [INFO] /set_manga_channel invoked by kyerstorm in guild 897814031346319382 -> channel 1420499306300969063
+[2025-09-24 20:58:32,911] [INFO] Saved configured channel 1420499306300969063 for guild 897814031346319382 to data/manga_channel.json
+[2025-09-24 20:58:32,911] [INFO] Configured manga updates for guild 897814031346319382 -> channel 1420499306300969063
+[2025-09-24 21:04:00,712] [INFO] Finisher cog initialized
+[2025-09-24 21:04:10,811] [INFO] Finisher cog initialized
+[2025-09-24 21:04:20,918] [INFO] Finisher cog initialized
+[2025-09-24 21:04:49,168] [INFO] Finisher cog initialized
+[2025-09-24 21:05:01,281] [INFO] Finisher cog initialized
+[2025-09-24 21:05:11,389] [INFO] Finisher cog initialized
+[2025-09-24 21:05:14,483] [INFO] Finisher cog initialized
+[2025-09-24 21:05:14,488] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp9oz1wmnk\manga_scan_test.json
+[2025-09-24 21:05:14,490] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmp9oz1wmnk\manga_channel_test.json
+[2025-09-24 21:05:14,491] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 21:05:14,492] [INFO] Posting manga updates to channel dummy
+[2025-09-24 21:05:14,492] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 21:05:14,492] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 21:05:14,493] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp9oz1wmnk\manga_scan_test.json
+[2025-09-24 21:05:14,493] [INFO] Post manga updates complete and state saved
+[2025-09-24 21:05:43,660] [INFO] Finisher cog initialized
+[2025-09-24 21:06:42,134] [INFO] Finisher cog initialized
+[2025-09-24 21:06:45,401] [INFO] Finisher cog initialized
+[2025-09-24 21:06:45,407] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpstynlntc\manga_scan_test.json
+[2025-09-24 21:06:45,409] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmpstynlntc\manga_channel_test.json
+[2025-09-24 21:06:45,410] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 21:06:45,411] [INFO] Posting manga updates to channel dummy
+[2025-09-24 21:06:45,411] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 21:06:45,411] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 21:06:45,412] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpstynlntc\manga_scan_test.json
+[2025-09-24 21:06:45,412] [INFO] Post manga updates complete and state saved
+[2025-09-24 21:08:14,903] [INFO] Finisher cog initialized
+[2025-09-24 21:08:39,136] [INFO] Finisher cog initialized
+[2025-09-24 21:08:45,208] [INFO] Finisher cog initialized
+[2025-09-24 21:08:49,119] [INFO] Finisher cog initialized
+[2025-09-24 21:08:49,124] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpo0h2ukam\manga_scan_test.json
+[2025-09-24 21:08:49,126] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmpo0h2ukam\manga_channel_test.json
+[2025-09-24 21:08:49,127] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 21:08:49,128] [INFO] Posting manga updates to channel dummy
+[2025-09-24 21:08:49,128] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 21:08:49,128] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 21:08:49,130] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmpo0h2ukam\manga_scan_test.json
+[2025-09-24 21:08:49,130] [INFO] Post manga updates complete and state saved
+[2025-09-24 21:09:17,481] [INFO] Finisher cog initialized
+[2025-09-24 21:10:34,118] [INFO] Finisher cog initialized
+[2025-09-24 21:10:44,208] [INFO] Finisher cog initialized
+[2025-09-24 21:10:46,252] [INFO] Finisher cog initialized
+[2025-09-24 21:10:52,328] [INFO] Finisher cog initialized
+[2025-09-24 21:10:56,637] [INFO] Finisher cog initialized
+[2025-09-24 21:10:56,643] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp8hb1oik1\manga_scan_test.json
+[2025-09-24 21:10:56,644] [INFO] Saved configured channel 5555 for guild 9999 to C:\Users\benet\AppData\Local\Temp\tmp8hb1oik1\manga_channel_test.json
+[2025-09-24 21:10:56,645] [INFO] Loaded configured channel 5555 for guild 9999
+[2025-09-24 21:10:56,646] [INFO] Posting manga updates to channel dummy
+[2025-09-24 21:10:56,646] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 21:10:56,646] [INFO] Posting update for manga id=123 title=Big Manga status=FINISHED
+[2025-09-24 21:10:56,648] [INFO] Saved 2 current manga ids to C:\Users\benet\AppData\Local\Temp\tmp8hb1oik1\manga_scan_test.json
+[2025-09-24 21:10:56,648] [INFO] Post manga updates complete and state saved
+[2025-09-24 21:11:20,603] [INFO] Finisher cog initialized
+[2025-09-24 21:13:51,873] [INFO] Finisher cog initialized
+[2025-09-24 21:18:36,243] [INFO] Finisher cog initialized
+[2025-09-24 21:24:32,767] [INFO] Finisher cog initialized
+[2025-09-24 21:25:23,547] [INFO] Finisher cog initialized
+[2025-09-24 21:28:05,682] [INFO] Finisher cog initialized
+[2025-09-24 21:47:25,656] [INFO] Finisher cog initialized
+[2025-09-24 22:33:28,914] [INFO] Fetching manga list from AniList
+[2025-09-24 22:33:29,261] [INFO] AniList returned 25 media entries
+[2025-09-24 22:33:31,717] [INFO] Loaded configured channel 1420499306300969063 for guild 897814031346319382
+[2025-09-24 22:33:31,717] [INFO] Posting manga updates to channel 📣•manga-completion•
+[2025-09-24 22:33:31,718] [INFO] Fetching manga list from AniList
+[2025-09-24 22:33:32,007] [INFO] AniList returned 25 media entries
+[2025-09-24 22:33:32,007] [INFO] Found 1 new manga updates after filtering
+[2025-09-24 22:33:32,007] [INFO] Posting update for manga id=186672 title=Heated Exchange status=FINISHED
+[2025-09-24 22:33:34,380] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-24 22:33:34,382] [INFO] Post manga updates complete and state saved
+[2025-09-24 22:33:34,383] [INFO] Posting anime updates to channel 📣•manga-completion•
+[2025-09-24 22:33:34,383] [ERROR] Error running forceupdate command
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\finisher.py", line 705, in forceupdate
+    await self.post_updates(channel, kind="anime")
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\finisher.py", line 492, in post_updates
+    items = await self.fetch_anime()
+                  ^^^^^^^^^^^^^^^^
+AttributeError: 'Finisher' object has no attribute 'fetch_anime'. Did you mean: 'fetch_manga'?
+[2025-09-24 22:59:01,453] [INFO] Finisher cog initialized
+[2025-09-24 23:02:20,682] [INFO] Finisher cog initialized
+[2025-09-24 23:05:07,199] [INFO] Finisher cog initialized
+[2025-09-24 23:10:40,001] [INFO] Finisher cog initialized
+[2025-09-24 23:23:06,586] [INFO] Finisher cog initialized
+[2025-09-24 23:26:55,094] [INFO] Finisher cog initialized
+[2025-09-24 23:30:06,615] [INFO] Finisher cog initialized
+[2025-09-24 23:33:28,788] [INFO] Finisher cog initialized
+[2025-09-24 23:40:55,189] [INFO] Finisher cog initialized
+[2025-09-24 23:42:52,252] [INFO] Finisher cog initialized
+[2025-09-24 23:43:31,265] [INFO] Finisher cog initialized
+[2025-09-24 23:47:46,590] [INFO] Finisher cog initialized
+[2025-09-24 23:52:30,822] [INFO] Finisher cog initialized
+[2025-09-24 23:59:23,710] [INFO] Finisher cog initialized
+[2025-09-25 00:06:03,457] [INFO] Finisher cog initialized
+[2025-09-25 00:12:44,259] [INFO] Finisher cog initialized
+[2025-09-25 00:15:29,358] [INFO] Finisher cog initialized
+[2025-09-25 00:18:51,144] [INFO] Finisher cog initialized

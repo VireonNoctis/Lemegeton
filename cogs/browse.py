@@ -250,8 +250,21 @@ class BrowseCog(commands.Cog):
             progress_lines.append("`{:-<20} {:-<10} {:-<7}`".format("", "", ""))
 
             for user in users:
-                discord_name = user[2]  # Assuming: (discord_id, discord_name, anilist_username)
-                anilist_username = user[2] if len(user) > 2 else None
+                # DB rows can come in two shapes depending on schema/migration:
+                # - Guild-aware: (id, discord_id, guild_id, username, anilist_username, ...)
+                # - Legacy:     (id, discord_id, username, anilist_username, ...)
+                if len(user) >= 5:
+                    # guild-aware
+                    discord_name = user[3]
+                    anilist_username = user[4]
+                elif len(user) >= 4:
+                    # legacy
+                    discord_name = user[2]
+                    anilist_username = user[3]
+                else:
+                    # Fallback: best-effort
+                    discord_name = str(user[1]) if len(user) > 1 else "Unknown"
+                    anilist_username = None
 
                 anilist_progress = await self.fetch_user_anilist_progress(
                     anilist_username, media.get("id", 0), real_type
@@ -287,55 +300,67 @@ class BrowseCog(commands.Cog):
 
         embed.set_footer(text="Fetched from AniList")
 
-        # Always send media info first
-        if progress_embed:
-            class PageView(View):
-                def __init__(self, embed1, embed2):
-                    super().__init__(timeout=120)
-                    self.embed1 = embed1
-                    self.embed2 = embed2
-                    self.current = "info" 
-                    self.rebuild_buttons()
+        # Always attach a PageView so the user can see the navigation buttons.
+        # If there is no `progress_embed`, the User Progress button will be disabled
+        # and will show a short ephemeral message if clicked.
+        class PageView(View):
+            def __init__(self, embed1, embed2):
+                super().__init__(timeout=120)
+                self.embed1 = embed1
+                self.embed2 = embed2
+                self.current = "info"
+                self.rebuild_buttons()
 
-                def rebuild_buttons(self):
-                    self.clear_items()
+            def rebuild_buttons(self):
+                self.clear_items()
 
-                    if self.current == "info":
-                        btn = Button(
-                            label="👥 User Progress",
-                            style=discord.ButtonStyle.green
-                        )
+                if self.current == "info":
+                    btn = Button(
+                        label="👥 User Progress",
+                        style=discord.ButtonStyle.green,
+                        disabled=(self.embed2 is None)
+                    )
 
-                        async def user_progress_callback(interaction: discord.Interaction):
-                            self.current = "progress"
-                            self.rebuild_buttons()
-                            await interaction.response.edit_message(embed=self.embed2, view=self)
+                    async def user_progress_callback(interaction: discord.Interaction):
+                        # If no progress embed, notify the user privately
+                        if self.embed2 is None:
+                            try:
+                                await interaction.response.send_message("No registered users with progress for this title.", ephemeral=True)
+                            except Exception:
+                                # As a fallback, use followup
+                                try:
+                                    await interaction.followup.send("No registered users with progress for this title.", ephemeral=True)
+                                except Exception:
+                                    pass
+                            return
 
-                        btn.callback = user_progress_callback
-                        self.add_item(btn)
+                        self.current = "progress"
+                        self.rebuild_buttons()
+                        await interaction.response.edit_message(embed=self.embed2, view=self)
 
-                    else:
-                        btn = Button(
-                            label="📖 Manga Info",
-                            style=discord.ButtonStyle.blurple
-                        )
+                    btn.callback = user_progress_callback
+                    self.add_item(btn)
 
-                        async def manga_info_callback(interaction: discord.Interaction):
-                            self.current = "info"
-                            self.rebuild_buttons()
-                            await interaction.response.edit_message(embed=self.embed1, view=self)
+                else:
+                    btn = Button(
+                        label="📖 Media Info",
+                        style=discord.ButtonStyle.blurple
+                    )
 
-                        btn.callback = manga_info_callback
-                        self.add_item(btn)
+                    async def media_info_callback(interaction: discord.Interaction):
+                        self.current = "info"
+                        self.rebuild_buttons()
+                        await interaction.response.edit_message(embed=self.embed1, view=self)
 
-                async def on_timeout(self):
-                    self.clear_items()
+                    btn.callback = media_info_callback
+                    self.add_item(btn)
 
-            # Start with manga info
-            view = PageView(embed, progress_embed)
-            await interaction.followup.send(embed=embed, view=view)
-        else:
-            await interaction.followup.send(embed=embed)
+            async def on_timeout(self):
+                self.clear_items()
+
+        # Start with media info; always include the view so buttons are visible (even if disabled)
+        view = PageView(embed, progress_embed)
+        await interaction.followup.send(embed=embed, view=view)
 
 
     # --------------------------------------------------

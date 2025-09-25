@@ -9,6 +9,13 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional, Union
 
+from helpers.cache_helper import (
+    load_timestamped_cache,
+    save_timestamped_cache,
+    get_cached_value,
+    set_cached_value,
+)
+
 from database import (
     get_all_users, upsert_user_stats,
     # Guild-aware functions
@@ -27,8 +34,16 @@ LOG_FILE = LOG_DIR / "leaderboard.log"
 
 # Clear the log file on startup
 if LOG_FILE.exists():
-    LOG_FILE.unlink()
-
+    try:
+        # Try to truncate the file in-place instead of deleting it. Deleting can fail on Windows
+        # if another process has the file open. Truncating is safer and avoids raising.
+        with open(LOG_FILE, 'w', encoding='utf-8'):
+            pass
+    except Exception as e:
+        # If we cannot truncate (file locked), continue without failing the cog import.
+        # Use a simple print because logger isn't configured yet.
+        print(f"Warning: could not clear leaderboard log {LOG_FILE}: {e}")
+ 
 # Create logger
 logger = logging.getLogger("Leaderboard")
 logger.setLevel(logging.INFO)
@@ -211,7 +226,10 @@ PAGE_SIZE = 5  # Users per page
 TIMEOUT_DURATION = 300  # 5 minutes for view timeout
 
 # Global cache for user fetch timestamps
-last_fetch: Dict[int, float] = {}
+_FETCH_CACHE_NAME = "leaderboard_last_fetch"
+
+# Persistent timestamped cache: {str(discord_id): (timestamp)} stored via helpers/cache_helper
+fetch_timestamps = load_timestamped_cache(_FETCH_CACHE_NAME)
 
 # Media type configuration
 MEDIA_TYPES = {
@@ -236,9 +254,38 @@ MEDIA_TYPES = {
         "unit_label": "Activity Score",
         "media_label": "Combined"
     }
+    ,
+    "chapters": {
+        "title": "📚 Most Chapters Read",
+        "description": "Users ranked by total chapters read",
+        "sql": "SELECT username, total_chapters FROM user_stats",
+        "unit_label": "Chapters",
+        "media_label": "Chapters"
+    }
+    ,
+    "episodes": {
+        "title": "📺 Most Episodes Watched",
+        "description": "Users ranked by total episodes watched",
+        "sql": "SELECT username, total_episodes FROM user_stats",
+        "unit_label": "Episodes",
+        "media_label": "Episodes"
+    }
+    ,
+    "manga_completed": {
+        "title": "🏁 Most Manga Completed",
+        "description": "Users ranked by total manga entries completed",
+        "sql": "SELECT username, manga_completed FROM user_stats",
+        "unit_label": "Completed",
+        "media_label": "Manga"
+    },
+    "anime_completed": {
+        "title": "🏁 Most Anime Completed",
+        "description": "Users ranked by total anime entries completed",
+        "sql": "SELECT username, anime_completed FROM user_stats",
+        "unit_label": "Completed",
+        "media_label": "Anime"
+    }
 }
-
-
 class LeaderboardView(discord.ui.View):
     """Interactive paginated view for leaderboard display."""
     
@@ -308,17 +355,54 @@ class LeaderboardView(discord.ui.View):
                     )
             else:
                 # Standard format: (username, total_media, total_units, avg_units)
-                username, total_media, total_units, avg_units = data_tuple
-                
-                embed.add_field(
-                    name=f"{rank_emoji} {username}",
-                    value=(
-                        f"**Total {self.media_config['media_label']}:** {total_media:,}\n"
-                        f"**Total {self.media_config['unit_label']}:** {total_units:,}\n"
-                        f"**Average {self.media_config['unit_label']} per {self.media_config['media_label']}:** {avg_units:.2f}"
-                    ),
-                    inline=False
-                )
+                # Special-case chapters/episodes mediums to show only unit totals
+                if self.medium == "chapters":
+                    # total_chapters is stored as the third element in the tuple
+                    username = data_tuple[0]
+                    total_chapters = int(data_tuple[2]) if len(data_tuple) > 2 else 0
+
+                    embed.add_field(
+                        name=f"{rank_emoji} {username}",
+                        value=(
+                            f"**Total Chapters Read:** {total_chapters:,}"
+                        ),
+                        inline=False
+                    )
+                elif self.medium == "episodes":
+                    username = data_tuple[0]
+                    total_episodes = int(data_tuple[2]) if len(data_tuple) > 2 else 0
+
+                    embed.add_field(
+                        name=f"{rank_emoji} {username}",
+                        value=(
+                            f"**Total Episodes Watched:** {total_episodes:,}"
+                        ),
+                        inline=False
+                    )
+                elif self.medium in ("manga_completed", "anime_completed"):
+                    # For completed leaderboards, only show the total completed count
+                    username = data_tuple[0]
+                    total_completed = int(data_tuple[2]) if len(data_tuple) > 2 else 0
+
+                    embed.add_field(
+                        name=f"{rank_emoji} {username}",
+                        value=(
+                            f"**Total Completed:** {total_completed:,}"
+                        ),
+                        inline=False
+                    )
+                else:
+                    username, total_media, total_units, avg_units = data_tuple
+                    
+                    embed.add_field(
+                        name=f"{rank_emoji} {username}",
+                        value=(
+                            f"**Total {self.media_config['media_label']}:** {total_media:,}\n"
+                            f"**Total {self.media_config['unit_label']}:** {total_units:,}\n"
+                            f"**Average {self.media_config['unit_label']} per {self.media_config['media_label']}:** {avg_units:.2f}"
+                        ),
+                        inline=False
+                    )
 
         embed.set_footer(
             text="🔄 Leaderboard based on cached AniList stats (updates once per day)",
@@ -744,10 +828,11 @@ class Leaderboard(commands.Cog):
             # Correct structure: (id, discord_id, username, anilist_username, anilist_id)
             discord_id, username = user[1], user[3]  # discord_id is at index 1, anilist_username at index 3
             
-            # Check cache
+            # Check persistent cache (per-user last fetch timestamp)
             now = time.time()
-            if discord_id in last_fetch and now - last_fetch[discord_id] < CACHE_TTL:
-                logger.debug(f"Using cached data for user {username} (ID: {discord_id})")
+            cached_ts = get_cached_value(fetch_timestamps, str(discord_id), max_age_seconds=CACHE_TTL)
+            if cached_ts is not None:
+                logger.debug(f"Using cached data for user {username} (ID: {discord_id}) - last fetch within TTL")
                 return None
             
             logger.info(f"Fetching fresh data for user {username} (discord_id: {discord_id})")
@@ -784,7 +869,13 @@ class Leaderboard(commands.Cog):
                 total_episodes
             )
             
-            last_fetch[discord_id] = now
+            # Persist last fetch timestamp for this user
+            set_cached_value(fetch_timestamps, str(discord_id), now)
+            # Save the fetch_timestamps cache to disk
+            try:
+                save_timestamped_cache(_FETCH_CACHE_NAME, fetch_timestamps)
+            except Exception:
+                logger.debug("Failed to persist fetch timestamps cache (non-fatal)")
             logger.info(f"Successfully updated stats for {username}: {total_manga} manga, {total_anime} anime")
             
             return {
@@ -960,14 +1051,21 @@ class Leaderboard(commands.Cog):
                 
             else:
                 # Standard manga/anime leaderboard
-                for username, total_media, total_units in rows:
-                    # Guard against zero/None divisions
-                    total_media = total_media or 0
-                    total_units = total_units if total_units is not None else 0
-                    
-                    if total_media and total_units is not None:
-                        avg_units = total_units / total_media if total_media > 0 else 0
-                        leaderboard_data.append((username, total_media, total_units, avg_units))
+                # Some media queries (two-column: username, total_units)
+                if medium in ("chapters", "episodes", "manga_completed", "anime_completed"):
+                    for username, total_units in rows:
+                        total_units = int(total_units or 0)
+                        # For two-column queries we don't have a total_media count; use 0 for that field
+                        leaderboard_data.append((username, 0, total_units, float(total_units)))
+                else:
+                    for username, total_media, total_units in rows:
+                        # Guard against zero/None divisions
+                        total_media = total_media or 0
+                        total_units = total_units if total_units is not None else 0
+                        
+                        if total_media and total_units is not None:
+                            avg_units = total_units / total_media if total_media > 0 else 0
+                            leaderboard_data.append((username, total_media, total_units, avg_units))
 
                 # Sort by average units per media in descending order
                 leaderboard_data.sort(key=lambda x: x[3], reverse=True)
@@ -980,9 +1078,13 @@ class Leaderboard(commands.Cog):
             return []
 
     @app_commands.choices(medium=[
-        app_commands.Choice(name="📖 Manga", value="manga"),
-        app_commands.Choice(name="🎬 Anime", value="anime"),
-        app_commands.Choice(name="🌟 Combined", value="combined"),
+        app_commands.Choice(name="📖 Best Manga Average", value="manga"),
+        app_commands.Choice(name="🎬 Best Anime Average", value="anime"),
+        app_commands.Choice(name="🌟 Combined Animanga Average", value="combined"),
+    app_commands.Choice(name="📚 Most Chapters Read", value="chapters"),
+    app_commands.Choice(name="📺 Most Episodes Watched", value="episodes"),
+    app_commands.Choice(name="📚 Most Manga Completed", value="manga_completed"),
+    app_commands.Choice(name="📺 Most Anime Completed", value="anime_completed"),
     ])
     @app_commands.command(
         name="leaderboard",
@@ -1082,44 +1184,102 @@ class Leaderboard(commands.Cog):
             if medium == "combined":
                 # Combined leaderboard: calculate origin-weighted activity score
                 for entry in leaderboard_entries:
-                    username = entry['username']
-                    total_manga = entry['total_manga']
-                    total_chapters = entry['total_chapters'] 
-                    total_anime = entry['total_anime']
-                    total_episodes = entry['total_episodes']
-                    
-                    # Calculate origin-weighted activity score
-                    activity_score, breakdown = self._calculate_origin_weighted_score(
-                        total_manga, total_anime, total_chapters, total_episodes
-                    )
-                    
-                    if activity_score > 0:  # Only include users with activity
-                        # Store breakdown data for enhanced display
-                        leaderboard_data.append((
-                            username, total_manga, total_chapters, 
-                            total_anime, total_episodes, activity_score, breakdown
-                        ))
+                    # Entry may be a dict (from DB helper) or a tuple/list
+                    try:
+                        if isinstance(entry, dict):
+                            username = entry.get('username') or entry.get('anilist_username')
+                            total_manga = int(entry.get('total_manga', 0) or 0)
+                            total_chapters = int(entry.get('total_chapters', 0) or 0)
+                            total_anime = int(entry.get('total_anime', 0) or 0)
+                            total_episodes = int(entry.get('total_episodes', 0) or 0)
+                        else:
+                            username = entry[0]
+                            total_manga = int(entry[1] if len(entry) > 1 else 0)
+                            total_chapters = int(entry[2] if len(entry) > 2 else 0)
+                            total_anime = int(entry[3] if len(entry) > 3 else 0)
+                            total_episodes = int(entry[4] if len(entry) > 4 else 0)
+                    except Exception:
+                        logger.debug(f"Malformed combined entry for guild {guild_id}: {entry}")
+                        continue
+
+                    score, breakdown = self._calculate_origin_weighted_score(total_manga, total_anime, total_chapters, total_episodes)
+                    leaderboard_data.append((username, total_manga, total_chapters, total_anime, total_episodes, score, breakdown))
                 
                 # Sort by activity score in descending order
                 leaderboard_data.sort(key=lambda x: x[5], reverse=True)
                 
             else:
-                # Regular medium leaderboard (manga or anime)
-                for entry in leaderboard_entries:
-                    username = entry['username']
-                    
-                    if medium == "manga":
-                        primary_count = entry['total_manga'] 
-                        secondary_count = entry['total_chapters']
-                    else:  # anime
-                        primary_count = entry['total_anime']
-                        secondary_count = entry['total_episodes']
-                    
-                    if primary_count > 0:  # Only include users with activity
-                        leaderboard_data.append((username, primary_count, secondary_count))
-                
-                # Sort by primary count, then secondary count
-                leaderboard_data.sort(key=lambda x: (x[1], x[2]), reverse=True)
+                # Regular medium leaderboard (manga, anime, chapters, or episodes)
+                if medium in ("chapters", "episodes", "manga_completed", "anime_completed"):
+                    # For these mediums we want to rank by total units (chapters or episodes) only
+                    for entry in leaderboard_entries:
+                        try:
+                            if isinstance(entry, dict):
+                                username = entry.get('username') or entry.get('anilist_username')
+                                if medium == 'chapters':
+                                    total_units = int(entry.get('total_chapters', 0) or 0)
+                                elif medium == 'episodes':
+                                    total_units = int(entry.get('total_episodes', 0) or 0)
+                                elif medium == 'manga_completed':
+                                    total_units = int(entry.get('manga_completed', 0) or 0)
+                                else:  # anime_completed
+                                    total_units = int(entry.get('anime_completed', 0) or 0)
+                            else:
+                                # tuple layout from DB helper: (anilist_username, total_manga, total_anime, total_chapters, total_episodes, ...)
+                                username = entry[0]
+                                if medium == 'chapters':
+                                    total_units = int(entry[3] if len(entry) > 3 else 0)
+                                elif medium == 'episodes':
+                                    total_units = int(entry[4] if len(entry) > 4 else 0)
+                                elif medium == 'manga_completed':
+                                    # completed counts are not part of the original SELECT; try named keys first (dict path), otherwise 0
+                                    total_units = 0
+                                else:
+                                    total_units = 0
+                        except Exception:
+                            logger.debug(f"Malformed {medium} entry for guild {guild_id}: {entry}")
+                            continue
+
+                        # Shape to the standard (username, total_media, total_units, avg_units) where total_media is unused (0)
+                        leaderboard_data.append((username, 0, total_units, float(total_units)))
+                else:
+                    # Entries expected: (username, total_media, total_units)
+                    for entry in leaderboard_entries:
+                        try:
+                            if isinstance(entry, dict):
+                                username = entry.get('username') or entry.get('anilist_username')
+                                # For manga medium 'total_manga' is primary and 'total_chapters' is units
+                                if medium == 'manga':
+                                    total_media = int(entry.get('total_manga', 0) or 0)
+                                    total_units = int(entry.get('total_chapters', 0) or 0)
+                                else:  # anime
+                                    total_media = int(entry.get('total_anime', 0) or 0)
+                                    total_units = int(entry.get('total_episodes', 0) or 0)
+                            else:
+                                username = entry[0]
+                                total_media = int(entry[1] if len(entry) > 1 else 0)
+                                total_units = int(entry[2] if len(entry) > 2 else 0)
+                        except Exception:
+                            logger.debug(f"Malformed entry for guild {guild_id}: {entry}")
+                            continue
+
+                        avg_units = (total_units / total_media) if total_media > 0 else float(total_units)
+                        leaderboard_data.append((username, total_media, total_units, avg_units))
+
+                # Debug: log ordering before sort
+                try:
+                    logger.debug(f"Leaderboard data pre-sort sample for {medium} (first 10): %s", [(d[0], d[2]) for d in leaderboard_data[:10]])
+                except Exception:
+                    logger.debug("Could not serialize pre-sort leaderboard sample")
+
+                # Sort by average units per media (or total units for chapters/episodes) in descending order
+                leaderboard_data.sort(key=lambda x: x[3], reverse=True)
+
+                # Debug: log ordering after sort
+                try:
+                    logger.debug(f"Leaderboard data post-sort sample for {medium} (first 10): %s", [(d[0], d[2]) for d in leaderboard_data[:10]])
+                except Exception:
+                    logger.debug("Could not serialize post-sort leaderboard sample")
             
             logger.info(f"✅ Generated {len(leaderboard_data)} entries for {medium} leaderboard in guild {guild_id}")
             return leaderboard_data
@@ -1187,26 +1347,63 @@ class Leaderboard(commands.Cog):
             if not user_data:
                 logger.warning(f"No AniList data found for {username}")
                 return False
-            
-            stats_anime = user_data["statistics"]["anime"]
-            stats_manga = user_data["statistics"]["manga"]
-            
-            total_manga = stats_manga.get("count", 0)
-            total_anime = stats_anime.get("count", 0)
+
+            # Some helpers return the raw GraphQL wrapper: { 'data': { 'User': {...} } }
+            if isinstance(user_data, dict) and "data" in user_data and "User" in user_data["data"]:
+                user_data = user_data["data"]["User"]
+
+            # Defensive: ensure 'statistics' exists before indexing into it
+            if "statistics" not in user_data:
+                # Log a trimmed diagnostic so we can see why AniList returned unexpected data
+                try:
+                    top_keys = list(user_data.keys()) if isinstance(user_data, dict) else []
+                except Exception:
+                    top_keys = []
+                logger.warning(
+                    f"AniList payload for user {username} missing 'statistics' key. Top-level keys: {top_keys}"
+                )
+                return False
+
+            stats_anime = user_data["statistics"].get("anime", {})
+            stats_manga = user_data["statistics"].get("manga", {})
+
+            total_manga = int(stats_manga.get("count", 0) or 0)
+            total_anime = int(stats_anime.get("count", 0) or 0)
+            # Extract chapter/episode totals when available
+            total_chapters = int(stats_manga.get("chaptersRead", 0) or 0)
+            # AniList sometimes uses 'episodesWatched' or other field names
+            total_episodes = int(stats_anime.get("episodesWatched", 0) or stats_anime.get("episodes", 0) or 0)
+            # Extract completed counts from status distributions when present
+            manga_statuses = {s.get('status', '').upper(): int(s.get('count', 0) or 0) for s in stats_manga.get('statuses', [])}
+            anime_statuses = {s.get('status', '').upper(): int(s.get('count', 0) or 0) for s in stats_anime.get('statuses', [])}
+
+            manga_completed = manga_statuses.get('COMPLETED', 0)
+            anime_completed = anime_statuses.get('COMPLETED', 0)
             
             # Calculate weighted averages from score distribution
-            manga_avg = self._calc_weighted_avg(stats_manga.get("scores", []))
-            anime_avg = self._calc_weighted_avg(stats_anime.get("scores", []))
+            manga_avg = self._calc_weighted_avg(stats_manga.get("scores", [])) if isinstance(stats_manga.get("scores", []), list) else 0.0
+            anime_avg = self._calc_weighted_avg(stats_anime.get("scores", [])) if isinstance(stats_anime.get("scores", []), list) else 0.0
             
+            # Log the totals we will upsert (helps diagnose zero-value cases)
+            logger.debug(
+                "Upserting stats guild_aware: username=%s guild=%s discord_id=%s total_manga=%s total_chapters=%s total_anime=%s total_episodes=%s",
+                user_data.get("name") or username, guild_id, discord_id, total_manga, total_chapters, total_anime, total_episodes
+            )
+
             # Update database with guild context
             await upsert_user_stats_guild_aware(
                 discord_id=discord_id,
                 guild_id=guild_id,
-                username=user_data["name"],
+                username=user_data.get("name") or username,
                 total_manga=total_manga,
                 total_anime=total_anime,
                 avg_manga_score=manga_avg,
-                avg_anime_score=anime_avg
+                avg_anime_score=anime_avg,
+                total_chapters=total_chapters,
+                total_episodes=total_episodes,
+                # Pass completed counts to DB upsert (DB will ignore if column missing)
+                manga_completed=manga_completed,
+                anime_completed=anime_completed
             )
             
             logger.info(f"Successfully updated stats for {username} (Guild: {guild_id}): {total_manga} manga, {total_anime} anime")

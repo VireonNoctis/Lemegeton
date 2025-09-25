@@ -1,54 +1,47 @@
-[2025-09-24 00:17:04] [INFO    ] [UserCleanup] User cleanup system initialized
-[2025-09-24 00:17:04] [INFO    ] [UserCleanup] UserCleanup cog initialized
-[2025-09-24 00:17:04] [INFO    ] [UserCleanup] UserCleanup cog loaded - starting cleanup task
-[2025-09-24 00:17:04] [INFO    ] [UserCleanup] UserCleanup cog successfully loaded
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] Bot is ready - user cleanup task will start
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] ⏰ Automated user cleanup started (runs every 24 hours)
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] 🚀 Starting full user cleanup across all guilds
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Apocrypha's Records (ID: 897814031346319382)
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] Guild Apocrypha's Records has 215 members
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] Retrieved 18 registered users from database
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] Found 18 registered users for guild Apocrypha's Records
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] Processing batch 1 (18 users)
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User Kyerstorm (Discord: 331164413623009281) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User Judasz (Discord: 1019960555341107271) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User tes (Discord: 461675352952012801) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User nottdenito (Discord: 397394309977997314) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User raidflexer (Discord: 503946204296773642) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User xuehua (Discord: 369957492962099201) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User AZackInTime (Discord: 359452133831081984) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User 1Frieren (Discord: 905468832406179850) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User NobodyImportant (Discord: 360165403777040385) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User MyeTezz (Discord: 1034606763330248744) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User EmiyaKun (Discord: 902052855123443743) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User ThatJayGuy (Discord: 528583472663494656) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User Ruebin (Discord: 772776679608156180) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User secretduck (Discord: 345030367289278464) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User JellyJelmo (Discord: 586185435399716864) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User lineausnovuelle (Discord: 591244355096936459) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User is.old.ice.bear.dead.was.he.noob (Discord: 1262304313481625704) still in guild
-[2025-09-24 00:17:07] [DEBUG   ] [UserCleanup] ✅ User slopking._ (Discord: 1419744000977403994) still in guild
-[2025-09-24 00:17:07] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Apocrypha's Records: checked=18, removed=0, errors=0
-[2025-09-24 00:17:09] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Heil Sadaharu (ID: 1013906890608087080)
-[2025-09-24 00:17:09] [DEBUG   ] [UserCleanup] Guild Heil Sadaharu has 10 members
-[2025-09-24 00:17:09] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
-[2025-09-24 00:17:09] [INFO    ] [UserCleanup] Retrieved 18 registered users from database
-[2025-09-24 00:17:09] [INFO    ] [UserCleanup] Found 0 registered users for guild Heil Sadaharu
-[2025-09-24 00:17:09] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Heil Sadaharu: checked=0, removed=0, errors=0
-[2025-09-24 00:17:11] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Rea's Humble Abode (ID: 1288900941096943616)
-[2025-09-24 00:17:11] [DEBUG   ] [UserCleanup] Guild Rea's Humble Abode has 18 members
-[2025-09-24 00:17:11] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
-[2025-09-24 00:17:11] [INFO    ] [UserCleanup] Retrieved 18 registered users from database
-[2025-09-24 00:17:11] [INFO    ] [UserCleanup] Found 0 registered users for guild Rea's Humble Abode
-[2025-09-24 00:17:11] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Rea's Humble Abode: checked=0, removed=0, errors=0
-[2025-09-24 00:17:13] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Otaku Nexus (ID: 1417205672847736955)
-[2025-09-24 00:17:13] [DEBUG   ] [UserCleanup] Guild Otaku Nexus has 62 members
-[2025-09-24 00:17:13] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
-[2025-09-24 00:17:13] [INFO    ] [UserCleanup] Retrieved 18 registered users from database
-[2025-09-24 00:17:13] [INFO    ] [UserCleanup] Found 0 registered users for guild Otaku Nexus
-[2025-09-24 00:17:13] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Otaku Nexus: checked=0, removed=0, errors=0
-[2025-09-24 00:17:15] [INFO    ] [UserCleanup] 🎉 Full cleanup completed in 8.10 seconds
-[2025-09-24 00:17:15] [INFO    ] [UserCleanup] 📊 Final stats: {'guilds_processed': 4, 'total_checked': 18, 'total_removed': 0, 'total_errors': 0}
-[2025-09-24 00:17:15] [INFO    ] [UserCleanup] ✨ No inactive users found - database is clean!
-[2025-09-24 00:17:51] [INFO    ] [UserCleanup] UserCleanup cog unloading - stopping cleanup task
+[2025-09-25 01:12:35] [INFO    ] [UserCleanup] User cleanup system initialized
+[2025-09-25 01:12:35] [INFO    ] [UserCleanup] UserCleanup cog initialized
+[2025-09-25 01:12:35] [INFO    ] [UserCleanup] UserCleanup cog loaded - starting cleanup task
+[2025-09-25 01:12:35] [INFO    ] [UserCleanup] UserCleanup cog successfully loaded
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] Bot is ready - user cleanup task will start
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] ⏰ Automated user cleanup started (runs every 24 hours)
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] 🚀 Starting full user cleanup across all guilds
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Apocrypha's Records (ID: 897814031346319382)
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] Guild Apocrypha's Records has 214 members
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] Retrieved 19 registered users from database
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] Found 18 registered users for guild Apocrypha's Records
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] Processing batch 1 (18 users)
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User Kyerstorm (Discord: 331164413623009281) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User Judasz (Discord: 1019960555341107271) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User tes (Discord: 461675352952012801) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User nottdenito (Discord: 397394309977997314) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User raidflexer (Discord: 503946204296773642) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User xuehua (Discord: 369957492962099201) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User AZackInTime (Discord: 359452133831081984) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User 1Frieren (Discord: 905468832406179850) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User NobodyImportant (Discord: 360165403777040385) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User MyeTezz (Discord: 1034606763330248744) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User EmiyaKun (Discord: 902052855123443743) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User ThatJayGuy (Discord: 528583472663494656) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User Ruebin (Discord: 772776679608156180) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User secretduck (Discord: 345030367289278464) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User JellyJelmo (Discord: 586185435399716864) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User lineausnovuelle (Discord: 591244355096936459) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User is.old.ice.bear.dead.was.he.noob (Discord: 1262304313481625704) still in guild
+[2025-09-25 01:12:38] [DEBUG   ] [UserCleanup] ✅ User slopking._ (Discord: 1419744000977403994) still in guild
+[2025-09-25 01:12:38] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Apocrypha's Records: checked=18, removed=0, errors=0
+[2025-09-25 01:12:40] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Heil Sadaharu (ID: 1013906890608087080)
+[2025-09-25 01:12:40] [DEBUG   ] [UserCleanup] Guild Heil Sadaharu has 10 members
+[2025-09-25 01:12:40] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
+[2025-09-25 01:12:40] [INFO    ] [UserCleanup] Retrieved 19 registered users from database
+[2025-09-25 01:12:40] [INFO    ] [UserCleanup] Found 0 registered users for guild Heil Sadaharu
+[2025-09-25 01:12:40] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Heil Sadaharu: checked=0, removed=0, errors=0
+[2025-09-25 01:12:42] [INFO    ] [UserCleanup] 🧹 Starting user cleanup for guild: Rea's Humble Abode (ID: 1288900941096943616)
+[2025-09-25 01:12:42] [DEBUG   ] [UserCleanup] Guild Rea's Humble Abode has 18 members
+[2025-09-25 01:12:42] [DEBUG   ] [UserCleanup] Using guild-aware query for user cleanup
+[2025-09-25 01:12:42] [INFO    ] [UserCleanup] Retrieved 19 registered users from database
+[2025-09-25 01:12:42] [INFO    ] [UserCleanup] Found 0 registered users for guild Rea's Humble Abode
+[2025-09-25 01:12:42] [INFO    ] [UserCleanup] 🏁 Cleanup completed for guild Rea's Humble Abode: checked=0, removed=0, errors=0
+[2025-09-25 01:12:44] [INFO    ] [UserCleanup] 🎉 Full cleanup completed in 6.05 seconds
+[2025-09-25 01:12:44] [INFO    ] [UserCleanup] 📊 Final stats: {'guilds_processed': 3, 'total_checked': 18, 'total_removed': 0, 'total_errors': 0}
+[2025-09-25 01:12:44] [INFO    ] [UserCleanup] ✨ No inactive users found - database is clean!

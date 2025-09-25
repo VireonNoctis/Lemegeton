@@ -1,17 +1,17 @@
 ================================================================================
-BOT SERVER INFORMATION - 2025-09-24 00:17:07
+BOT SERVER INFORMATION - 2025-09-25 01:12:38
 ================================================================================
 Bot User: Lemegeton#5196 (ID: 844560439525638144)
-Total Servers: 4
-Bot Latency: 108.34ms
+Total Servers: 3
+Bot Latency: 104.13ms
 --------------------------------------------------------------------------------
 
 [1] SERVER: Apocrypha's Records
      Guild ID: 897814031346319382
      Owner: kyerstorm (ID: 331164413623009281)
-     Members: 215
+     Members: 214
      Created: 2021-10-13
-     Channels: 54 text, 12 voice
+     Channels: 57 text, 12 voice
      Roles: 136
      Features: TIERLESS_BOOSTING_SYSTEM_MESSAGE, PIN_PERMISSION_MIGRATION_COMPLETE, VIDEO_QUALITY_1080_60FPS, ENABLED_MODERATION_EXPERIENCE_FOR_NON_COMMUNITY, TEXT_IN_VOICE_ENABLED, CHANNEL_ICON_EMOJIS_GENERATED, AUDIO_BITRATE_128_KBPS, ANIMATED_ICON, INVITE_SPLASH, GUILD_ONBOARDING_EVER_ENABLED, ROLE_ICONS, GUILD_ONBOARDING, STAGE_CHANNEL_VIEWERS_50, WELCOME_SCREEN_ENABLED, ACTIVITY_FEED_DISABLED_BY_USER, VIDEO_BITRATE_ENHANCED, AUDIO_BITRATE_256_KBPS, MEMBER_VERIFICATION_GATE_ENABLED, GUILD_SERVER_GUIDE, STAGE_CHANNEL_VIEWERS_150, MAX_FILE_SIZE_50_MB, COMMUNITY, TIERLESS_BOOSTING, GUILD_ONBOARDING_HAS_PROMPTS, PREVIEW_ENABLED, SOUNDBOARD, NEWS, BANNER, VIDEO_QUALITY_720_60FPS
      Bot Perms: Admin=True, Manage Server=True, Send Messages=True
@@ -36,19 +36,9 @@ Bot Latency: 108.34ms
      Features: COMMUNITY, GUILD_ONBOARDING_EVER_ENABLED, NEWS
      Bot Perms: Admin=True, Manage Server=True, Send Messages=True
 
-[4] SERVER: Otaku Nexus
-     Guild ID: 1417205672847736955
-     Owner: christheotaku (ID: 1089679920923422761)
-     Members: 62
-     Created: 2025-09-15
-     Channels: 25 text, 2 voice
-     Roles: 77
-     Features: GUILD_ONBOARDING_HAS_PROMPTS, INVITE_SPLASH, GUILD_SERVER_GUIDE, TIERLESS_BOOSTING, NEWS, ANIMATED_ICON, GUILD_ONBOARDING, COMMUNITY, VIDEO_QUALITY_720_60FPS, VIDEO_BITRATE_ENHANCED, GUILD_ONBOARDING_EVER_ENABLED, STAGE_CHANNEL_VIEWERS_50, AUDIO_BITRATE_128_KBPS
-     Bot Perms: Admin=True, Manage Server=True, Send Messages=True
-
 --------------------------------------------------------------------------------
 SUMMARY:
-Total Servers: 4
-Total Members Across All Servers: 305
-Average Members per Server: 76.2
+Total Servers: 3
+Total Members Across All Servers: 242
+Average Members per Server: 80.7
 ================================================================================
