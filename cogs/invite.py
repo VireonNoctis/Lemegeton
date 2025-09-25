@@ -16,19 +16,23 @@ LOG_FILE = LOG_DIR / "invite.log"
 logger = logging.getLogger("invite")
 logger.setLevel(logging.INFO)
 
-# Only add handler if not already present
-if not logger.handlers:
-    # File handler with safe file access
-    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
-    
-    # Formatter
-    formatter = logging.Formatter(
-        '[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+# Only add a file handler if not already present; fall back to stream handler on failure
+if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(logging.Formatter('[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+        logger.addHandler(stream_handler)
 
 logger.info("Invite cog logging initialized")
 
@@ -52,7 +56,6 @@ class InviteCog(commands.Cog):
             
             # Define the permissions the bot needs
             permissions = discord.Permissions(
-                read_messages=True,
                 send_messages=True,
                 manage_messages=True,
                 embed_links=True,
@@ -124,7 +127,7 @@ class InviteCog(commands.Cog):
             await interaction.response.send_message(
                 embed=embed,
                 view=view,
-                ephemeral=False  # Make it public so others can see and use it
+                ephemeral=True  # Make invite response private to the requester
             )
             
             logger.info(f"Invite link generated successfully for {interaction.user.display_name}")

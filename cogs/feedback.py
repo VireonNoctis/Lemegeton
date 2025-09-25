@@ -19,18 +19,22 @@ logger.setLevel(logging.INFO)
 
 # Only add handler if not already present
 if not logger.handlers:
-    # File handler with safe file access
-    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
-    
-    # Formatter
-    formatter = logging.Formatter(
-        '[%(asctime)s] [%(levelname)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
-    logger.info("Feedback cog logging initialized")
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '[%(asctime)s] [%(levelname)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.info("Feedback cog logging initialized")
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(logging.Formatter('[%(asctime)s] [%(levelname)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+        logger.addHandler(stream_handler)
+        logger.info("Feedback cog logging initialized with stream fallback")
 else:
     logger.info("Feedback cog logging reinitialized - using existing handler")
 

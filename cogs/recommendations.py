@@ -23,11 +23,20 @@ os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "recommendations.log")
 
 # Avoid adding duplicate handlers on reloads
+# Avoid duplicate file handlers on reload; try file handler, fallback to stream
 if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == os.path.abspath(LOG_FILE)
            for h in logger.handlers):
-    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
-    logger.addHandler(file_handler)
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        logger.addHandler(stream_handler)
+    logger.info("File handler added for logging.")
+else:
+    logger.info("File handler already exists, skipping addition.")
 # Also keep console output
 if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
     stream_handler = logging.StreamHandler()
@@ -1239,182 +1248,8 @@ class Recommendations(commands.Cog):
             await recommendation_message.edit(embed=final_embed, view=view)
         except Exception as e:
             logger.error(f"Error loading initial recommendation details: {e}")
-
-    @app_commands.command(name="check_anilist", description="Check if an AniList username exists and is accessible")
-    @app_commands.describe(username="AniList username to check")
-    async def check_anilist(self, interaction: discord.Interaction, username: str):
-        """Check if an AniList username exists and get basic profile info."""
-        await interaction.response.defer()
-        
-        logger.info(f"Checking AniList username: '{username}' for {interaction.user}")
-        
-        # First check if user exists
-        exists = await self._check_anilist_user_exists(username)
-        
-        if not exists:
-            embed = discord.Embed(
-                title="❌ AniList User Not Found",
-                description=f"The AniList user **{username}** could not be found.",
-                color=discord.Color.red()
-            )
-            embed.add_field(
-                name="🔍 Possible Issues",
-                value="• Username doesn't exist\n• Username spelling is incorrect\n• Profile is private or deactivated",
-                inline=False
-            )
-            embed.add_field(
-                name="💡 Suggestions",
-                value=f"• Check spelling and capitalization\n• Visit [anilist.co/user/{username}](https://anilist.co/user/{username}) to verify\n• Make sure the profile is public",
-                inline=False
-            )
-            await interaction.followup.send(embed=embed)
-            return
-        
-        # If user exists, try to get basic manga list info
-        query = """
-        query ($username: String) {
-          User(name: $username) {
-            id
-            name
-            avatar { large }
-            statistics {
-              manga {
-                count
-                meanScore
-                standardDeviation
-              }
-            }
-          }
-          MediaListCollection(userName: $username, type: MANGA) {
-            lists {
-              entries {
-                score
-                status
-              }
-            }
-          }
-        }
-        """
-        variables = {"username": username}
-        
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(ANILIST_API_URL, json={"query": query, "variables": variables}) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        
-                        user_data = data.get("data", {}).get("User", {})
-                        collection_data = data.get("data", {}).get("MediaListCollection", {})
-                        
-                        embed = discord.Embed(
-                            title="✅ AniList User Found",
-                            description=f"**{user_data.get('name', username)}** exists and is accessible!",
-                            color=discord.Color.green()
-                        )
-                        
-                        # Add avatar if available
-                        avatar_url = user_data.get("avatar", {}).get("large")
-                        if avatar_url:
-                            embed.set_thumbnail(url=avatar_url)
-                        
-                        # Add profile link
-                        embed.add_field(
-                            name="🔗 Profile",
-                            value=f"[View on AniList](https://anilist.co/user/{username})",
-                            inline=True
-                        )
-                        
-                        # Add manga statistics
-                        stats = user_data.get("statistics", {}).get("manga", {})
-                        if stats:
-                            embed.add_field(
-                                name="📊 Manga Stats",
-                                value=f"**Total Manga:** {stats.get('count', 0)}\n**Mean Score:** {stats.get('meanScore', 0):.1f}%",
-                                inline=True
-                            )
-                        
-                        # Count entries by status
-                        status_counts = {}
-                        total_entries = 0
-                        rated_entries = 0
-                        
-                        lists = collection_data.get("lists", []) or []
-                        for manga_list in lists:
-                            entries = manga_list.get("entries", []) or []
-                            for entry in entries:
-                                total_entries += 1
-                                status = entry.get("status", "Unknown")
-                                status_counts[status] = status_counts.get(status, 0) + 1
-                                
-                                score = entry.get("score")
-                                if score and score > 0:
-                                    rated_entries += 1
-                        
-                        if total_entries > 0:
-                            embed.add_field(
-                                name="📚 List Info",
-                                value=f"**Total Entries:** {total_entries}\n**Rated Entries:** {rated_entries}\n**Lists Accessible:** ✅",
-                                inline=True
-                            )
-                            
-                            # Show status breakdown
-                            if status_counts:
-                                status_text = "\n".join([f"**{status}:** {count}" for status, count in status_counts.items()])
-                                embed.add_field(
-                                    name="📝 Status Breakdown",
-                                    value=status_text,
-                                    inline=False
-                                )
-                        else:
-                            embed.add_field(
-                                name="📚 List Info",
-                                value="**No manga entries found**\nList may be empty or private",
-                                inline=True
-                            )
-                        
-                        # Add recommendation readiness
-                        if rated_entries >= 5:
-                            embed.add_field(
-                                name="🎯 Recommendation Ready",
-                                value=f"✅ Ready for recommendations!\n{rated_entries} rated entries found",
-                                inline=False
-                            )
-                        else:
-                            embed.add_field(
-                                name="🎯 Recommendation Status",
-                                value=f"⚠️ More ratings needed for best results\nCurrently: {rated_entries} rated entries\nRecommended: 5+ rated entries",
-                                inline=False
-                            )
-                        
-                        embed.set_footer(text="Use /recommendations to get personalized manga suggestions!")
-                        
-                    else:
-                        embed = discord.Embed(
-                            title="⚠️ Profile Access Issue",
-                            description=f"User **{username}** exists but detailed info couldn't be retrieved.",
-                            color=discord.Color.orange()
-                        )
-                        embed.add_field(
-                            name="🔍 Possible Cause",
-                            value="Profile may be set to private or have restricted access",
-                            inline=False
-                        )
-                        
-                    await interaction.followup.send(embed=embed)
-                    
-        except Exception as e:
-            logger.error(f"Error checking AniList user '{username}': {e}")
-            embed = discord.Embed(
-                title="❌ Error Checking User",
-                description=f"An error occurred while checking **{username}**.",
-                color=discord.Color.red()
-            )
-            embed.add_field(
-                name="🔧 Try Again",
-                value="Please try again later or contact support if the issue persists.",
-                inline=False
-            )
-            await interaction.followup.send(embed=embed)
+        # /check_anilist command removed — the Login UI now provides an equivalent check via the
+        # Check AniList button which calls `_check_anilist_user_exists`.
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Recommendations(bot))

@@ -3,19 +3,32 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _int_env(key, default=None):
+    val = os.getenv(key)
+    if val is None or val == "":
+        return default
+    try:
+        return int(val)
+    except ValueError:
+        # Keep original string if it can't be parsed, caller can validate
+        return default
+
+
 TOKEN = os.getenv("DISCORD_TOKEN")
-GUILD_ID = int(os.getenv("GUILD_ID"))
-BOT_ID = int(os.getenv("BOT_ID"))
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+# Numeric IDs are parsed defensively to avoid exceptions at import time
+GUILD_ID = _int_env("GUILD_ID")
+BOT_ID = _int_env("BOT_ID")
+CHANNEL_ID = _int_env("CHANNEL_ID")
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
-ADMIN_DISCORD_ID = int(os.getenv("ADMIN_DISCORD_ID"))
+ADMIN_DISCORD_ID = _int_env("ADMIN_DISCORD_ID")
 
 # Moderator role id used by cogs that restrict commands to moderators.
 # Set MOD_ROLE_ID in your .env as the numeric role id. If unset, will be None.
-MOD_ROLE_ID = int(os.getenv("MOD_ROLE_ID")) if os.getenv("MOD_ROLE_ID") else None
+MOD_ROLE_ID = _int_env("MOD_ROLE_ID")
 
 # Primary Guild ID for backwards compatibility and default operations
-PRIMARY_GUILD_ID = int(os.getenv("GUILD_ID"))
+PRIMARY_GUILD_ID = GUILD_ID
 
 # Database path - Railway compatible
 DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "data", "database.db"))
@@ -64,3 +77,8 @@ CHALLENGE_ROLE_IDS = {
         1.0: 1414286327507321074,
     },
 }
+
+# Optional All Star role IDs (useful for mutual-exclusion logic). Set these in your .env as numeric role IDs.
+ALL_STAR_STAGE1_ROLE_ID = int(os.getenv("ALL_STAR_STAGE1_ROLE_ID")) if os.getenv("ALL_STAR_STAGE1_ROLE_ID") else None
+ALL_STAR_STAGE2_ROLE_ID = int(os.getenv("ALL_STAR_STAGE2_ROLE_ID")) if os.getenv("ALL_STAR_STAGE2_ROLE_ID") else None
+ALL_STAR_COMPLETED_ROLE_ID = int(os.getenv("ALL_STAR_COMPLETED_ROLE_ID")) if os.getenv("ALL_STAR_COMPLETED_ROLE_ID") else None

@@ -16,17 +16,20 @@ log_file_path.parent.mkdir(exist_ok=True)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# Create file handler with rotation
-file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
-file_handler.setLevel(logging.INFO)
-
-# Create formatter
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-file_handler.setFormatter(formatter)
-
-# Add handler to logger if not already added
-if not logger.handlers:
-    logger.addHandler(file_handler)
+try:
+    file_handler = logging.FileHandler(log_file_path, encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+except Exception:
+    # Fall back to console logging if the file cannot be created (Windows lock, etc.)
+    if not logger.handlers:
+        stream = logging.StreamHandler()
+        stream.setLevel(logging.INFO)
+        stream.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logger.addHandler(stream)
 
 class TimestampConverter(commands.Cog):
     """Watches chat for time mentions and converts them to dynamic Discord timestamps."""

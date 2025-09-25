@@ -33,22 +33,25 @@ LOG_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("Login")
 logger.setLevel(logging.DEBUG)
 
-# Clear handlers to avoid duplicates
-logger.handlers.clear()
-
-# Create file handler that clears on startup
-file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
-file_handler.setLevel(logging.DEBUG)
-
-# Create formatter
-formatter = logging.Formatter(
-    fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-file_handler.setFormatter(formatter)
-
-# Add handler to logger
-logger.addHandler(file_handler)
+# Ensure we don't duplicate handlers on reload; try to use a file handler but
+# fall back to a console StreamHandler if the file is locked (Windows).
+if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                      datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(stream_handler)
 
 logger.info("Login cog logging system initialized")
 
@@ -72,6 +75,33 @@ class LoginView(discord.ui.View):
         logger.info(f"AniList button clicked by {interaction.user.display_name} (ID: {self.user_id})")
         
         modal = RegistrationModal(self.is_registered, registration_type="anilist")
+        await interaction.response.send_modal(modal)
+
+    @discord.ui.button(label="🔎 Check AniList", style=discord.ButtonStyle.secondary, emoji="🔎")
+    async def check_anilist_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Quick check to see if an AniList username exists. Uses Recommendations cog helper when available."""
+        logger.info(f"Check AniList button clicked by {interaction.user.display_name} (ID: {self.user_id})")
+
+        # If we already have a stored AniList username for this user in this view, check that first
+        if self.anilist_username:
+            username = self.anilist_username
+            recs_cog = interaction.client.get_cog("Recommendations")
+            if recs_cog and hasattr(recs_cog, "_check_anilist_user_exists"):
+                try:
+                    exists = await recs_cog._check_anilist_user_exists(username)
+                    if exists:
+                        await interaction.response.send_message(f"✅ AniList user **{username}** exists.", ephemeral=True)
+                    else:
+                        await interaction.response.send_message(f"❌ AniList user **{username}** not found.", ephemeral=True)
+                except Exception as e:
+                    logger.error(f"Error checking AniList user via Recommendations cog: {e}", exc_info=True)
+                    await interaction.response.send_message("❌ Could not check AniList at this time.", ephemeral=True)
+            else:
+                await interaction.response.send_message("❌ The Recommendations system is unavailable. Try again later.", ephemeral=True)
+            return
+
+        # Otherwise, prompt for a username via a small modal
+        modal = CheckAniListModal()
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="🎮 Steam", style=discord.ButtonStyle.secondary, emoji="🎮")
@@ -198,6 +228,39 @@ class RegistrationModal(discord.ui.Modal):
         self.add_item(self.username_input)
         
         logger.debug(f"Created RegistrationModal (type: {registration_type}, update: {is_update})")
+
+
+class CheckAniListModal(discord.ui.Modal):
+    """Modal to ask for an AniList username and verify its existence via the Recommendations cog."""
+
+    def __init__(self):
+        super().__init__(title="Check AniList Username")
+
+        self.username_input = discord.ui.TextInput(
+            label="AniList Username",
+            placeholder="Enter the exact AniList username (case-sensitive)",
+            required=True,
+            max_length=MAX_USERNAME_LENGTH
+        )
+        self.add_item(self.username_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        username = self.username_input.value.strip()
+
+        recs_cog = interaction.client.get_cog("Recommendations")
+        if not recs_cog or not hasattr(recs_cog, "_check_anilist_user_exists"):
+            await interaction.response.send_message("❌ The Recommendations system is unavailable. Try again later.", ephemeral=True)
+            return
+
+        try:
+            exists = await recs_cog._check_anilist_user_exists(username)
+            if exists:
+                await interaction.response.send_message(f"✅ AniList user **{username}** exists.", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"❌ AniList user **{username}** not found.", ephemeral=True)
+        except Exception as e:
+            logger.error(f"Error checking AniList user via Recommendations cog: {e}", exc_info=True)
+            await interaction.response.send_message("❌ Could not check AniList at this time.", ephemeral=True)
 
     async def on_submit(self, interaction: discord.Interaction):
         """Handle modal submission and process registration."""

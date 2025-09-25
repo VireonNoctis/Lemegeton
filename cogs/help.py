@@ -16,19 +16,23 @@ LOG_FILE = LOG_DIR / "help.log"
 logger = logging.getLogger("help")
 logger.setLevel(logging.INFO)
 
-# Only add handler if not already present
-if not logger.handlers:
-    # File handler with safe file access
-    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-    file_handler.setLevel(logging.INFO)
-    
-    # Formatter
-    formatter = logging.Formatter(
-        '[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+# Only add a file handler if not already present; fall back to a console stream handler on failure
+if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            '[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(logging.Formatter('[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
+        logger.addHandler(stream_handler)
 
 logger.info("Help cog logging initialized")
 
@@ -47,11 +51,7 @@ class HelpCog(commands.Cog):
                     "usage": "/login",
                     "note": "Start here to connect your AniList account!"
                 },
-                "check_anilist": {
-                    "desc": "Check if an AniList username exists and is accessible",
-                    "usage": "/check_anilist <username>",
-                    "note": "Verify AniList usernames before registration"
-                }
+                # /check_anilist was removed; users can verify via the Login UI instead
             },
             "📊 Profile & Stats": {
                 "profile": {
@@ -184,6 +184,146 @@ class HelpCog(commands.Cog):
             }
         }
 
+        # Note: keep the curated metadata above, but filter at runtime to only show
+        # commands that are actually registered with the bot. This provides a stable
+        # descriptions source while ensuring /help reflects current functionality.
+
+    def _get_registered_command_names(self) -> set:
+        """Return a set of registered command names from app commands (bot.tree)
+        and legacy text commands (bot.commands)."""
+        names = set()
+
+        # App commands (slash commands, groups, etc.)
+        try:
+            tree = getattr(self.bot, "tree", None)
+            if tree is not None:
+                # walk_commands yields AppCommand or AppCommandGroup objects
+                walker = getattr(tree, "walk_commands", None)
+                if walker:
+                    for cmd in tree.walk_commands():
+                        # cmd may be an AppCommand or Group; use cmd.name
+                        try:
+                            names.add(cmd.name)
+                        except Exception:
+                            continue
+                else:
+                    # Fallback: iterate tree._commands if available
+                    for cmd in getattr(tree, "_commands", []):
+                        try:
+                            names.add(cmd.name)
+                        except Exception:
+                            continue
+        except Exception:
+            logger.debug("Failed to enumerate app commands from bot.tree", exc_info=True)
+
+        # Also include legacy commands (prefix commands)
+        try:
+            for cmd in getattr(self.bot, "commands", []):
+                try:
+                    names.add(cmd.name)
+                except Exception:
+                    continue
+        except Exception:
+            logger.debug("Failed to enumerate legacy commands", exc_info=True)
+
+        return names
+
+    def _get_filtered_command_categories(self) -> dict:
+        """Return a copy of self.command_categories filtered to only include
+        commands that are currently registered on the bot."""
+        registered = self._get_registered_command_names()
+        filtered = {}
+
+        # Collect runtime info to optionally fill missing metadata (description/usage)
+        runtime_info = self._get_runtime_command_info()
+
+        for category, cmds in self.command_categories.items():
+            kept = {}
+            for cmd_name, meta in cmds.items():
+                # the keys in our metadata map are command names
+                if cmd_name in registered:
+                    # copy metadata so we don't mutate original
+                    entry = dict(meta)
+
+                    # Fill missing description or usage from runtime info
+                    rt = runtime_info.get(cmd_name)
+                    if rt:
+                        if (not entry.get('desc')) and rt.get('desc'):
+                            entry['desc'] = rt.get('desc')
+                        if (not entry.get('usage')) and rt.get('usage'):
+                            entry['usage'] = rt.get('usage')
+
+                    kept[cmd_name] = entry
+
+            if kept:
+                filtered[category] = kept
+
+        return filtered
+
+    def _get_runtime_command_info(self) -> dict:
+        """Return runtime info for commands: {name: {'desc':..., 'usage':...}}.
+
+        This inspects app commands (bot.tree) and legacy commands (bot.commands).
+        It is conservative and will not raise on unexpected structures.
+        """
+        info = {}
+
+        # App commands
+        try:
+            tree = getattr(self.bot, 'tree', None)
+            if tree is not None:
+                walker = getattr(tree, 'walk_commands', None)
+                if walker:
+                    for cmd in tree.walk_commands():
+                        try:
+                            name = getattr(cmd, 'name', None)
+                            desc = getattr(cmd, 'description', None) or getattr(cmd, 'brief', None) or ''
+                            # Build a simple usage string from parameters if available
+                            usage = f"/{name}"
+                            params = []
+                            try:
+                                for p in getattr(cmd, 'parameters', []):
+                                    # parameters may be inspect.Parameter objects or AppCommandParameter
+                                    pname = getattr(p, 'name', None) or getattr(p, 'display_name', None)
+                                    if pname:
+                                        params.append(pname)
+                            except Exception:
+                                params = []
+
+                            if params:
+                                usage += ' ' + ' '.join([f'<{p}>' for p in params])
+
+                            if name:
+                                info[name] = {'desc': desc, 'usage': usage}
+                        except Exception:
+                            continue
+        except Exception:
+            logger.debug('Error enumerating app command runtime info', exc_info=True)
+
+        # Legacy commands (prefix commands)
+        try:
+            for cmd in getattr(self.bot, 'commands', []):
+                try:
+                    name = getattr(cmd, 'name', None)
+                    desc = getattr(cmd, 'help', None) or getattr(cmd, 'short_doc', None) or ''
+                    sig = ''
+                    try:
+                        sig = getattr(cmd, 'signature', '')
+                    except Exception:
+                        sig = ''
+
+                    usage = f"/{name} {sig}".strip()
+                    if name:
+                        # Do not override app command info if present
+                        if name not in info:
+                            info[name] = {'desc': desc, 'usage': usage}
+                except Exception:
+                    continue
+        except Exception:
+            logger.debug('Error enumerating legacy command runtime info', exc_info=True)
+
+        return info
+
     async def cog_load(self):
         """Called when the cog is loaded."""
         logger.info("Help cog loaded successfully")
@@ -208,6 +348,9 @@ class HelpCog(commands.Cog):
         try:
             logger.info(f"Help command requested by {interaction.user.display_name} (ID: {interaction.user.id}) - Category: {category.value if category else 'overview'}")
             
+            # Filter categories/commands at runtime to only show registered commands
+            self._filtered_command_categories = self._get_filtered_command_categories()
+
             if category is None:
                 # Show overview of all categories
                 embed = await self._create_overview_embed(interaction)
@@ -218,7 +361,7 @@ class HelpCog(commands.Cog):
             # Create navigation view
             view = HelpNavigationView(self, interaction.user)
             
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=False)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             logger.info(f"Help information sent successfully to {interaction.user.display_name}")
             
         except Exception as e:
@@ -251,7 +394,7 @@ class HelpCog(commands.Cog):
         
         # Add category overview
         category_overview = []
-        for category_name, commands in self.command_categories.items():
+        for category_name, commands in getattr(self, "_filtered_command_categories", self.command_categories).items():
             command_count = len(commands)
             category_overview.append(f"{category_name} • **{command_count} commands**")
         
@@ -314,6 +457,9 @@ class HelpCog(commands.Cog):
         )
         
         # Add each command in the category
+        # Use the filtered mapping if available
+        commands = getattr(self, "_filtered_command_categories", self.command_categories).get(category_name, {})
+
         for cmd_name, cmd_info in commands.items():
             embed.add_field(
                 name=f"/{cmd_name}",
@@ -348,7 +494,7 @@ class HelpCog(commands.Cog):
             "account": (
                 "• Start with `/login` - it's required for most features\n"
                 "• Your AniList username must be exact (case-sensitive)\n"
-                "• Use `/check_anilist` to verify usernames before registration\n"
+                "• Use the **Check AniList** button in the `/login` interface to verify usernames before registration\n"
                 "• You can update or change your linked account anytime"
             ),
             "profile": (

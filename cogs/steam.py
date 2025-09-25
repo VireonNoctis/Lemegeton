@@ -28,13 +28,20 @@ os.makedirs(LOG_DIR, exist_ok=True)
 logger = logging.getLogger("steam")
 logger.setLevel(logging.DEBUG)
 
-# Avoid duplicate handlers on reload
+# Avoid duplicate handlers on reload and harden file handler creation
 if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == os.path.abspath(LOG_FILE)
            for h in logger.handlers):
-    fh = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-    logger.addHandler(fh)
+    try:
+        fh = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(fh)
+    except Exception:
+        # Fall back to a stream handler so import doesn't fail if the file is locked
+        fallback = logging.StreamHandler()
+        fallback.setLevel(logging.DEBUG)
+        fallback.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(fallback)
 
 # Ensure at least one stream handler for console
 if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):

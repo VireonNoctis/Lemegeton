@@ -1,0 +1,80 @@
+2025-09-25 03:06:06,340 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:07:46,949 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:09:12,416 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:09:16,794 | ERROR | BotMonitor | Failed to get system metrics: [WinError 2] The system cannot find the file specified: 'database.db'
+2025-09-25 03:09:16,795 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:09:16,795 | INFO | BotMonitor | 🖥️  System: CPU 0%, RAM 0%, Latency 0ms
+2025-09-25 03:09:16,796 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:09:16,797 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 03:10:27,899 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 03:10:27,899 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:10:32,156 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:10:32,156 | INFO | BotMonitor | 🖥️  System: CPU 35.7%, RAM 60.9%, Latency 106.45ms
+2025-09-25 03:10:32,156 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:10:32,157 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 03:15:32,160 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:15:32,160 | INFO | BotMonitor | 🖥️  System: CPU 29.2%, RAM 61.1%, Latency 126.39ms
+2025-09-25 03:15:32,160 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:20:32,164 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:20:32,165 | INFO | BotMonitor | 🖥️  System: CPU 31.9%, RAM 61.2%, Latency 107.23ms
+2025-09-25 03:20:32,165 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:25:32,166 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:25:32,166 | INFO | BotMonitor | 🖥️  System: CPU 45.4%, RAM 60.9%, Latency 114.28ms
+2025-09-25 03:25:32,166 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:30:32,170 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:30:32,170 | INFO | BotMonitor | 🖥️  System: CPU 33.6%, RAM 61.6%, Latency 110.35ms
+2025-09-25 03:30:32,171 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:35:24,485 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 03:35:24,485 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:35:28,962 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:35:28,963 | INFO | BotMonitor | 🖥️  System: CPU 34.5%, RAM 62.0%, Latency 103.69ms
+2025-09-25 03:35:28,963 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:35:28,963 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 03:35:32,163 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:35:32,163 | INFO | BotMonitor | 🖥️  System: CPU 39.9%, RAM 61.9%, Latency 104.51ms
+2025-09-25 03:35:32,163 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:40:32,167 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:40:32,168 | INFO | BotMonitor | 🖥️  System: CPU 28.7%, RAM 60.9%, Latency 107.67ms
+2025-09-25 03:40:32,168 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:42:44,503 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 03:42:44,504 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:42:48,758 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:42:48,759 | INFO | BotMonitor | 🖥️  System: CPU 53.7%, RAM 61.5%, Latency 105.86ms
+2025-09-25 03:42:48,759 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:42:48,759 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 03:44:22,410 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 03:44:22,410 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:44:26,743 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:44:26,743 | INFO | BotMonitor | 🖥️  System: CPU 28.7%, RAM 61.2%, Latency 106.55ms
+2025-09-25 03:44:26,743 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:44:26,744 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 03:45:12,800 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 03:45:12,800 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:45:17,024 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:45:17,024 | INFO | BotMonitor | 🖥️  System: CPU 36.5%, RAM 61.2%, Latency 105.85ms
+2025-09-25 03:45:17,025 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:45:17,025 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 03:48:21,895 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 03:48:21,896 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 03:48:26,614 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 03:48:26,614 | INFO | BotMonitor | 🖥️  System: CPU 33.9%, RAM 62.1%, Latency 107.0ms
+2025-09-25 03:48:26,614 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 03:48:26,615 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 04:02:04,427 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 04:02:04,427 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 04:02:08,780 | ERROR | BotMonitor | Failed to get bot metrics: no such table: users
+2025-09-25 04:02:08,780 | INFO | BotMonitor | 🖥️  System: CPU 28.2%, RAM 61.7%, Latency 111.01ms
+2025-09-25 04:02:08,781 | INFO | BotMonitor | 🤖 Bot: 0 guilds, 0 registered users, 0 recent commands
+2025-09-25 04:02:08,781 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 04:07:21,570 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 04:07:21,570 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 04:07:25,963 | WARNING | BotMonitor | Monitoring DB unavailable or missing tables, continuing with zeroed registered users: no such table: users
+2025-09-25 04:07:25,963 | INFO | BotMonitor | 🖥️  System: CPU 31.4%, RAM 61.3%, Latency 108.42ms
+2025-09-25 04:07:25,963 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 0 registered users, 0 recent commands
+2025-09-25 04:07:25,964 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 04:10:56,364 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 04:10:56,364 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 04:11:00,672 | WARNING | BotMonitor | Monitoring DB unavailable or missing tables, continuing with zeroed registered users: no such table: users
+2025-09-25 04:11:00,672 | INFO | BotMonitor | 🖥️  System: CPU 50.9%, RAM 62.1%, Latency 108.15ms
+2025-09-25 04:11:00,672 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 0 registered users, 0 recent commands
+2025-09-25 04:11:00,673 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters

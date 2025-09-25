@@ -5,6 +5,7 @@ import math
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from config import CHALLENGE_ROLE_IDS, GUILD_ID
+from config import ALL_STAR_STAGE1_ROLE_ID, ALL_STAR_STAGE2_ROLE_ID, ALL_STAR_COMPLETED_ROLE_ID
 
 # Configuration constants
 LOG_DIR = Path("logs")
@@ -459,6 +460,39 @@ async def assign_challenge_role(bot: commands.Bot, discord_id: int, challenge_id
                 
         except Exception as e:
             logger.error(f"Failed to assign role {role.name} to user {discord_id}: {e}")
+
+            # Enforce mutual-exclusion for All Star roles using role IDs if configured
+            try:
+                to_remove_ids = []
+                # If we have role IDs configured, use them for removal
+                if ALL_STAR_COMPLETED_ROLE_ID and role.id == ALL_STAR_COMPLETED_ROLE_ID:
+                    if ALL_STAR_STAGE2_ROLE_ID:
+                        to_remove_ids.append(ALL_STAR_STAGE2_ROLE_ID)
+                elif ALL_STAR_STAGE2_ROLE_ID and role.id == ALL_STAR_STAGE2_ROLE_ID:
+                    if ALL_STAR_STAGE1_ROLE_ID:
+                        to_remove_ids.append(ALL_STAR_STAGE1_ROLE_ID)
+
+                # If no IDs configured or no matches, fall back to name-based checks
+                if not to_remove_ids:
+                    if role.name == "All Star Completed":
+                        for r in member.roles:
+                            if r.name == "All Star Stage 2":
+                                to_remove_ids.append(r.id)
+                    elif role.name == "All Star Stage 2":
+                        for r in member.roles:
+                            if r.name == "All Star Stage 1":
+                                to_remove_ids.append(r.id)
+
+                if to_remove_ids:
+                    roles_to_remove = [guild.get_role(rid) for rid in to_remove_ids if guild.get_role(rid) is not None]
+                    if roles_to_remove:
+                        try:
+                            await member.remove_roles(*roles_to_remove, reason="Mutual exclusion for All Star roles")
+                            logger.info(f"Removed mutually exclusive roles {[r.name for r in roles_to_remove]} from user {discord_id}")
+                        except Exception as rem_err:
+                            logger.error(f"Failed to remove mutually exclusive roles for user {discord_id}: {rem_err}")
+            except Exception as e:
+                logger.debug(f"No mutual-exclusion role changes required or error occurred: {e}")
 
         return assigned_roles
         

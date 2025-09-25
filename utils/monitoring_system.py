@@ -170,27 +170,33 @@ class MonitoringSystem:
             return SystemMetrics(0, 0, 0, 0, 0, 0)
 
     async def get_bot_metrics(self) -> BotMetrics:
-        """Get bot-wide metrics"""
+        """Get bot-wide metrics (defensive against missing DB/tables)"""
         try:
             # Guild count
             guild_count = len(self.bot.guilds)
-            
+
             # Total users across all guilds
             total_users = sum(guild.member_count for guild in self.bot.guilds)
-            
-            # Registered users from database
-            conn = sqlite3.connect(self.database_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT COUNT(DISTINCT discord_id) FROM users")
-            total_registered = cursor.fetchone()[0]
-            conn.close()
-            
+
+            # Registered users from database - handle DB/table missing gracefully
+            total_registered = 0
+            try:
+                conn = sqlite3.connect(self.database_path)
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(DISTINCT discord_id) FROM users")
+                row = cursor.fetchone()
+                total_registered = (row[0] if row and row[0] is not None else 0)
+                conn.close()
+            except sqlite3.Error as db_err:
+                # Log a warning once per monitoring loop iteration but don't raise
+                monitor_logger.warning(f"Monitoring DB unavailable or missing tables, continuing with zeroed registered users: {db_err}")
+
             # Commands per hour (last hour)
             commands_per_hour = sum(self.command_usage.values())
-            
+
             # Top commands
             top_commands = dict(sorted(self.command_usage.items(), key=lambda x: x[1], reverse=True)[:10])
-            
+
             return BotMetrics(
                 guild_count=guild_count,
                 total_users=total_users,
@@ -200,7 +206,7 @@ class MonitoringSystem:
                 top_commands=top_commands,
                 response_times=self.response_times[-100:]  # Last 100 response times
             )
-            
+
         except Exception as e:
             monitor_logger.error(f"Failed to get bot metrics: {e}")
             return BotMetrics(0, 0, 0, 0, 0, {}, [])
@@ -408,8 +414,10 @@ def setup_monitoring(bot: commands.Bot) -> MonitoringSystem:
     """Initialize monitoring system"""
     global monitoring_system
     monitoring_system = MonitoringSystem(bot)
-    monitoring_system.monitoring_task.start()
-    monitor_logger.info("🚀 Monitoring system initialized")
+    # Do NOT start the @tasks.loop here because the bot's event loop may not be
+    # running yet (setup_monitoring can be called during module import or before
+    # bot.run()). Starting the loop must happen when the event loop is active.
+    monitor_logger.info("🚀 Monitoring system initialized (task start deferred)")
     return monitoring_system
 
 def get_monitoring() -> Optional[MonitoringSystem]:

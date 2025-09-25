@@ -467,8 +467,11 @@ def clear_cache(cache_name: str, cache_type: str = "json") -> bool:
     cache_file = get_cache_file_path(cache_name, cache_type)
     try:
         if cache_file.exists():
-            cache_file.unlink()
-            logger.info(f"Cleared cache '{cache_name}' ({cache_type})")
+            try:
+                cache_file.unlink()
+                logger.info(f"Cleared cache '{cache_name}' ({cache_type})")
+            except PermissionError:
+                logger.warning(f"Cache file {cache_file} is in use and could not be removed")
         return True
     except Exception as e:
         logger.error(f"Error clearing cache '{cache_name}': {e}")
@@ -487,9 +490,12 @@ def clear_all_caches() -> int:
     try:
         for cache_file in CACHE_DIR.glob("*_cache.*"):
             try:
-                cache_file.unlink()
-                cleared_count += 1
-                logger.debug(f"Cleared cache file: {cache_file.name}")
+                try:
+                    cache_file.unlink()
+                    cleared_count += 1
+                    logger.debug(f"Cleared cache file: {cache_file.name}")
+                except PermissionError:
+                    logger.warning(f"Cache file {cache_file} is in use and could not be removed")
             except Exception as e:
                 logger.error(f"Error clearing cache file {cache_file.name}: {e}")
     except Exception as e:
@@ -547,9 +553,12 @@ def cleanup_old_caches(max_age_days: int = 7) -> int:
             try:
                 file_age = current_time - cache_file.stat().st_mtime
                 if file_age > max_age_seconds:
-                    cache_file.unlink()
-                    removed_count += 1
-                    logger.debug(f"Removed old cache file: {cache_file.name}")
+                    try:
+                        cache_file.unlink()
+                        removed_count += 1
+                        logger.debug(f"Removed old cache file: {cache_file.name}")
+                    except PermissionError:
+                        logger.warning(f"Old cache file {cache_file} is in use and could not be removed")
             except Exception as e:
                 logger.error(f"Error removing old cache file {cache_file.name}: {e}")
     except Exception as e:

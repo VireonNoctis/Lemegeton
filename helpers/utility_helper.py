@@ -200,7 +200,10 @@ def clear_cache(cache_name: str) -> bool:
     cache_file = get_cache_file_path(cache_name)
     try:
         if cache_file.exists():
-            cache_file.unlink()
+            try:
+                cache_file.unlink()
+            except PermissionError:
+                logger.warning(f"Cache file {cache_file} is in use and could not be removed")
         return True
     except Exception as e:
         logger.error(f"Error clearing cache {cache_name}: {e}")
@@ -408,8 +411,11 @@ def clean_old_files(directory: Union[str, Path], max_age_days: int = 7) -> int:
             if file_path.is_file():
                 file_age = now - file_path.stat().st_mtime
                 if file_age > max_age_seconds:
-                    file_path.unlink()
-                    deleted_count += 1
+                    try:
+                        file_path.unlink()
+                        deleted_count += 1
+                    except PermissionError:
+                        logger.warning(f"Old file {file_path} is in use and could not be removed")
         
         return deleted_count
     except Exception as e:

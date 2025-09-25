@@ -182,3 +182,118 @@ AttributeError: 'Finisher' object has no attribute 'fetch_anime'. Did you mean: 
 [2025-09-25 00:12:44,259] [INFO] Finisher cog initialized
 [2025-09-25 00:15:29,358] [INFO] Finisher cog initialized
 [2025-09-25 00:18:51,144] [INFO] Finisher cog initialized
+[2025-09-25 01:12:34,943] [INFO] Finisher cog initialized
+[2025-09-25 01:43:17,987] [INFO] Fetching manga list from AniList
+[2025-09-25 01:43:18,263] [INFO] AniList returned 25 media entries
+[2025-09-25 01:43:19,374] [INFO] Loaded configured channel 1420499306300969063 for guild 897814031346319382
+[2025-09-25 01:43:19,374] [INFO] Posting manga updates to channel 📣•manga-completion•
+[2025-09-25 01:43:19,375] [INFO] Fetching manga list from AniList
+[2025-09-25 01:43:19,684] [INFO] AniList returned 25 media entries
+[2025-09-25 01:43:19,685] [INFO] Found 0 new manga updates after filtering
+[2025-09-25 01:43:20,008] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-25 01:43:22,023] [INFO] Posting anime updates to channel 📣•manga-completion•
+[2025-09-25 01:43:22,024] [ERROR] Error running forceupdate command
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\finisher.py", line 705, in forceupdate
+    await self.post_updates(channel, kind="anime")
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\finisher.py", line 492, in post_updates
+    items = await self.fetch_anime()
+                  ^^^^^^^^^^^^^^^^
+AttributeError: 'Finisher' object has no attribute 'fetch_anime'. Did you mean: 'fetch_manga'?
+[2025-09-25 01:44:28,367] [INFO] Finisher cog initialized
+[2025-09-25 01:45:00,683] [INFO] Finisher cog initialized
+[2025-09-25 01:45:43,974] [INFO] Fetching manga list from AniList
+[2025-09-25 01:45:44,269] [INFO] AniList returned 25 media entries
+[2025-09-25 01:45:45,239] [INFO] Loaded configured channel 1420499306300969063 for guild 897814031346319382
+[2025-09-25 01:45:45,239] [INFO] Posting manga updates to channel 📣•manga-completion•
+[2025-09-25 01:45:45,240] [INFO] Fetching manga list from AniList
+[2025-09-25 01:45:45,531] [INFO] AniList returned 25 media entries
+[2025-09-25 01:45:45,532] [INFO] Found 0 new manga updates after filtering
+[2025-09-25 01:45:45,798] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-25 01:45:47,808] [INFO] Posting anime updates to channel 📣•manga-completion•
+[2025-09-25 01:45:47,809] [INFO] Fetching anime list from AniList
+[2025-09-25 01:45:48,197] [INFO] AniList returned 25 anime entries
+[2025-09-25 01:45:48,197] [INFO] Found 25 new anime updates after filtering
+[2025-09-25 01:45:48,197] [INFO] Posting update for anime id=137699 title=Biaozhun Guige Zhanshi status=FINISHED
+[2025-09-25 01:45:50,511] [INFO] Posting update for anime id=195209 title=With Vengeance, Sincerely, Your Broken Saintess status=FINISHED
+[2025-09-25 01:45:52,816] [INFO] Posting update for anime id=178090 title=I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2 status=FINISHED
+[2025-09-25 01:45:55,103] [INFO] Posting update for anime id=151799 title=New PANTY & STOCKING with GARTERBELT status=FINISHED
+[2025-09-25 01:45:57,407] [INFO] Posting update for anime id=179678 title=Hell Teacher: Jigoku Sensei Nube (2025) status=FINISHED
+[2025-09-25 01:45:59,948] [INFO] Posting update for anime id=173780 title=The Rising of the Shield Hero Season 4 status=FINISHED
+[2025-09-25 01:46:02,361] [INFO] Posting update for anime id=159483 title=Turkey! Time to Strike status=FINISHED
+[2025-09-25 01:46:04,699] [INFO] Posting update for anime id=184591 title=There's No Freaking Way I'll Be Your Lover! Unless… status=FINISHED
+[2025-09-25 01:46:07,021] [INFO] Posting update for anime id=182309 title=Grand Blue Dreaming Season 2 status=FINISHED
+[2025-09-25 01:46:09,310] [INFO] Posting update for anime id=179828 title=A Couple of Cuckoos Season 2 status=FINISHED
+[2025-09-25 01:46:11,766] [INFO] Posting update for anime id=188138 title=Cute High Earth Defense Club Hi-CARA! status=FINISHED
+[2025-09-25 01:46:14,238] [INFO] Posting update for anime id=189326 title=Toilet-Bound Hanako-kun Season 2 Part 2 status=FINISHED
+[2025-09-25 01:46:16,796] [INFO] Posting update for anime id=185755 title=Puniru is a Kawaii Slime Season 2 status=FINISHED
+[2025-09-25 01:46:19,128] [INFO] Posting update for anime id=184575 title=Uglymug, Epicfighter status=FINISHED
+[2025-09-25 01:46:21,434] [INFO] Posting update for anime id=184574 title=Dekin no Mogura: The Earthbound Mole status=FINISHED
+[2025-09-25 01:46:23,710] [INFO] Posting update for anime id=180425 title=With You and the Rain status=FINISHED
+[2025-09-25 01:46:26,085] [INFO] Posting update for anime id=179885 title=Scooped Up by an S-Rank Adventurer! status=FINISHED
+[2025-09-25 01:46:28,361] [INFO] Posting update for anime id=178675 title=Bad Girl status=FINISHED
+[2025-09-25 01:46:30,684] [INFO] Posting update for anime id=170113 title=Private Tutor to the Duke's Daughter status=FINISHED
+[2025-09-25 01:46:32,948] [INFO] Posting update for anime id=154768 title=My Dress-Up Darling Season 2 status=FINISHED
+[2025-09-25 01:46:35,365] [INFO] Posting update for anime id=195883 title=Shenguo Zhi Shang status=FINISHED
+[2025-09-25 01:46:37,682] [INFO] Posting update for anime id=186561 title=The Shy Hero and the Assassin Princesses status=FINISHED
+[2025-09-25 01:46:40,035] [INFO] Posting update for anime id=179879 title=Betrothed to My Sister's Ex status=FINISHED
+[2025-09-25 01:46:42,262] [INFO] Posting update for anime id=185660 title=DAN DA DAN Season 2 status=FINISHED
+[2025-09-25 01:46:44,533] [INFO] Posting update for anime id=185544 title=Welcome to the Outcast's Restaurant! status=FINISHED
+[2025-09-25 01:46:46,763] [INFO] Saved 25 current anime ids to data/anime_scan.json
+[2025-09-25 01:46:46,763] [INFO] Post anime updates complete and state saved
+[2025-09-25 01:46:46,765] [INFO] Saved last run timestamp 2025-09-25T00:46:46.764130 to data/manga_scan_meta.json
+[2025-09-25 01:48:00,210] [INFO] Finisher cog initialized
+[2025-09-25 01:49:04,294] [INFO] Fetching manga list from AniList
+[2025-09-25 01:49:04,596] [INFO] AniList returned 25 media entries
+[2025-09-25 01:49:05,449] [INFO] Loaded configured channel 1420499306300969063 for guild 897814031346319382
+[2025-09-25 01:49:05,449] [INFO] Posting manga updates to channel 📣•manga-completion•
+[2025-09-25 01:49:05,450] [INFO] Fetching manga list from AniList
+[2025-09-25 01:49:05,740] [INFO] AniList returned 25 media entries
+[2025-09-25 01:49:05,741] [INFO] Found 0 new manga updates after filtering
+[2025-09-25 01:49:05,975] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-25 01:49:07,990] [INFO] Posting anime updates to channel 📣•manga-completion•
+[2025-09-25 01:49:07,997] [INFO] Fetching anime list from AniList
+[2025-09-25 01:49:08,359] [INFO] AniList returned 25 anime entries
+[2025-09-25 01:49:08,359] [INFO] Found 3 new anime updates after filtering
+[2025-09-25 01:49:08,360] [INFO] Posting update for anime id=195209 title=With Vengeance, Sincerely, Your Broken Saintess status=FINISHED
+[2025-09-25 01:49:10,730] [INFO] Posting update for anime id=178090 title=I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2 status=FINISHED
+[2025-09-25 01:49:13,018] [INFO] Posting update for anime id=151799 title=New PANTY & STOCKING with GARTERBELT status=FINISHED
+[2025-09-25 01:49:16,384] [INFO] Saved 25 current anime ids to data/anime_scan.json
+[2025-09-25 01:49:16,385] [INFO] Post anime updates complete and state saved
+[2025-09-25 01:49:16,386] [INFO] Saved last run timestamp 2025-09-25T00:49:16.385362 to data/manga_scan_meta.json
+[2025-09-25 01:54:31,723] [INFO] Finisher cog initialized
+[2025-09-25 02:51:51,960] [INFO] Finisher cog initialized
+[2025-09-25 02:56:26,377] [INFO] Finisher cog initialized
+[2025-09-25 03:06:06,442] [INFO] Finisher cog initialized
+[2025-09-25 03:07:47,060] [INFO] Finisher cog initialized
+[2025-09-25 03:09:12,526] [INFO] Finisher cog initialized
+[2025-09-25 03:10:28,008] [INFO] Finisher cog initialized
+[2025-09-25 03:14:14,126] [INFO] Finisher cog initialized
+[2025-09-25 03:17:19,618] [INFO] Finisher cog initialized
+[2025-09-25 03:27:03,037] [INFO] Finisher cog initialized
+[2025-09-25 03:33:39,441] [INFO] Finisher cog initialized
+[2025-09-25 03:35:24,617] [INFO] Finisher cog initialized
+[2025-09-25 03:42:44,605] [INFO] Finisher cog initialized
+[2025-09-25 03:44:22,545] [INFO] Finisher cog initialized
+[2025-09-25 03:44:22,546] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 03:44:22,546] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 03:45:12,929] [INFO] Finisher cog initialized
+[2025-09-25 03:45:12,929] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 03:45:12,929] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 03:45:12,940] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 03:48:22,115] [INFO] Finisher cog initialized
+[2025-09-25 03:48:22,116] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 03:48:22,116] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 03:48:22,167] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 04:02:04,533] [INFO] Finisher cog initialized
+[2025-09-25 04:02:04,534] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 04:02:04,534] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 04:02:04,543] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 04:07:21,678] [INFO] Finisher cog initialized
+[2025-09-25 04:07:21,679] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 04:07:21,679] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 04:07:21,690] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 04:10:56,471] [INFO] Finisher cog initialized
+[2025-09-25 04:10:56,472] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 04:10:56,472] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 04:10:56,482] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness

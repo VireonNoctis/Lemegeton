@@ -24,24 +24,25 @@ LOG_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("ChallengeChange")
 logger.setLevel(logging.DEBUG)
 
-# Clear handlers to avoid duplicates
-logger.handlers.clear()
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                      datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(stream_handler)
 
-# Create file handler that clears on startup
-file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
-file_handler.setLevel(logging.DEBUG)
-
-# Create formatter
-formatter = logging.Formatter(
-    fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-file_handler.setFormatter(formatter)
-
-# Add handler to logger
-logger.addHandler(file_handler)
-
-logger.info("Challenge Change cog logging system initialized")
+logger.info("Challenge Change cog logging system initialized (file or stream fallback)")
 
 class ChallengeManagementView(discord.ui.View):
     """Interactive view for challenge management actions."""
@@ -67,45 +68,120 @@ class ChallengeManagementView(discord.ui.View):
         modal = RemoveMangaModal()
         await interaction.response.send_modal(modal)
 
-    @discord.ui.button(label="📋 List Challenges", style=discord.ButtonStyle.secondary, emoji="📋")
+    @discord.ui.button(label="📋 List Challenges", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
     async def list_challenges_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show all active challenges."""
         logger.info(f"List challenges button clicked by {interaction.user.display_name} (ID: {self.user_id})")
         
         await interaction.response.defer(ephemeral=True)
-        
         try:
-            challenge_cog = interaction.client.get_cog("ChallengeChange")
-            if challenge_cog:
-                challenges_info = await challenge_cog.get_all_challenges()
-                
-                if not challenges_info:
+            challenge_cog = interaction.client.get_cog("ChallengeManage")
+            if not challenge_cog:
+                await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
+                return
+
+            # Get all challenges and their manga lists
+            challenges_info = await challenge_cog.get_all_challenges()
+            if not challenges_info:
+                embed = discord.Embed(
+                    title="📋 Challenge List",
+                    description="No active challenges found.",
+                    color=discord.Color.orange()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+
+            # Build a list of (challenge_id, title, manga_list)
+            challenges_with_manga = []
+            for challenge_id, title, _mcount in challenges_info:
+                manga_rows = await challenge_cog.get_challenge_manga(challenge_id)
+                # manga_rows is list of tuples (manga_id, title, total_chapters)
+                challenges_with_manga.append((challenge_id, title, manga_rows))
+
+            # Paginated view: one page per challenge
+            class ChallengeListView(discord.ui.View):
+                PER_PAGE = 8
+
+                def __init__(self, challenges):
+                    super().__init__(timeout=VIEW_TIMEOUT)
+                    self.challenges = challenges
+                    self.index = 0
+                    # per-challenge manga page (resets when switching challenges)
+                    self.manga_page = 0
+
+                def make_embed(self):
+                    cid, ctitle, manga_list = self.challenges[self.index]
+                    total = len(manga_list)
+                    start = self.manga_page * self.PER_PAGE
+                    end = start + self.PER_PAGE
+                    page_items = manga_list[start:end]
+
                     embed = discord.Embed(
-                        title="📋 Challenge List",
-                        description="No active challenges found.",
-                        color=discord.Color.orange()
-                    )
-                else:
-                    embed = discord.Embed(
-                        title="📋 Active Challenges",
-                        description=f"Found {len(challenges_info)} active challenge(s):",
+                        title=f"📋 {ctitle}",
+                        description=f"Challenge ID: `{cid}` • {total} manga",
                         color=discord.Color.blue()
                     )
-                    
-                    for i, (challenge_id, title, manga_count) in enumerate(challenges_info[:10], 1):
-                        embed.add_field(
-                            name=f"{i}. {title}",
-                            value=f"ID: `{challenge_id}` • {manga_count} manga",
-                            inline=False
-                        )
-                    
-                    if len(challenges_info) > 10:
-                        embed.set_footer(text=f"Showing first 10 of {len(challenges_info)} challenges")
-                
-                await interaction.followup.send(embed=embed, ephemeral=True)
-            else:
-                await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
-                
+
+                    if page_items:
+                        description_lines = []
+                        for m_id, m_title, m_chapters in page_items:
+                            m_title_short = (m_title[:80] + '...') if m_title and len(m_title) > 80 else (m_title or 'Unknown')
+                            description_lines.append(f"• **{m_title_short}** (ID: `{m_id}`) • {m_chapters or 'Unknown'} chapters")
+
+                        embed.add_field(name="📚 Manga in this challenge", value="\n".join(description_lines), inline=False)
+                    else:
+                        embed.add_field(name="📚 Manga in this challenge", value="No manga in this challenge.", inline=False)
+
+                    # Footer shows challenge page and manga subpage
+                    total_pages = (len(self.challenges))
+                    manga_pages = (total - 1) // self.PER_PAGE + 1 if total > 0 else 1
+                    embed.set_footer(text=f"Challenge {self.index + 1}/{total_pages} • Showing {start + 1 if total>0 else 0}-{min(end, total)} of {total} • Manga page {self.manga_page + 1}/{manga_pages}")
+                    return embed
+
+                @discord.ui.button(label="⬅️ Prev", style=discord.ButtonStyle.secondary)
+                async def prev(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    if self.index > 0:
+                        self.index -= 1
+                        self.manga_page = 0
+                        await interaction.response.edit_message(embed=self.make_embed(), view=self)
+                    else:
+                        await interaction.response.defer()
+
+                @discord.ui.button(label="Next ➡️", style=discord.ButtonStyle.secondary)
+                async def next(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    if self.index < len(self.challenges) - 1:
+                        self.index += 1
+                        self.manga_page = 0
+                        await interaction.response.edit_message(embed=self.make_embed(), view=self)
+                    else:
+                        await interaction.response.defer()
+
+                @discord.ui.button(label="More", style=discord.ButtonStyle.primary)
+                async def more(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    # Advance manga subpage within current challenge
+                    cid, _ctitle, manga_list = self.challenges[self.index]
+                    total = len(manga_list)
+                    manga_pages = (total - 1) // self.PER_PAGE + 1 if total > 0 else 1
+                    if self.manga_page < manga_pages - 1:
+                        self.manga_page += 1
+                        await interaction.response.edit_message(embed=self.make_embed(), view=self)
+                    else:
+                        # No more pages; wrap or just defer
+                        await interaction.response.defer()
+
+                @discord.ui.button(label="❌ Close", style=discord.ButtonStyle.danger)
+                async def close(self, interaction: discord.Interaction, button: discord.ui.Button):
+                    for item in self.children:
+                        item.disabled = True
+                    await interaction.response.edit_message(embed=self.make_embed(), view=self)
+
+                async def on_timeout(self):
+                    for item in self.children:
+                        item.disabled = True
+
+            view = ChallengeListView(challenges_with_manga)
+            await interaction.followup.send(embed=view.make_embed(), view=view, ephemeral=True)
+
         except Exception as e:
             logger.error(f"Error listing challenges: {e}", exc_info=True)
             await interaction.followup.send("❌ Error retrieving challenge list.", ephemeral=True)
@@ -125,6 +201,13 @@ class ChallengeManagementView(discord.ui.View):
             logger.debug(f"ChallengeManagementView timed out for user ID: {self.user_id}")
         except Exception as e:
             logger.error(f"Error handling ChallengeManagementView timeout: {e}", exc_info=True)
+
+    @discord.ui.button(label="🗑️ Delete Challenge", style=discord.ButtonStyle.danger, emoji="🗑️", row=1)
+    async def delete_challenge_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show modal to delete a challenge by ID."""
+        logger.info(f"Delete challenge button clicked by {interaction.user.display_name} (ID: {self.user_id})")
+        modal = DeleteChallengeModal()
+        await interaction.response.send_modal(modal)
 
 
 class AddMangaModal(discord.ui.Modal):
@@ -190,7 +273,7 @@ class AddMangaModal(discord.ui.Modal):
                     return
             
             # Process the request
-            challenge_cog = interaction.client.get_cog("ChallengeChange")
+            challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
                 result = await challenge_cog.handle_add_manga(
                     self.challenge_title.value.strip(),
@@ -241,7 +324,7 @@ class RemoveMangaModal(discord.ui.Modal):
                 return
             
             # Process the request
-            challenge_cog = interaction.client.get_cog("ChallengeChange")
+            challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
                 result = await challenge_cog.handle_remove_manga(manga_id_int)
                 await interaction.followup.send(result, ephemeral=True)
@@ -251,6 +334,45 @@ class RemoveMangaModal(discord.ui.Modal):
         except Exception as e:
             logger.error(f"Error in remove manga modal: {e}", exc_info=True)
             await interaction.followup.send("❌ An error occurred while removing manga.", ephemeral=True)
+
+
+class DeleteChallengeModal(discord.ui.Modal):
+    """Modal for deleting a challenge by ID."""
+
+    def __init__(self):
+        super().__init__(title="🗑️ Delete Challenge")
+
+        self.challenge_id = discord.ui.TextInput(
+            label="Challenge ID",
+            placeholder="Enter the numeric challenge ID to delete",
+            required=True,
+            max_length=20
+        )
+        self.add_item(self.challenge_id)
+
+        logger.debug("Created DeleteChallengeModal")
+
+    async def on_submit(self, interaction: discord.Interaction):
+        logger.info(f"Delete challenge modal submitted by {interaction.user.display_name} (ID: {interaction.user.id})")
+        await interaction.response.defer(ephemeral=True)
+
+        try:
+            try:
+                cid = int(self.challenge_id.value.strip())
+            except ValueError:
+                await interaction.followup.send("❌ Invalid Challenge ID. Must be a number.", ephemeral=True)
+                return
+
+            challenge_cog = interaction.client.get_cog("ChallengeManage")
+            if challenge_cog:
+                result = await challenge_cog.handle_delete_challenge(cid)
+                await interaction.followup.send(result, ephemeral=True)
+            else:
+                await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
+
+        except Exception as e:
+            logger.error(f"Error in delete challenge modal: {e}", exc_info=True)
+            await interaction.followup.send("❌ An error occurred while deleting the challenge.", ephemeral=True)
 
 
 class SearchMangaModal(discord.ui.Modal):
@@ -288,7 +410,7 @@ class SearchMangaModal(discord.ui.Modal):
                 return
             
             # Process the request
-            challenge_cog = interaction.client.get_cog("ChallengeChange")
+            challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
                 result = await challenge_cog.handle_search_manga(manga_id_int)
                 await interaction.followup.send(embed=result, ephemeral=True)
@@ -395,6 +517,33 @@ class ChallengeManage(commands.Cog):
         except Exception as e:
             logger.error(f"Error in handle_remove_manga: {e}", exc_info=True)
             return "❌ An error occurred while removing manga from the challenge. Please try again later."
+
+    async def handle_delete_challenge(self, challenge_id: int) -> str:
+        """Delete a challenge and all its manga entries. Returns a user-facing status string."""
+        logger.info(f"Processing delete challenge request: challenge_id={challenge_id}")
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                # Check exists
+                cursor = await db.execute("SELECT title FROM global_challenges WHERE challenge_id = ?", (challenge_id,))
+                row = await cursor.fetchone()
+                await cursor.close()
+                if not row:
+                    return f"⚠️ Challenge ID `{challenge_id}` does not exist."
+
+                title = row[0]
+
+                # Delete related manga entries
+                await db.execute("DELETE FROM challenge_manga WHERE challenge_id = ?", (challenge_id,))
+                # Delete challenge
+                await db.execute("DELETE FROM global_challenges WHERE challenge_id = ?", (challenge_id,))
+                await db.commit()
+
+                logger.info(f"Successfully deleted challenge '{title}' (ID: {challenge_id}) and its manga entries")
+                return f"✅ Challenge **{title}** (ID: {challenge_id}) and its manga entries have been deleted."
+
+        except Exception as e:
+            logger.error(f"Error deleting challenge {challenge_id}: {e}", exc_info=True)
+            return "❌ An error occurred while deleting the challenge. Please try again later."
 
     async def handle_search_manga(self, manga_id: int) -> discord.Embed:
         """Handle searching for manga information and return an embed."""
@@ -528,6 +677,22 @@ class ChallengeManage(commands.Cog):
         except Exception as e:
             logger.error(f"Database error getting challenge info: {e}", exc_info=True)
             raise
+
+    async def get_challenge_manga(self, challenge_id: int) -> List[Tuple[int, str, int]]:
+        """Return list of manga for a given challenge_id as (manga_id, title, total_chapters)."""
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                cursor = await db.execute(
+                    "SELECT manga_id, title, total_chapters FROM challenge_manga WHERE challenge_id = ? ORDER BY title",
+                    (challenge_id,)
+                )
+                rows = await cursor.fetchall()
+                await cursor.close()
+                logger.debug(f"Retrieved {len(rows)} manga entries for challenge ID {challenge_id}")
+                return rows
+        except Exception as e:
+            logger.error(f"Error fetching manga for challenge {challenge_id}: {e}", exc_info=True)
+            return []
 
     async def _fetch_anilist_manga_info(self, manga_id: int) -> tuple[str, int] | None:
         """Fetch manga information from AniList API. Returns (title, chapters) or None."""

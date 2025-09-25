@@ -7,8 +7,6 @@ Short, focused instructions to help an AI coding agent be immediately productive
 - Persistence & caches: `database.py` (aiosqlite) and `data/` (JSON caches). Use `execute_db_operation()` wrapper for DB queries; many modules use atomic file writes (write to `.tmp` then rename).
 - Infra & runtime: `config.py` loads environment variables (DOTENV). The project assumes a `.env` with `DISCORD_TOKEN`, `GUILD_ID`, `BOT_ID`, `DATABASE_PATH`, etc. Rails/Railway deployment configs live under `config/` and `docs/`.
 
-NOTE: During recent edits the repo had a few files containing accidental Markdown fenced code blocks (triple backticks) which produced SyntaxErrors when the bot loaded cogs. If you see a SyntaxError while importing a cog, first check for stray backticks at the top or bottom of the file.
-
 2) Developer workflows the project expects
 - Local dev (Windows): create & activate venv then `pip install -r requirements.txt`. Run `start.bat` or `python bot.py` to start. See `README.md` for Railway deployment notes.
 - Environment: `.env` must contain `DISCORD_TOKEN`, `BOT_ID`, and `GUILD_ID` (legacy). `config.DB_PATH` defaults to `data/database.db`.
@@ -58,8 +56,6 @@ Short, focused instructions to help an AI coding agent be immediately productive
 - Persistence & caches: `database.py` (aiosqlite) and `data/` (JSON caches). Use `execute_db_operation()` wrapper for DB queries; many modules use atomic file writes (write to `.tmp` then rename).
 - Infra & runtime: `config.py` loads environment variables (DOTENV). The project assumes a `.env` with `DISCORD_TOKEN`, `GUILD_ID`, `BOT_ID`, `DATABASE_PATH`, etc. Rails/Railway deployment configs live under `config/` and `docs/`.
 
-NOTE: During recent edits the repo had a few files containing accidental Markdown fenced code blocks (triple backticks) which produced SyntaxErrors when the bot loaded cogs. If you see a SyntaxError while importing a cog, first check for stray backticks at the top or bottom of the file.
-
 2) Developer workflows the project expects
 - Local dev (Windows): create & activate venv then `pip install -r requirements.txt`. Run `start.bat` or `python bot.py` to start. See `README.md` for Railway deployment notes.
 - Environment: `.env` must contain `DISCORD_TOKEN`, `BOT_ID`, and `GUILD_ID` (legacy). `config.DB_PATH` defaults to `data/database.db`.
@@ -104,7 +100,6 @@ Dependency checklist for edits made here:
 
 When editing files with the automated agent:
 - Use the provided `apply_patch` format for edits and preserve whitespace and style.
-- If a file contains triple-backticks, remove them — they break imports. I encountered this with `cogs/embed.py` and `cogs/finisher.py` while working here.
 - After edits, run the project's static error checker or start the bot to validate changes (`python bot.py`).
 
 7) Safety notes for automated changes

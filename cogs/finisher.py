@@ -28,9 +28,16 @@ logger.setLevel(logging.INFO)
 # Avoid duplicate file handlers on reload
 if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == os.path.abspath(LOG_FILE)
            for h in logger.handlers):
-    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
-    logger.addHandler(file_handler)
+    try:
+        # Try to open file handler; if the file is locked, fall back to console
+        file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        logger.addHandler(file_handler)
+    except Exception:
+        # Fall back to stream handler to avoid failing cog import
+        stream_fallback = logging.StreamHandler()
+        stream_fallback.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        logger.addHandler(stream_fallback)
 
 # Console output
 if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
@@ -119,6 +126,16 @@ class Finisher(commands.Cog):
     def cog_unload(self):
         self.daily_check.cancel()
 
+    async def cog_load(self):
+        """Called when the cog is loaded into the bot. Start scheduled task here so the client exists."""
+        self.logger.info("Finisher cog loaded - ensuring daily_check task is started")
+        try:
+            if not self.daily_check.is_running():
+                self.daily_check.start()
+                self.logger.info("Finisher daily_check task started from cog_load")
+        except Exception:
+            self.logger.exception("Failed to start daily_check task from cog_load")
+
     # === Utilities ===
     async def fetch_manga(self):
         """Async fetch from AniList with timeout and basic error handling."""
@@ -134,30 +151,30 @@ class Finisher(commands.Cog):
                     media = data.get("data", {}).get("Page", {}).get("media", [])
                     self.logger.info(f"AniList returned {len(media)} media entries")
                     return media
-        
-            async def fetch_anime(self):
-                timeout = aiohttp.ClientTimeout(total=15)
-                try:
-                    self.logger.info("Fetching anime list from AniList")
-                    async with aiohttp.ClientSession(timeout=timeout) as session:
-                        async with session.post(ANILIST_URL, json={"query": anime_query}) as resp:
-                            if resp.status != 200:
-                                self.logger.warning(f"AniList returned status {resp.status} (anime)")
-                                return []
-                            data = await resp.json()
-                            media = data.get("data", {}).get("Page", {}).get("media", [])
-                            self.logger.info(f"AniList returned {len(media)} anime entries")
-                            return media
-                except asyncio.CancelledError:
-                    raise
-                except Exception as e:
-                    self.logger.exception(f"Error fetching AniList anime data: {e}")
-                    return []
-
         except asyncio.CancelledError:
             raise
         except Exception as e:
             self.logger.exception(f"Error fetching AniList data: {e}")
+            return []
+
+    async def fetch_anime(self):
+        """Async fetch anime list from AniList with timeout and basic error handling."""
+        timeout = aiohttp.ClientTimeout(total=15)
+        try:
+            self.logger.info("Fetching anime list from AniList")
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(ANILIST_URL, json={"query": anime_query}) as resp:
+                    if resp.status != 200:
+                        self.logger.warning(f"AniList returned status {resp.status} (anime)")
+                        return []
+                    data = await resp.json()
+                    media = data.get("data", {}).get("Page", {}).get("media", [])
+                    self.logger.info(f"AniList returned {len(media)} anime entries")
+                    return media
+        except asyncio.CancelledError:
+            raise
+        except Exception as e:
+            self.logger.exception(f"Error fetching AniList anime data: {e}")
             return []
 
     async def load_previous(self):
@@ -259,13 +276,22 @@ class Finisher(commands.Cog):
                 if eps < 8:
                     continue
                 mid = m.get("id")
-                if mid not in prev_ids:
-                    new_items.append(m)
-                    continue
+                # Determine end date presence
                 end = m.get("endDate") or {}
-                if all(k in end and isinstance(end[k], int) for k in ("year", "month", "day")):
+                has_end = all(k in end and isinstance(end[k], int) for k in ("year", "month", "day"))
+
+                # Skip anime that ended before today
+                if has_end:
                     if (end["year"], end["month"], end["day"]) == (today.year, today.month, today.day):
                         new_items.append(m)
+                    else:
+                        # Ended prior to today — don't include
+                        continue
+                else:
+                    # Ongoing/unknown end date: only add if unseen
+                    if mid not in prev_ids:
+                        new_items.append(m)
+                        continue
             except Exception:
                 self.logger.exception("Error filtering anime entry")
                 continue
@@ -669,7 +695,23 @@ class Finisher(commands.Cog):
 
     @daily_check.before_loop
     async def before_check(self):
-        await self.bot.wait_until_ready()
+        # wait_until_ready may raise RuntimeError if the client is not fully initialized
+        # (depends on how the bot was started). Retry with a short polling loop as a
+        # safe fallback so the scheduled task doesn't fail the whole process.
+        try:
+            await self.bot.wait_until_ready()
+            return
+        except RuntimeError:
+            # Poll for readiness for a short period
+            self.logger.warning("bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness")
+            for _ in range(60):  # poll for up to ~60 seconds
+                try:
+                    if getattr(self.bot, 'is_ready', lambda: False)():
+                        return
+                except Exception:
+                    pass
+                await asyncio.sleep(1)
+            self.logger.warning("Finisher.before_check: bot did not become ready after polling; continuing anyway")
 
     # === Slash Command for Mods Only ===
     @mod_only()
@@ -764,9 +806,4 @@ class Finisher(commands.Cog):
 async def setup(bot):
     cog = Finisher(bot)
     await bot.add_cog(cog)
-    # Start the scheduled task after the cog is added so the bot client is initialized.
-    try:
-        cog.daily_check.start()
-    except RuntimeError:
-        # If the loop is already running or can't be started, log and continue.
-        logger.exception("Failed to start daily_check loop for Finisher cog")
+    # The Finisher cog will start its scheduled task in its cog_load method.

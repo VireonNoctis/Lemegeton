@@ -18,9 +18,17 @@ LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "random.log"
 
-# Clear the log file on startup
-if LOG_FILE.exists():
-    LOG_FILE.unlink()
+# Clear the log file on startup (best-effort)
+try:
+    if LOG_FILE.exists():
+        try:
+            LOG_FILE.unlink()
+        except PermissionError:
+            # File is in use by another process; continue
+            pass
+except Exception:
+    # Best-effort only; do not fail import
+    pass
 
 # Create logger
 logger = logging.getLogger("Random")

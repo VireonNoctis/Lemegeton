@@ -15,31 +15,39 @@ LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "search_similar.log"
 
-# Clear the log file on startup
-if LOG_FILE.exists():
-    LOG_FILE.unlink()
+# Clear the log file on startup (best-effort)
+try:
+    if LOG_FILE.exists():
+        try:
+            LOG_FILE.unlink()
+        except PermissionError:
+            # File is in use by another process; continue
+            pass
+except Exception:
+    # Best-effort only; do not fail import
+    pass
 
 # Create logger
 logger = logging.getLogger("SearchSimilar")
 logger.setLevel(logging.INFO)
 
-# Remove existing handlers to avoid duplicates
 for handler in logger.handlers[:]:
     logger.removeHandler(handler)
 
-# Create file handler
-file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-
-# Create formatter
-formatter = logging.Formatter(
-    "[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-file_handler.setFormatter(formatter)
-
-# Add handler to logger
-logger.addHandler(file_handler)
+try:
+    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+except Exception:
+    stream = logging.StreamHandler()
+    stream.setLevel(logging.INFO)
+    stream.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    logger.addHandler(stream)
 
 logger.info("SearchSimilar cog logging initialized - log file cleared")
 

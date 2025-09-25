@@ -1,2 +1,2 @@
-[2025-09-25 01:12:34] [INFO    ] [CacheHelper] Cache Helper logging system initialized
-[2025-09-25 01:12:34] [DEBUG   ] [CacheHelper] JSON cache 'leaderboard_last_fetch' not found or invalid, returning empty dict
+[2025-09-25 04:10:56] [INFO    ] [CacheHelper] Cache Helper logging system initialized
+[2025-09-25 04:10:56] [DEBUG   ] [CacheHelper] JSON cache 'leaderboard_last_fetch' not found or invalid, returning empty dict

@@ -344,8 +344,12 @@ def clean_old_logs(max_age_days: int = 30) -> int:
         try:
             file_age = current_time - log_file.stat().st_mtime
             if file_age > max_age_seconds:
-                log_file.unlink()
-                removed_count += 1
+                try:
+                    log_file.unlink()
+                    removed_count += 1
+                except PermissionError:
+                    # File is in use by another process; skip
+                    continue
         except Exception:
             continue
     

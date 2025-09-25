@@ -26,11 +26,17 @@ LOG_FILE = os.path.join(LOG_DIR, "challenge_update.log")
 
 logger = logging.getLogger("ChallengeUpdate")
 logger.setLevel(logging.INFO)
-if not logger.handlers:
-    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == os.path.abspath(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+        formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s"))
+        logger.addHandler(stream_handler)
 
 # ------------------------------------------------------
 # AniList API helper

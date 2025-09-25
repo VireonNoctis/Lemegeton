@@ -34,19 +34,24 @@ logger.setLevel(logging.INFO)
 for handler in logger.handlers[:]:
     logger.removeHandler(handler)
 
-# Create file handler
-file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
-
-# Create formatter
-formatter = logging.Formatter(
-    "[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-file_handler.setFormatter(formatter)
-
-# Add handler to logger
-logger.addHandler(file_handler)
+# Create file handler with safe fallback to stream handler if file can't be opened
+try:
+    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+    # Create formatter
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
+    # Add handler to logger
+    logger.addHandler(file_handler)
+except Exception:
+    # Fall back to console stream handler to avoid import-time failure
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    logger.addHandler(stream_handler)
 
 logger.info("Invite Tracker cog logging initialized")
 
@@ -691,133 +696,7 @@ class InviteTracker(commands.Cog):
             except:
                 logger.error("Failed to send error message - interaction may have expired")
     
-    @app_commands.command(
-        name="sect_analytics",
-        description="📊 View detailed sect analytics and statistics"
-    )
-    @app_commands.default_permissions(administrator=True)
-    async def sect_analytics(self, interaction: discord.Interaction):
-        """View detailed analytics about the sect"""
-        # Defer immediately to prevent timeout
-        try:
-            await interaction.response.defer()
-        except discord.errors.NotFound:
-            logger.error(f"Interaction token expired for sect_analytics command")
-            return
-        except Exception as e:
-            logger.error(f"Failed to defer interaction for sect_analytics: {e}")
-            return
-            
-        guild_id = interaction.guild.id
-        
-        try:
-            # Total recruits
-            result = await execute_db_operation(
-                "get total recruited count",
-                "SELECT COUNT(*) FROM invite_uses WHERE guild_id = ?",
-                (guild_id,),
-                fetch_type='one'
-            )
-            total_recruited = result[0] if result else 0
-            
-            # Total leaves
-            result = await execute_db_operation(
-                "get total leaves count",
-                "SELECT COUNT(*) FROM user_leaves WHERE guild_id = ?",
-                (guild_id,),
-                fetch_type='one'
-            )
-            total_leaves = result[0] if result else 0
-            
-            # Average days in server for those who left
-            result = await execute_db_operation(
-                "get avg days before leaving",
-                """
-                SELECT AVG(days_in_server) FROM user_leaves 
-                WHERE guild_id = ? AND days_in_server > 0
-                """,
-                (guild_id,),
-                fetch_type='one'
-            )
-            avg_days = result[0] if result and result[0] else 0
-            
-            # Most active recruiter
-            result = await execute_db_operation(
-                "get top recruiter",
-                """
-                SELECT username, total_recruits FROM recruitment_stats 
-                WHERE guild_id = ? ORDER BY total_recruits DESC LIMIT 1
-                """,
-                (guild_id,),
-                fetch_type='one'
-            )
-            top_recruiter = result
-            
-            # Recent activity (last 7 days)
-            result = await execute_db_operation(
-                "get recent joins",
-                """
-                SELECT COUNT(*) FROM invite_uses 
-                WHERE guild_id = ? AND joined_at >= datetime('now', '-7 days')
-                """,
-                (guild_id,),
-                fetch_type='one'
-            )
-            recent_joins = result[0] if result else 0
-            
-            result = await execute_db_operation(
-                "get recent leaves",
-                """
-                SELECT COUNT(*) FROM user_leaves 
-                WHERE guild_id = ? AND left_at >= datetime('now', '-7 days')
-                """,
-                (guild_id,),
-                fetch_type='one'
-            )
-            recent_leaves = result[0] if result else 0
-            
-        except Exception as e:
-            logger.error(f"Error getting analytics data: {e}")
-            await interaction.followup.send("An error occurred while retrieving analytics data.", ephemeral=True)
-            return
-        
-        embed = discord.Embed(
-            title="📊 Sect Analytics Dashboard",
-            description="*Comprehensive statistics about our cultivation community*",
-            color=0x9146FF
-        )
-        
-        embed.add_field(
-            name="🎯 Overall Statistics",
-            value=f"```yaml\n"
-                  f"Total Recruited: {total_recruited}\n"
-                  f"Total Departures: {total_leaves}\n"
-                  f"Retention Rate: {((total_recruited - total_leaves) / max(total_recruited, 1) * 100):.1f}%\n"
-                  f"Avg Days Before Leaving: {avg_days:.1f}"
-                  f"```",
-            inline=False
-        )
-        
-        embed.add_field(
-            name="📈 Recent Activity (7 Days)",
-            value=f"```css\n"
-                  f"New Disciples: {recent_joins}\n"
-                  f"Departures: {recent_leaves}\n"
-                  f"Net Growth: {recent_joins - recent_leaves}"
-                  f"```",
-            inline=True
-        )
-        
-        if top_recruiter:
-            embed.add_field(
-                name="🏆 Top Recruiter",
-                value=f"```\n{top_recruiter[0]}\n{top_recruiter[1]} disciples```",
-                inline=True
-            )
-        
-        embed.set_footer(text="Use /recruitment_stats for detailed recruitment information")
-        
-        await interaction.followup.send(embed=embed)
+    # /sect_analytics command removed
     
     async def cog_unload(self):
         """Clean up when cog is unloaded"""

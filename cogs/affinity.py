@@ -14,33 +14,64 @@ from config import DB_PATH
 # Logging Setup - Auto-clearing
 # ------------------------------------------------------
 LOG_DIR = Path("logs")
-LOG_DIR.mkdir(exist_ok=True)
+try:
+    LOG_DIR.mkdir(exist_ok=True)
+except Exception:
+    # If we can't create the logs dir (permission issues), continue and rely on StreamHandler
+    pass
+
 LOG_FILE = LOG_DIR / "affinity.log"
 
-# Clear the log file on startup
-if LOG_FILE.exists():
-    LOG_FILE.unlink()
+# Attempt to clear the log file on startup but tolerate locks (Windows)
+try:
+    if LOG_FILE.exists():
+        try:
+            LOG_FILE.unlink()
+        except PermissionError:
+            # File is in use by another process (e.g., external log viewer) — continue
+            pass
+except Exception:
+    # Best-effort only; do not fail import
+    pass
 
 # Setup logger
 logger = logging.getLogger("affinity")
 logger.setLevel(logging.INFO)
-
-# File handler
-file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
-file_handler.setLevel(logging.INFO)
 
 # Formatter
 formatter = logging.Formatter(
     '[%(asctime)s] [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-file_handler.setFormatter(formatter)
 
-# Add handler if not already added
-if not logger.handlers:
-    logger.addHandler(file_handler)
-
-logger.info("Affinity cog logging initialized - log file cleared")
+# Try to add a FileHandler; fall back to StreamHandler on PermissionError
+try:
+    file_handler = logging.FileHandler(LOG_FILE, encoding='utf-8')
+    file_handler.setLevel(logging.INFO)
+    file_handler.setFormatter(formatter)
+    # Avoid adding duplicate file handlers for the same file
+    if not any(
+        isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(LOG_FILE)
+        for h in logger.handlers
+    ):
+        logger.addHandler(file_handler)
+    logger.info("Affinity cog logging initialized - writing to %s", LOG_FILE)
+except PermissionError:
+    # Fall back to console logging when file cannot be opened
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        logger.addHandler(stream_handler)
+    logger.warning("Could not open affinity log file (permission denied); logging to stdout/stderr instead")
+except Exception:
+    # Any other unexpected error: use StreamHandler as a safe fallback
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+    if not any(isinstance(h, logging.StreamHandler) for h in logger.handlers):
+        logger.addHandler(stream_handler)
+    logger.exception("Unexpected error initializing affinity logger; using StreamHandler")
 
 # ------------------------------------------------------
 # Constants
@@ -537,14 +568,6 @@ class Affinity(commands.Cog):
             self.show_details = not self.show_details
             logger.debug(f"AffinityView: Toggled details to {self.show_details} for {self.user_name}")
             await interaction.response.edit_message(embed=self.get_embed(), view=self)
-
-        @discord.ui.button(label="🔄 Refresh", style=discord.ButtonStyle.green)
-        async def refresh_data(self, interaction: discord.Interaction, button: discord.ui.Button):
-            """Refresh affinity calculations."""
-            await interaction.response.send_message(
-                "🔄 Use `/affinity` command again to refresh with latest data.", 
-                ephemeral=True
-            )
 
     # ---------------------------------------------------------
     # Slash Command: /affinity

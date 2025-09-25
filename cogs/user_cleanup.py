@@ -25,19 +25,28 @@ logger.setLevel(logging.DEBUG)
 # Clear handlers to avoid duplicates
 logger.handlers.clear()
 
-# Create file handler that clears on startup
-file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
-file_handler.setLevel(logging.DEBUG)
+try:
+    # Try to create a file handler (truncate on open). If the file is locked,
+    # fall back to a stream handler to avoid import-time failures.
+    file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
 
-# Create formatter
-formatter = logging.Formatter(
-    fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-file_handler.setFormatter(formatter)
+    # Create formatter
+    formatter = logging.Formatter(
+        fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
 
-# Add handler to logger
-logger.addHandler(file_handler)
+    # Add handler to logger
+    logger.addHandler(file_handler)
+except Exception:
+    # Fall back to console logging if the file cannot be opened
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)
+    stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                  datefmt="%Y-%m-%d %H:%M:%S"))
+    logger.addHandler(stream_handler)
 
 logger.info("User cleanup system initialized")
 

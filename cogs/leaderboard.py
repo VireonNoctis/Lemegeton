@@ -52,21 +52,26 @@ logger.setLevel(logging.INFO)
 for handler in logger.handlers[:]:
     logger.removeHandler(handler)
 
-# Create file handler
-file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
+# Try to create a file handler; fall back to stream handler if the file is locked.
+try:
+    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
 
-# Create formatter
-formatter = logging.Formatter(
-    "[%(asctime)s] [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S"
-)
-file_handler.setFormatter(formatter)
+    # Create formatter
+    formatter = logging.Formatter(
+        "[%(asctime)s] [%(levelname)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
+except Exception:
+    # Fall back to a console stream handler to avoid import-time failure
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+    logger.addHandler(stream_handler)
 
-# Add handler to logger
-logger.addHandler(file_handler)
-
-logger.info("Leaderboard cog logging initialized - log file cleared")
+logger.info("Leaderboard cog logging initialized - log file cleared (or stream fallback used)")
 
 # ------------------------------------------------------
 # Origin-Based Weighting System

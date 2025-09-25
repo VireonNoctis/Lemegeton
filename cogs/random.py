@@ -20,7 +20,19 @@ LOG_FILE = LOG_DIR / "random.log"
 
 # Clear the log file on startup
 if LOG_FILE.exists():
-    LOG_FILE.unlink()
+    try:
+        # Try to truncate the file instead of unlinking; unlink can fail if another
+        # process has the file open (PermissionError on Windows). Truncation is
+        # less likely to raise, but wrap in try/except to be safe.
+        with open(LOG_FILE, 'w'):
+            pass
+    except Exception as e:
+        # If we can't clear the file, continue — we'll append to it or fall back
+        # to console logging when we create the handler below.
+        try:
+            print(f"Warning: could not clear log file {LOG_FILE}: {e}")
+        except Exception:
+            pass
 
 # Create logger
 logger = logging.getLogger("Random")
@@ -30,9 +42,18 @@ logger.setLevel(logging.INFO)
 for handler in logger.handlers[:]:
     logger.removeHandler(handler)
 
-# Create file handler
-file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
-file_handler.setLevel(logging.INFO)
+# Create file handler with safe fallback
+try:
+    file_handler = logging.FileHandler(LOG_FILE, encoding="utf-8")
+    file_handler.setLevel(logging.INFO)
+except Exception:
+    # Fall back to console logging if the file cannot be opened
+    try:
+        print(f"Warning: could not open log file {LOG_FILE}, falling back to console")
+    except Exception:
+        pass
+    file_handler = logging.StreamHandler()
+    file_handler.setLevel(logging.INFO)
 
 # Create formatter
 formatter = logging.Formatter(
@@ -293,7 +314,7 @@ class Random(commands.Cog):
                 logger.info(f"User {interaction.user.id} requested random {selected_type}")
 
             # Defer the response since API call might take time
-            await interaction.response.defer(ephemeral=True)
+            await interaction.response.defer()
             
             # Fetch basic random media first to get the ID
             logger.info(f"Fetching random {selected_type} for user {interaction.user.id}")
@@ -306,7 +327,7 @@ class Random(commands.Cog):
                     description=f"Sorry, couldn't find any random {selected_type.lower()} right now. Please try again later!",
                     color=discord.Color.red()
                 )
-                await interaction.followup.send(embed=error_embed, ephemeral=True)
+                await interaction.followup.send(embed=error_embed)
                 return
 
             # Extract media ID from the basic embed URL to get detailed info
@@ -333,17 +354,17 @@ class Random(commands.Cog):
                     if progress_embed:
                         # Create interactive view with both embeds
                         view = self.PageView(enhanced_embed, progress_embed, selected_type)
-                        await interaction.followup.send(embed=enhanced_embed, view=view, ephemeral=True)
+                        await interaction.followup.send(embed=enhanced_embed, view=view)
                         logger.info(f"Successfully sent enhanced random {selected_type} with user progress to user {interaction.user.id}")
                     else:
                         # Just send the enhanced embed without progress
-                        await interaction.followup.send(embed=enhanced_embed, ephemeral=True)
+                        await interaction.followup.send(embed=enhanced_embed)
                         logger.info(f"Successfully sent enhanced random {selected_type} to user {interaction.user.id}")
                     return
 
             # Fallback to basic embed if detailed fetch failed
             basic_embed = self._apply_random_color(basic_embed)
-            await interaction.followup.send(embed=basic_embed, ephemeral=True)
+            await interaction.followup.send(embed=basic_embed)
             logger.info(f"Successfully sent basic random {selected_type} to user {interaction.user.id}")
             
         except Exception as e:
@@ -358,9 +379,9 @@ class Random(commands.Cog):
             
             # Send error response
             if not interaction.response.is_done():
-                await interaction.response.send_message(embed=error_embed, ephemeral=True)
+                await interaction.response.send_message(embed=error_embed)
             else:
-                await interaction.followup.send(embed=error_embed, ephemeral=True)
+                await interaction.followup.send(embed=error_embed)
 
     class PageView(View):
         """Interactive view for switching between media info and user progress."""

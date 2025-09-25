@@ -20,10 +20,17 @@ from helpers.challenge_helper import assign_challenge_role, get_manga_difficulty
 
 
 logger = logging.getLogger("ChallengeProgress")
-file_handler = logging.FileHandler("logs/challenge_update.log")
-file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
-logger.addHandler(file_handler)
 logger.setLevel(logging.INFO)
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == os.path.abspath("logs/challenge_update.log")
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler("logs/challenge_update.log")
+        file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
+        logger.addHandler(stream_handler)
 user_progress_cache = {}  # {(user_id, manga_id): (chapters_read, status)}
 
 # AniList API
@@ -402,15 +409,17 @@ class MangaChallenges(commands.Cog):
                         points = calculate_manga_points(total_chapters, ani_progress, status, difficulty, ani_repeat)
 
                         # Update database using guild-aware function
+                        # Signature: upsert_user_manga_progress_guild_aware(discord_id, guild_id, manga_id, title, chapters, points, status, repeat=0, started_at=None)
                         await upsert_user_manga_progress_guild_aware(
-                            discord_id=self.target_id,
-                            guild_id=interaction.guild.id,
-                            manga_id=manga_id,
-                            title=manga_title,
-                            current_chapter=ani_progress,
-                            status=status,
-                            points=points,
-                            started_at=ani_started_at
+                            self.target_id,
+                            interaction.guild.id,
+                            manga_id,
+                            manga_title,
+                            ani_progress,
+                            points,
+                            status,
+                            ani_repeat,
+                            ani_started_at
                         )
 
                         # Update cache

@@ -727,36 +727,6 @@ async def on_guild_remove(guild):
     except Exception as e:
         logger.error(f"Error updating server log after guild remove: {e}")
 
-# Manual server logging command (for debugging)
-@bot.tree.command(name="log_servers", description="🔍 Manually log server information (Owner only)")
-async def manual_server_log(interaction: discord.Interaction):
-    """Manually trigger server logging (restricted to bot owner)."""
-    # Check if user is bot owner or admin
-    if interaction.user.id != ADMIN_DISCORD_ID:
-        await interaction.response.send_message("❌ This command is restricted to the bot owner.", ephemeral=True)
-        return
-    
-    try:
-        await interaction.response.defer(ephemeral=True)
-        await log_server_information()
-        
-        embed = discord.Embed(
-            title="🔍 Server Information Logged",
-            description=f"Successfully logged information for {len(bot.guilds)} servers to `logs/servers.log`",
-            color=0x00FF00
-        )
-        
-        total_members = sum(guild.member_count for guild in bot.guilds)
-        embed.add_field(name="Total Servers", value=str(len(bot.guilds)), inline=True)
-        embed.add_field(name="Total Members", value=f"{total_members:,}", inline=True)
-        embed.add_field(name="Average Members/Server", value=f"{total_members/len(bot.guilds):.1f}" if bot.guilds else "0", inline=True)
-        
-        await interaction.followup.send(embed=embed, ephemeral=True)
-        logger.info(f"Manual server log triggered by {interaction.user}")
-        
-    except Exception as e:
-        logger.error(f"Error in manual server log command: {e}")
-        await interaction.followup.send("❌ Error occurred while logging server information.", ephemeral=True)
 
 # ------------------------------------------------------
 # Main Function with Comprehensive Logging
