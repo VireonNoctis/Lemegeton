@@ -1,142 +1,127 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
+from discord import app_commands
 from datetime import datetime
 
-# IDs you provided
+# IDs from your setup
 CHANGELOG_CHANNEL_ID = 1420448966423609407
 ALLOWED_ROLE_ID = 1420451296304959641
+
+
+def changelog_only():
+    """App command check that allows only users with ALLOWED_ROLE_ID
+    or users with administrative/manage permissions as a fallback.
+    """
+    async def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.guild is None:
+            return False
+
+        try:
+            member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
+
+            # Role check
+            for r in getattr(member, "roles", []):
+                if getattr(r, "id", None) == ALLOWED_ROLE_ID:
+                    return True
+
+            # Fallback to permission checks
+            perms = getattr(member, "guild_permissions", None)
+            if perms:
+                return perms.manage_roles or perms.manage_guild or perms.administrator
+        except Exception:
+            return False
+        return False
+
+    return app_commands.check(predicate)
+
 
 class Changelog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    # Restrict command to users with the role (hidden for others)
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return any(r.id == ALLOWED_ROLE_ID for r in interaction.user.roles)
-
+    @changelog_only()
     @app_commands.command(name="changelog", description="Publish a new changelog message.")
     @app_commands.describe(
-        markdown="Main content of the changelog (supports full markdown).",
-        description="Optional description below the changelog (supports full markdown).",
-        elaboration="Optional further elaboration (each line auto-prefixed with '-#').",
-        elaboration_title="Optional: Custom title for the elaboration section.",
-        role="Role to ping (required)."
+        title="Main title of the changelog.",
+        description="Main description text.",
+        extra_description="Optional extra description for more details.",
+        role="Optional role to ping."
     )
     async def changelog(
         self,
         interaction: discord.Interaction,
-        markdown: str,
-        role: discord.Role,
-        description: str = None,
-        elaboration: str = None,
-        elaboration_title: str = "Further Elaboration"
+        title: str,
+        description: str,
+        extra_description: str = None,
+        role: discord.Role = None
     ):
-        # --- Format changelog ---
-        formatted_changelog = self.apply_markdown(markdown)
+        """Slash command to post a changelog embed in the configured channel."""
+        try:
+            embed = discord.Embed(
+                title="📢 New Changelog",
+                color=discord.Color.blurple()
+            )
 
-        # --- Build embed ---
-        embed = discord.Embed(
-            title="📢 New Changelog",
-            description=formatted_changelog,
-            color=discord.Color.blurple()
-        )
-
-        if description:
+            # Main Title
             embed.add_field(
-                name="📝 Description",
-                value=self.apply_markdown(description),
+                name="📝 Title",
+                value=title,
                 inline=False
             )
 
-        if elaboration:
+            # Description
             embed.add_field(
-                name=f"📌 {elaboration_title}",
-                value=self.apply_elaboration(elaboration),
+                name="📖 Description",
+                value=description,
                 inline=False
             )
 
-        # Author at top
-        embed.set_author(
-            name=f"Published by {interaction.user.display_name}",
-            icon_url=interaction.user.display_avatar.url
-        )
+            # Extra Description (optional)
+            if extra_description:
+                embed.add_field(
+                    name="📌 Extra Description",
+                    value=extra_description,
+                    inline=False
+                )
 
-        # Footer with date/time
-        embed.set_footer(
-            text=f"Published on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
-        )
-
-        # --- Get channel ---
-        channel = self.bot.get_channel(CHANGELOG_CHANNEL_ID)
-        if not channel:
-            return await interaction.response.send_message(
-                "❌ I couldn't find the changelog channel.",
-                ephemeral=True
+            # Author info
+            embed.set_author(
+                name=f"Published by {interaction.user.display_name}",
+                icon_url=interaction.user.display_avatar.url
             )
 
-        # --- Send message ---
-        await channel.send(content=role.mention, embed=embed)
-        await interaction.response.send_message("✅ Changelog published!", ephemeral=True)
+            # Footer
+            embed.set_footer(
+                text=f"📅 Published on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+            )
 
-    def apply_markdown(self, text: str) -> str:
-        """
-        Wraps content inside triple backticks, preserving formatting.
-        Supports:
-        - Bold (**)
-        - Italics (*)
-        - Bullet points (- item)
-        - Numbered lists (1. item)
-        - Headings (#, ##, ###)
-        - Horizontal divider (---)
-        """
-        lines = text.splitlines()
-        formatted_lines = []
+            # Send to channel
+            channel = self.bot.get_channel(CHANGELOG_CHANNEL_ID)
+            if not channel:
+                await interaction.response.send_message("❌ Could not find changelog channel.", ephemeral=True)
+                return
 
-        for line in lines:
-            stripped = line.strip()
+            content = role.mention if role else None
+            await channel.send(content=content, embed=embed)
 
-            # Horizontal divider
-            if stripped == "---":
-                new_line = "────────────────────────"
+            await interaction.response.send_message("✅ Changelog published!", ephemeral=True)
 
-            # Headings
-            elif stripped.startswith("# "):
-                new_line = f"**{stripped[2:].upper()}**"
-            elif stripped.startswith("## "):
-                new_line = f"**{stripped[3:].upper()}**"
-            elif stripped.startswith("### "):
-                new_line = f"**{stripped[4:].upper()}**"
+        except Exception as e:
+            await interaction.response.send_message("❌ Failed to publish changelog.", ephemeral=True)
+            raise e
 
-            # Bullet point
-            elif stripped.startswith("- "):
-                new_line = f"- {stripped[2:]}"
+    @changelog.error
+    async def changelog_error(self, interaction: discord.Interaction, error):
+        """Error handler for /changelog command."""
+        from discord import app_commands as _app
+        if isinstance(error, (_app.MissingRole, _app.MissingPermissions, _app.CheckFailure)):
+            try:
+                await interaction.response.send_message("❌ You don’t have permission to use this command.", ephemeral=True)
+            except Exception:
+                pass
+        else:
+            raise error
 
-            # Numbered list
-            elif stripped[:2].isdigit() and stripped[2:3] == ".":
-                number = stripped.split(".", 1)[0]
-                rest = stripped[len(number) + 1:].strip()
-                new_line = f"{number}. {rest}"
-
-            else:
-                new_line = stripped
-
-            formatted_lines.append(new_line)
-
-        text = "\n".join(formatted_lines)
-        if not text.startswith("```") and not text.endswith("```"):
-            text = f"```{text}```"
-
-        return text
-
-    def apply_elaboration(self, text: str) -> str:
-        """
-        Formats elaboration lines so they always come out like '-# text'
-        and are wrapped inside a code block.
-        """
-        lines = text.splitlines()
-        formatted_lines = [f"-# {line.strip()}" for line in lines if line.strip()]
-        return f"```{chr(10).join(formatted_lines)}```"
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Changelog(bot))
