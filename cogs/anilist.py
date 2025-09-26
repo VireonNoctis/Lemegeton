@@ -184,7 +184,7 @@ class AniListCog(commands.Cog):
         return media_links, cleaned.strip()
 
     # ---------------------
-    # Activity-related code (kept as-is)
+    # Activity-related code
     # ---------------------
 
 
@@ -623,7 +623,7 @@ class AniListCog(commands.Cog):
         progress = 85
         logger.info("Parsing mode: %d%% — stats extracted (episodes/chapters/status/popularity)", progress)
 
-        # Step 5: attempt to find studios or author (best-effort)
+        # Step 5: attempt to find studios or author
         studios = []
         try:
             for m in re.finditer(r'<a[^>]+href=["\']https?://anilist.co/[^"\']*studio/[^"\']+["\'][^>]*>([^<]+)</a>', html):
@@ -735,7 +735,7 @@ class AniListCog(commands.Cog):
             return None
 
     # ---------------------
-    # Media embed builders and pages (aesthetic)
+    # Media embed builders and pages
     # ---------------------
     def _fmt_date(self, d: Dict[str, Any]) -> str:
         if not d:
@@ -844,7 +844,7 @@ class AniListCog(commands.Cog):
                 embeds.append(em)
         return embeds
 
-    # build relations / characters / staff / stats / recs / tags (aesthetic)
+    # build relations / characters / staff / stats / recs / tags 
     def build_relations_embed(self, media: dict) -> List[discord.Embed]:
         relations = (media.get("relations") or {}).get("edges") or []
         if not relations:
@@ -1163,7 +1163,7 @@ class AniListCog(commands.Cog):
         if message.author.bot:
             return
 
-        # Activity link handling (kept as before)
+        # Activity link handling
         m = ACTIVITY_URL_RE.search(message.content)
         if m:
             activity_id = int(m.group(1))
