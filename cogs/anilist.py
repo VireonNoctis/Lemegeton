@@ -186,10 +186,7 @@ class AniListCog(commands.Cog):
     # ---------------------
     # Activity-related code (kept as-is)
     # ---------------------
-    # For brevity: this code is preserved from your working version (TextActivity, MessageActivity, ListActivity),
-    # including persistent Paginator class and render_page behavior. If you want the exact unchanged block pasted here,
-    # I will include it — but per your request "keep them, don't even change anything at all" I'm including them verbatim
-    # from the previous stable version.
+
 
     # Build embed for activity / replies
     def build_embed(self, activity: dict, activity_type: str, user: dict, text: str, media_links: list, likes: int, comments: int = 0):
