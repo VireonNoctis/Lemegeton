@@ -1,182 +1,305 @@
-import discord
-from discord.ext import commands, tasks
-import sqlite3
 import asyncio
 import os
+import time
+import itertools
+from datetime import datetime
+
+import discord
+from discord.ext import commands, tasks
+from discord import app_commands
+
+import aiohttp
+
+# Try to import aiosqlite for database operations
 try:
-    import importlib
-    sntwitter = importlib.import_module("snscrape.modules.twitter")
-    _SNSCRAPE_AVAILABLE = True
-except Exception:
-    sntwitter = None
-    _SNSCRAPE_AVAILABLE = False
-import logging
-from datetime import datetime, timezone
+    import aiosqlite
+    _AIOSQLITE_AVAILABLE = True
+except ImportError:
+    _AIOSQLITE_AVAILABLE = False
+    aiosqlite = None
+
+# Import database functions
+import database
 from helpers.command_logger import log_command
-from helpers.logging_helper import get_logger
 
-logger = get_logger("NewsCog")
 
-# Store the news cog DB in the central `data/` folder at the repo root
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'news_cog.db')
+# ---------------------- Scraping ----------------------
 
-# Ensure the data directory exists
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+NITTER_INSTANCES = [
+    "https://nitter.net",
+    "https://nitter.poast.org",
+    "https://nitter.privacydev.net",
+]
+
+async def fetch_tweets(username: str, limit: int = 5):
+    """Fetch tweets using Nitter JSON (rotates through instances)."""
+    username = username.replace("@", "").lower()
+    for base in NITTER_INSTANCES:
+        url = f"{base}/{username}/rss"  # RSS feed gives structured data
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, timeout=10) as resp:
+                    if resp.status != 200:
+                        continue
+                    text = await resp.text()
+                    # Parse RSS manually (simple)
+                    import re
+                    items = re.findall(r"<item>(.*?)</item>", text, re.DOTALL)
+                    tweets = []
+                    for item in items[:limit]:
+                        guid = re.search(r"<guid.*?>(.*?)</guid>", item).group(1)
+                        link = re.search(r"<link.*?>(.*?)</link>", item).group(1)
+                        desc = re.search(r"<description>(.*?)</description>", item).group(1)
+                        pubdate = re.search(r"<pubDate>(.*?)</pubDate>", item).group(1)
+
+                        tweets.append({
+                            "id": guid.split("/")[-1],
+                            "url": link,
+                            "text": discord.utils.escape_markdown(desc),
+                            "date": datetime.strptime(pubdate, "%a, %d %b %Y %H:%M:%S %Z")
+                        })
+                    return tweets
+        except Exception:
+            continue
+    return []
+
+
+# ---------------------- Cog ----------------------
 
 class NewsCog(commands.Cog):
+    """Twitter monitoring cog with Nitter scraping and keyword filters."""
+
     def __init__(self, bot):
         self.bot = bot
-        self.conn = sqlite3.connect(DB_PATH)
-        self.cursor = self.conn.cursor()
-        self._setup_db()
-        # Start background task only if snscrape is available
-        if _SNSCRAPE_AVAILABLE:
-            self.check_tweets.start()
-        else:
-            logger.warning("snscrape not available; NewsCog background task disabled. Install 'snscrape' to enable Twitter scraping.")
 
-    def cog_unload(self):
-        self.check_tweets.cancel()
-        self.conn.close()
+    async def initialize(self):
+        if not _AIOSQLITE_AVAILABLE:
+            print("❌ aiosqlite not available - news cog disabled")
+            return
 
-    def _setup_db(self):
-        """Initialize database tables."""
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS accounts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            handle TEXT UNIQUE,
-            channel_id INTEGER,
-            last_tweet_id TEXT
-        )
-        """)
-        self.cursor.execute("""
-        CREATE TABLE IF NOT EXISTS filters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            word TEXT UNIQUE
-        )
-        """)
-        self.conn.commit()
+        try:
+            print("✅ News cog initialized using main database")
+
+            if not self.check_tweets.is_running():
+                self.check_tweets.start()
+                print("✅ Background tweet checking started")
+
+        except Exception as e:
+            print(f"❌ Failed to initialize news cog: {e}")
+
+    async def cog_load(self):
+        await self.initialize()
+
+    async def cog_unload(self):
+        if self.check_tweets.is_running():
+            self.check_tweets.cancel()
 
     # ---------------------- Commands ----------------------
 
-    @commands.group(name="news", invoke_without_command=True)
-    async def news_group(self, ctx):
-        """Main news command group."""
-        await ctx.send("Subcommands: add, remove, list, setchannel, addfilter, listfilters")
+    news_group = app_commands.Group(name="news", description="Twitter monitoring commands")
 
+    @news_group.command(name="add", description="Add a Twitter account to monitor")
+    @app_commands.describe(username="The Twitter @username you want to track (without @)")
     @log_command
-    @news_group.command(name="add")
-    async def add_account(self, ctx, handle: str):
-        """Follow a new Twitter account by handle."""
+    async def add_account(self, interaction: discord.Interaction, username: str):
+        await interaction.response.defer()
+        username = username.replace("@", "").lower()
+        
         try:
-            self.cursor.execute("INSERT INTO accounts (handle, channel_id, last_tweet_id) VALUES (?, ?, ?)",
-                                (handle, ctx.channel.id, None))
-            self.conn.commit()
-            await ctx.send(f"✅ Now following **{handle}** in {ctx.channel.mention}")
-        except sqlite3.IntegrityError:
-            await ctx.send("⚠️ This account is already being tracked.")
-
-    @log_command
-    @news_group.command(name="remove")
-    async def remove_account(self, ctx, handle: str):
-        """Unfollow a Twitter account."""
-        self.cursor.execute("DELETE FROM accounts WHERE handle = ?", (handle,))
-        self.conn.commit()
-        await ctx.send(f"🗑️ Removed tracking for {handle}")
-
-    @log_command
-    @news_group.command(name="list")
-    async def list_accounts(self, ctx):
-        """List tracked Twitter accounts."""
-        self.cursor.execute("SELECT handle, channel_id FROM accounts")
-        rows = self.cursor.fetchall()
-        if not rows:
-            await ctx.send("No accounts are being tracked yet.")
-            return
-
-        msg = "\n".join([f"- **{handle}** → <#{channel_id}>" for handle, channel_id in rows])
-        await ctx.send(f"Tracked accounts:\n{msg}")
-
-    @log_command
-    @news_group.command(name="setchannel")
-    async def set_channel(self, ctx, handle: str, channel: discord.TextChannel):
-        """Set output channel for a Twitter account."""
-        self.cursor.execute("UPDATE accounts SET channel_id = ? WHERE handle = ?", (channel.id, handle))
-        self.conn.commit()
-        await ctx.send(f"📡 Output channel for {handle} set to {channel.mention}")
-
-    @log_command
-    @news_group.command(name="addfilter")
-    async def add_filter(self, ctx, *, word: str):
-        """Add a keyword filter (case-insensitive)."""
-        try:
-            self.cursor.execute("INSERT INTO filters (word) VALUES (?)", (word.lower(),))
-            self.conn.commit()
-            await ctx.send(f"🔎 Added filter word: **{word}**")
-        except sqlite3.IntegrityError:
-            await ctx.send("⚠️ This filter already exists.")
-
-    @log_command
-    @news_group.command(name="listfilters")
-    async def list_filters(self, ctx):
-        """List all filter words."""
-        self.cursor.execute("SELECT word FROM filters")
-        rows = [r[0] for r in self.cursor.fetchall()]
-        if not rows:
-            await ctx.send("No filters set.")
-        else:
-            await ctx.send("Active filters:\n" + ", ".join([f"`{w}`" for w in rows]))
-
-    # ---------------------- Tweet Scraper ----------------------
-
-    async def fetch_new_tweets(self, handle, last_id):
-        """Fetch new tweets since last_id."""
-        tweets = []
-        try:
-            scraper = sntwitter.TwitterUserScraper(handle)
-            for tweet in scraper.get_items():
-                if last_id and str(tweet.id) <= str(last_id):
-                    break
-                tweets.append(tweet)
-            return tweets
+            success = await database.add_news_account(username, interaction.channel.id)
+            
+            if success:
+                embed = discord.Embed(
+                    title="✅ Account Added",
+                    description=f"Now monitoring [@{username}](https://twitter.com/{username}) in {interaction.channel.mention}",
+                    color=0x00ff00
+                )
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.followup.send(embed=discord.Embed(
+                    title="❌ Error",
+                    description="Failed to add account to database",
+                    color=0xff0000
+                ))
         except Exception as e:
-            logger.error(f"Error fetching tweets from {handle}: {e}")
-            return []
+            await interaction.followup.send(embed=discord.Embed(
+                title="❌ Error",
+                description=str(e),
+                color=0xff0000
+            ))
 
-    def passes_filters(self, text):
-        """Check if tweet matches any keyword filter."""
-        self.cursor.execute("SELECT word FROM filters")
-        filters = [row[0] for row in self.cursor.fetchall()]
-        return any(word.lower() in text.lower() for word in filters) if filters else True
+    @news_group.command(name="remove", description="Remove a monitored Twitter account")
+    @app_commands.describe(username="The Twitter @username you want to stop tracking")
+    @log_command
+    async def remove_account(self, interaction: discord.Interaction, username: str):
+        await interaction.response.defer()
+        username = username.replace("@", "").lower()
+        
+        success = await database.remove_news_account(username)
+        
+        if success:
+            embed = discord.Embed(
+                title="🗑️ Account Removed",
+                description=f"Stopped monitoring [@{username}](https://twitter.com/{username})",
+                color=0xff5555
+            )
+        else:
+            embed = discord.Embed(
+                title="⚠️ Not Found",
+                description=f"[@{username}](https://twitter.com/{username}) was not being monitored.",
+                color=0xffaa00
+            )
+        await interaction.followup.send(embed=embed)
 
-    # ---------------------- Background Task ----------------------
+    @news_group.command(name="list", description="List all monitored accounts")
+    @log_command
+    async def list_accounts(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        accounts = await database.get_news_accounts()
+        
+        if accounts:
+            desc = "\n".join(
+                f"[ @{acc['handle']} ](https://twitter.com/{acc['handle']}) → <#{acc['channel_id']}>"
+                for acc in accounts
+            )
+            embed = discord.Embed(title="📋 Monitored Accounts", description=desc, color=0x1DA1F2)
+        else:
+            embed = discord.Embed(title="📋 Monitored Accounts", description="No accounts are being monitored.", color=0xffaa00)
+        await interaction.followup.send(embed=embed)
+
+    @news_group.command(name="addfilter", description="Add a keyword filter")
+    @app_commands.describe(keyword="Tweets containing this word will be suppressed")
+    @log_command
+    async def add_filter(self, interaction: discord.Interaction, keyword: str):
+        await interaction.response.defer()
+        
+        success = await database.add_news_filter(keyword)
+        
+        if success:
+            embed = discord.Embed(
+                title="🔍 Filter Added",
+                description=f"Tweets containing **{keyword}** will be suppressed.",
+                color=0x00ff00
+            )
+        else:
+            embed = discord.Embed(
+                title="⚠️ Filter Already Exists",
+                description=f"Filter for **{keyword}** already exists.",
+                color=0xffaa00
+            )
+        await interaction.followup.send(embed=embed)
+
+    @news_group.command(name="listfilters", description="List all keyword filters")
+    @log_command
+    async def list_filters(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        
+        filters = await database.get_news_filters()
+        
+        if filters:
+            desc = "\n".join([f"• {word}" for word in filters])
+            embed = discord.Embed(title="🔍 Active Filters", description=desc, color=0x1DA1F2)
+        else:
+            embed = discord.Embed(title="🔍 Active Filters", description="No filters configured.", color=0xffaa00)
+        await interaction.followup.send(embed=embed)
+
+    @news_group.command(name="removefilter", description="Remove a keyword filter")
+    @app_commands.describe(keyword="The word you want to remove from filters")
+    @log_command
+    async def remove_filter(self, interaction: discord.Interaction, keyword: str):
+        await interaction.response.defer()
+        
+        success = await database.remove_news_filter(keyword)
+        
+        if success:
+            embed = discord.Embed(title="🗑️ Filter Removed", description=f"Removed filter: **{keyword}**", color=0xff5555)
+        else:
+            embed = discord.Embed(title="⚠️ Not Found", description=f"Filter **{keyword}** not found.", color=0xffaa00)
+        await interaction.followup.send(embed=embed)
+        await interaction.followup.send(embed=embed)
+
+    @news_group.command(name="status", description="Check bot status and scraping health")
+    @log_command
+    async def status(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+        status_lines = []
+
+        # Database is always connected now via main database
+        status_lines.append("✅ Database: Connected (Main Database)")
+
+        try:
+            tweets = await fetch_tweets("nasa", 1)
+            if tweets:
+                status_lines.append("✅ Scraping: Working")
+            else:
+                status_lines.append("⚠️ Scraping: No tweets found")
+        except Exception:
+            status_lines.append("❌ Scraping: Error")
+
+        if hasattr(self, 'check_tweets') and self.check_tweets.is_running():
+            status_lines.append("✅ Background Task: Running")
+            status_lines.append(f"📅 Next check: <t:{int(time.time()) + 300}:R>")
+        else:
+            status_lines.append("⚠️ Background Task: Not running")
+
+        # Get counts from database functions
+        accounts = await database.get_news_accounts()
+        filters = await database.get_news_filters()
+        status_lines.append(f"📊 Tracked Accounts: {len(accounts)}")
+        status_lines.append(f"🔍 Active Filters: {len(filters)}")
+
+        embed = discord.Embed(title="📰 News Cog Status", description="\n".join(status_lines), color=0x1DA1F2)
+        await interaction.followup.send(embed=embed)
+
+    # ---------------------- Background Tasks ----------------------
 
     @tasks.loop(minutes=5)
     async def check_tweets(self):
-        await self.bot.wait_until_ready()
+        accounts = await database.get_news_accounts()
+        if not accounts:
+            return
 
-        self.cursor.execute("SELECT id, handle, channel_id, last_tweet_id FROM accounts")
-        accounts = self.cursor.fetchall()
-
-        for acc_id, handle, channel_id, last_tweet_id in accounts:
-            tweets = await self.fetch_new_tweets(handle, last_tweet_id)
-            if not tweets:
-                continue
-
-            tweets.sort(key=lambda t: t.date)  # oldest → newest
-            for tweet in tweets:
-                if not self.passes_filters(tweet.content):
+        for account in accounts:
+            handle = account['handle']
+            channel_id = account['channel_id']
+            last_tweet_id = account['last_tweet_id']
+            
+            try:
+                channel = self.bot.get_channel(channel_id)
+                if not channel:
                     continue
 
-                channel = self.bot.get_channel(channel_id)
-                if channel:
-                    ts = int(tweet.date.replace(tzinfo=timezone.utc).timestamp())
-                    msg = f"**@{handle}** made a new post <t:{ts}:R>: https://x.com/{handle}/status/{tweet.id}"
-                    await channel.send(msg)
+                tweets = await fetch_tweets(handle, 5)
+                if not tweets:
+                    continue
 
-                # Update last tweet id
-                self.cursor.execute("UPDATE accounts SET last_tweet_id = ? WHERE id = ?", (str(tweet.id), acc_id))
-                self.conn.commit()
+                new_tweets = []
+                for t in tweets:
+                    tid = str(t["id"])
+                    if last_tweet_id and tid == last_tweet_id:
+                        break
+                    new_tweets.append(t)
+
+                new_tweets.reverse()
+                for t in new_tweets[-3:]:
+                    # Apply filters
+                    should_filter = False
+                    filters = await database.get_news_filters()
+                    for filter_word in filters:
+                        if filter_word.lower() in t["text"].lower():
+                            should_filter = True
+                            break
+                    if should_filter:
+                        continue
+
+                    await channel.send(f"🐦 [@{handle}](https://twitter.com/{handle}) has posted a new update:\n{t['url']}")
+
+                if new_tweets:
+                    await database.update_last_tweet_id(handle, str(tweets[0]["id"]))
+
+            except Exception as e:
+                print(f"Error checking tweets for {handle}: {e}")
 
     @check_tweets.before_loop
     async def before_check_tweets(self):
@@ -184,4 +307,5 @@ class NewsCog(commands.Cog):
 
 
 async def setup(bot):
-    await bot.add_cog(NewsCog(bot))
+    cog = NewsCog(bot)
+    await bot.add_cog(cog)
