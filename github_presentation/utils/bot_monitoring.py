@@ -7,14 +7,28 @@ import logging
 import time
 from datetime import datetime
 from functools import wraps
+from types import SimpleNamespace
 
-# Import monitoring system
+# Import monitoring system - try package-style import first, then fallback to top-level module
+MONITORING_AVAILABLE = False
+setup_monitoring = None
+get_monitoring = None
 try:
-    from monitoring_system import setup_monitoring, get_monitoring
+    # Prefer explicit package import when utils is a package or we're running from project root
+    from utils.monitoring_system import setup_monitoring as _setup_monitoring, get_monitoring as _get_monitoring
+    setup_monitoring = _setup_monitoring
+    get_monitoring = _get_monitoring
     MONITORING_AVAILABLE = True
-except ImportError:
-    MONITORING_AVAILABLE = False
-    logging.warning("Monitoring system not available - install psutil to enable monitoring")
+except Exception:
+    try:
+        # Fallback to direct module import if monitoring_system.py is on sys.path
+        from monitoring_system import setup_monitoring as _setup_monitoring, get_monitoring as _get_monitoring
+        setup_monitoring = _setup_monitoring
+        get_monitoring = _get_monitoring
+        MONITORING_AVAILABLE = True
+    except Exception:
+        MONITORING_AVAILABLE = False
+        logging.warning("Monitoring system not available (utils/monitoring_system.py missing or failed to import). To enable, ensure utils/monitoring_system.py exists and required deps (e.g. psutil) are installed.")
 
 def setup_bot_monitoring(bot):
     """Setup monitoring integration with the Discord bot"""
@@ -24,66 +38,92 @@ def setup_bot_monitoring(bot):
     
     try:
         monitoring = setup_monitoring(bot)
-        logging.info("✅ Bot monitoring system initialized")
-        
-        # Add monitoring to bot events
+        logging.info("✅ Bot monitoring system initialized (task start deferred)")
+
+        # We defer starting the monitoring background loop until the bot is
+        # ready. The loop will be started inside the on_ready handler added
+        # by add_monitoring_events(), which executes within the bot's event
+        # loop and avoids accessing bot.loop from synchronous code.
         add_monitoring_events(bot, monitoring)
-        
+
         return monitoring
     except Exception as e:
         logging.error(f"❌ Failed to setup bot monitoring: {e}")
         return None
 
 def add_monitoring_events(bot, monitoring):
-    """Add monitoring event handlers to the bot"""
-    
-    @bot.event
-    async def on_ready():
+    """Add monitoring event handlers to the bot using listeners (not decorators).
+
+    Using bot.add_listener ensures our handlers run alongside other
+    on_ready handlers defined elsewhere (and are not overridden).
+    """
+
+    async def _monitor_on_ready():
         """Bot ready event with monitoring"""
-        logging.info(f"🤖 Bot is ready! Logged in as {bot.user}")
-        logging.info(f"📊 Monitoring {len(bot.guilds)} guilds with {sum(g.member_count for g in bot.guilds)} total users")
-        
-        # Log guild information for monitoring
-        for guild in bot.guilds:
-            monitoring.guild_activity[guild.id] = {
-                'commands_24h': 0,
-                'errors_24h': 0,
-                'last_activity': datetime.utcnow()
-            }
-            logging.info(f"  📍 {guild.name} ({guild.id}): {guild.member_count} members")
-    
-    @bot.event
-    async def on_guild_join(guild):
+        try:
+            logging.info(f"🤖 Bot is ready! Logged in as {bot.user}")
+            logging.info(f"📊 Monitoring {len(bot.guilds)} guilds with {sum(g.member_count for g in bot.guilds)} total users")
+
+            # Log guild information for monitoring
+            for guild in bot.guilds:
+                monitoring.guild_activity[guild.id] = {
+                    'commands_24h': 0,
+                    'errors_24h': 0,
+                    'last_activity': datetime.utcnow()
+                }
+                logging.info(f"  📍 {guild.name} ({guild.id}): {guild.member_count} members")
+
+            # Start the monitoring background loop now that the bot is ready
+            if monitoring and hasattr(monitoring, 'monitoring_task'):
+                try:
+                    if not monitoring.monitoring_task.is_running():
+                        monitoring.monitoring_task.start()
+                        logging.info("✅ Monitoring background task started from on_ready")
+                    else:
+                        logging.info("Monitoring background task already running")
+                except Exception:
+                    logging.exception("Failed to start monitoring background task from on_ready")
+        except Exception:
+            logging.exception("Unexpected error in monitoring on_ready handler")
+
+    async def _monitor_on_guild_join(guild):
         """Track new guild joins"""
         logging.info(f"🎉 Bot joined new guild: {guild.name} ({guild.id}) with {guild.member_count} members")
-        
+
         # Initialize guild in monitoring
         monitoring.guild_activity[guild.id] = {
             'commands_24h': 0,
             'errors_24h': 0,
             'last_activity': datetime.utcnow()
         }
-    
-    @bot.event
-    async def on_guild_remove(guild):
+
+    async def _monitor_on_guild_remove(guild):
         """Track guild removals"""
         logging.info(f"👋 Bot removed from guild: {guild.name} ({guild.id})")
-        
+
         # Remove guild from monitoring
         if guild.id in monitoring.guild_activity:
             del monitoring.guild_activity[guild.id]
-    
-    @bot.event
-    async def on_command_error(ctx, error):
+
+    async def _monitor_on_command_error(ctx, error):
         """Track command errors for monitoring"""
         guild_id = ctx.guild.id if ctx.guild else None
         command_name = ctx.command.name if ctx.command else "unknown"
-        
+
         # Record error in monitoring
         monitoring.record_error(error, guild_id, command_name)
-        
+
         # Log the error
         logging.error(f"🚨 Command error in {ctx.guild.name if ctx.guild else 'DM'}: {error}")
+
+    # Register listeners so we don't interfere with other on_ready handlers
+    try:
+        bot.add_listener(_monitor_on_ready, 'on_ready')
+        bot.add_listener(_monitor_on_guild_join, 'on_guild_join')
+        bot.add_listener(_monitor_on_guild_remove, 'on_guild_remove')
+        bot.add_listener(_monitor_on_command_error, 'on_command_error')
+    except Exception:
+        logging.exception("Failed to register monitoring event listeners")
 
 def monitor_command(func):
     """Decorator to monitor command usage and response times"""
@@ -202,8 +242,27 @@ class BotMonitoringCommands:
             await interaction.response.defer(ephemeral=True)
             
             try:
-                system_metrics = await monitoring.get_system_metrics()
-                bot_metrics = await monitoring.get_bot_metrics()
+                # Defensive: call system and bot metrics separately so a failure
+                # in one (e.g., missing DB tables) doesn't abort the whole flow.
+                try:
+                    system_metrics = await monitoring.get_system_metrics()
+                except Exception as e:
+                    logging.warning(f"Monitoring system metrics failed: {e}")
+                    system_metrics = SimpleNamespace(cpu_percent=0, memory_percent=0, latency_ms=0, uptime_hours=0)
+
+                try:
+                    bot_metrics = await monitoring.get_bot_metrics()
+                except Exception as e:
+                    logging.warning(f"Monitoring bot metrics failed: {e}")
+                    bot_metrics = SimpleNamespace(
+                        guild_count=0,
+                        total_users=0,
+                        total_registered_users=0,
+                        commands_per_hour=0,
+                        errors_per_hour=0,
+                        top_commands={},
+                        response_times=[]
+                    )
                 
                 import discord
                 embed = discord.Embed(

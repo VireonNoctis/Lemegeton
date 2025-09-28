@@ -1,8 +1,9 @@
 import sqlite3
 import os
+import config
 
-# Connect to database using correct path
-database_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'database.db')
+# Connect to database using configured path (fallback to data/database.db)
+database_path = os.getenv('DATABASE_PATH', getattr(config, 'DB_PATH', os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'database.db')))
 conn = sqlite3.connect(database_path)
 cursor = conn.cursor()
 

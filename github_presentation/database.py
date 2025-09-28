@@ -187,12 +187,14 @@ async def migrate_to_multi_guild_schema():
         await execute_db_operation("create new users table", new_table_query)
         
         # 2. Copy data from old table to new table
+        # Use environment variable for default guild ID
+        default_guild_id = os.getenv("GUILD_ID", "897814031346319382")
         copy_query = """
             INSERT INTO users_new (id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at)
-            SELECT id, discord_id, COALESCE(guild_id, 897814031346319382), username, anilist_username, anilist_id, created_at, updated_at
+            SELECT id, discord_id, COALESCE(guild_id, ?), username, anilist_username, anilist_id, created_at, updated_at
             FROM users
         """
-        await execute_db_operation("copy data to new users table", copy_query)
+        await execute_db_operation("copy data to new users table", copy_query, (default_guild_id,))
         
         # 3. Drop old table
         await execute_db_operation("drop old users table", "DROP TABLE users")
@@ -269,8 +271,8 @@ async def init_users_table():
                 has_guild_data = count_result[0] > 0 if count_result else False
                 
                 if not has_guild_data:
-                    # Migrate existing users to use default guild_id
-                    default_guild_id = 897814031346319382  # Your server ID
+                    # Migrate existing users to use default guild_id from environment
+                    default_guild_id = os.getenv("GUILD_ID", "897814031346319382")
                     migrate_query = "UPDATE users SET guild_id = ? WHERE guild_id IS NULL"
                     await execute_db_operation("migrate existing users to default guild", migrate_query, (default_guild_id,))
                     logger.info(f"✅ Migrated existing users to default guild ID: {default_guild_id}")
@@ -532,16 +534,29 @@ async def update_username(discord_id: int, username: str):
         logger.error(f"❌ Error updating username for {discord_id}: {e}", exc_info=True)
         raise
 
-async def remove_user(discord_id: int):
-    """Remove user with comprehensive logging and validation, including all related data."""
-    logger.info(f"Removing user with Discord ID: {discord_id}")
+async def remove_user(discord_id: int, guild_id: int = None):
+    """Remove user with comprehensive logging and validation.
+
+    If guild_id is provided the removal will be scoped to that guild only. If guild_id
+    is None the operation will remove all records for that discord_id across all guilds
+    (backwards-compatible global delete).
+    """
+    logger.info(f"Removing user with Discord ID: {discord_id} guild_id={guild_id}")
     
     try:
         if not isinstance(discord_id, int) or discord_id <= 0:
             raise ValueError(f"Invalid discord_id: {discord_id}")
         
-        # Check if user exists first
-        existing_user = await get_user(discord_id)
+        # Check if user exists first (guild-aware when possible)
+        existing_user = None
+        if guild_id is not None:
+            try:
+                existing_user = await get_user_guild_aware(discord_id, guild_id)
+            except Exception:
+                # Fall back to legacy get_user
+                existing_user = await get_user(discord_id)
+        else:
+            existing_user = await get_user(discord_id)
         if not existing_user:
             logger.warning(f"Cannot remove user - user {discord_id} not found")
             return False
@@ -565,18 +580,27 @@ async def remove_user(discord_id: int):
                 # Delete from all related tables first (in order to avoid foreign key conflicts)
                 
                 # 1. Delete user manga progress
-                result = await db.execute("DELETE FROM user_manga_progress WHERE discord_id = ?", (discord_id,))
+                if guild_id is not None:
+                    result = await db.execute("DELETE FROM user_manga_progress WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                else:
+                    result = await db.execute("DELETE FROM user_manga_progress WHERE discord_id = ?", (discord_id,))
                 progress_deleted = result.rowcount
                 logger.debug(f"Deleted {progress_deleted} manga progress records for user {discord_id}")
                 
                 # 2. Delete user stats
-                result = await db.execute("DELETE FROM user_stats WHERE discord_id = ?", (discord_id,))
+                if guild_id is not None:
+                    result = await db.execute("DELETE FROM user_stats WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                else:
+                    result = await db.execute("DELETE FROM user_stats WHERE discord_id = ?", (discord_id,))
                 stats_deleted = result.rowcount
                 logger.debug(f"Deleted {stats_deleted} user stats records for user {discord_id}")
                 
                 # 3. Delete cached stats
                 try:
-                    result = await db.execute("DELETE FROM cached_stats WHERE discord_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM cached_stats WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM cached_stats WHERE discord_id = ?", (discord_id,))
                     cached_deleted = result.rowcount
                     logger.debug(f"Deleted {cached_deleted} cached stats records for user {discord_id}")
                 except Exception as e:
@@ -585,7 +609,10 @@ async def remove_user(discord_id: int):
                 
                 # 4. Delete manga recommendation votes (voter_id column)
                 try:
-                    result = await db.execute("DELETE FROM manga_recommendations_votes WHERE voter_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM manga_recommendations_votes WHERE voter_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM manga_recommendations_votes WHERE voter_id = ?", (discord_id,))
                     votes_deleted = result.rowcount
                     logger.debug(f"Deleted {votes_deleted} recommendation votes for user {discord_id}")
                 except Exception as e:
@@ -594,7 +621,10 @@ async def remove_user(discord_id: int):
                 
                 # 5. Delete achievements
                 try:
-                    result = await db.execute("DELETE FROM achievements WHERE discord_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM achievements WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM achievements WHERE discord_id = ?", (discord_id,))
                     achievements_deleted = result.rowcount
                     logger.debug(f"Deleted {achievements_deleted} achievements for user {discord_id}")
                 except Exception as e:
@@ -603,7 +633,10 @@ async def remove_user(discord_id: int):
                 
                 # 6. Delete steam user mapping
                 try:
-                    result = await db.execute("DELETE FROM steam_users WHERE discord_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM steam_users WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM steam_users WHERE discord_id = ?", (discord_id,))
                     steam_deleted = result.rowcount
                     logger.debug(f"Deleted {steam_deleted} steam user mappings for user {discord_id}")
                 except Exception as e:
@@ -612,7 +645,10 @@ async def remove_user(discord_id: int):
                 
                 # 7. Delete user progress checkpoint
                 try:
-                    result = await db.execute("DELETE FROM user_progress_checkpoint WHERE discord_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM user_progress_checkpoint WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM user_progress_checkpoint WHERE discord_id = ?", (discord_id,))
                     checkpoint_deleted = result.rowcount
                     logger.debug(f"Deleted {checkpoint_deleted} progress checkpoint records for user {discord_id}")
                 except Exception as e:
@@ -621,7 +657,10 @@ async def remove_user(discord_id: int):
                 
                 # 8. Delete manga challenges (user_id column)
                 try:
-                    result = await db.execute("DELETE FROM manga_challenges WHERE user_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM manga_challenges WHERE user_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM manga_challenges WHERE user_id = ?", (discord_id,))
                     manga_challenges_deleted = result.rowcount
                     logger.debug(f"Deleted {manga_challenges_deleted} manga challenges for user {discord_id}")
                 except Exception as e:
@@ -630,7 +669,10 @@ async def remove_user(discord_id: int):
                 
                 # 9. Delete user progress (user_id column)
                 try:
-                    result = await db.execute("DELETE FROM user_progress WHERE user_id = ?", (discord_id,))
+                    if guild_id is not None:
+                        result = await db.execute("DELETE FROM user_progress WHERE user_id = ? AND guild_id = ?", (discord_id, guild_id))
+                    else:
+                        result = await db.execute("DELETE FROM user_progress WHERE user_id = ?", (discord_id,))
                     user_progress_deleted = result.rowcount
                     logger.debug(f"Deleted {user_progress_deleted} user progress records for user {discord_id}")
                 except Exception as e:
@@ -638,7 +680,10 @@ async def remove_user(discord_id: int):
                     user_progress_deleted = 0
                 
                 # 6. Finally, delete from users table
-                result = await db.execute("DELETE FROM users WHERE discord_id = ?", (discord_id,))
+                if guild_id is not None:
+                    result = await db.execute("DELETE FROM users WHERE discord_id = ? AND guild_id = ?", (discord_id, guild_id))
+                else:
+                    result = await db.execute("DELETE FROM users WHERE discord_id = ?", (discord_id,))
                 user_deleted = result.rowcount
                 
                 if user_deleted == 0:
@@ -671,14 +716,17 @@ async def remove_user(discord_id: int):
         logger.error(f"❌ Error removing user {discord_id}: {e}", exc_info=True)
         raise
 
-async def check_user_related_records(discord_id: int):
-    """Check for related records before user deletion (for debugging)."""
-    logger.debug(f"Checking related records for user {discord_id}")
-    
+async def check_user_related_records(discord_id: int, guild_id: int = None):
+    """Check for related records before user deletion (for debugging).
+
+    If guild_id is provided, counts will be limited to that guild when possible.
+    """
+    logger.debug(f"Checking related records for user {discord_id} (guild_id={guild_id})")
+
     try:
         async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
             related_counts = {}
-            
+
             # Check each table that might reference the user
             tables_to_check = [
                 ("user_manga_progress", "discord_id"),
@@ -691,9 +739,21 @@ async def check_user_related_records(discord_id: int):
                 ("manga_challenges", "user_id"),
                 ("user_progress", "user_id")
             ]
-            
+
             for table_name, column_name in tables_to_check:
                 try:
+                    if guild_id is not None:
+                        # Try guild-scoped count first; if table lacks guild_id column this will fail
+                        try:
+                            cursor = await db.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} = ? AND guild_id = ?", (discord_id, guild_id))
+                            count = await cursor.fetchone()
+                            related_counts[table_name] = count[0] if count else 0
+                            await cursor.close()
+                            continue
+                        except Exception:
+                            # Table probably doesn't have guild_id; fall back to global count
+                            pass
+
                     cursor = await db.execute(f"SELECT COUNT(*) FROM {table_name} WHERE {column_name} = ?", (discord_id,))
                     count = await cursor.fetchone()
                     related_counts[table_name] = count[0] if count else 0
@@ -701,10 +761,10 @@ async def check_user_related_records(discord_id: int):
                 except Exception as e:
                     logger.debug(f"Could not check table {table_name}: {e}")
                     related_counts[table_name] = "ERROR"
-            
+
             logger.debug(f"Related records for user {discord_id}: {related_counts}")
             return related_counts
-            
+
     except Exception as e:
         logger.error(f"Error checking related records for user {discord_id}: {e}")
         return {}
@@ -771,7 +831,8 @@ async def init_challenge_rules_table():
         await execute_db_operation("challenge rules table creation", create_query)
         
         # Add missing timestamp columns if they don't exist
-        for column_name, column_type in [("created_at", "DATETIME DEFAULT CURRENT_TIMESTAMP"), ("updated_at", "DATETIME DEFAULT CURRENT_TIMESTAMP")]:
+        # SQLite doesn't support DEFAULT CURRENT_TIMESTAMP with ALTER TABLE, so we use NULL default
+        for column_name, column_type in [("created_at", "DATETIME"), ("updated_at", "DATETIME")]:
             try:
                 alter_query = f"ALTER TABLE challenge_rules ADD COLUMN {column_name} {column_type}"
                 await execute_db_operation(f"add {column_name} to challenge_rules", alter_query)
@@ -779,6 +840,10 @@ async def init_challenge_rules_table():
             except aiosqlite.OperationalError as e:
                 if "duplicate column name" in str(e).lower():
                     logger.debug(f"Column '{column_name}' already exists in challenge_rules table")
+                else:
+                    logger.warning(f"Could not add column '{column_name}' to challenge_rules: {e}")
+            except Exception as e:
+                logger.warning(f"Could not add column '{column_name}' to challenge_rules: {e}")
         
         logger.info("✅ Challenge rules table initialization completed")
         
@@ -867,6 +932,25 @@ async def init_user_stats_table():
         """)
         await db.commit()
         logger.info("User stats table ready.")
+        # Ensure additional columns exist for compatibility with newer leaderboards
+        # Add total_chapters, total_episodes, manga_completed, anime_completed if missing
+        try:
+            await db.execute("ALTER TABLE user_stats ADD COLUMN total_chapters INTEGER DEFAULT 0")
+        except aiosqlite.OperationalError:
+            pass
+        try:
+            await db.execute("ALTER TABLE user_stats ADD COLUMN total_episodes INTEGER DEFAULT 0")
+        except aiosqlite.OperationalError:
+            pass
+        try:
+            await db.execute("ALTER TABLE user_stats ADD COLUMN manga_completed INTEGER DEFAULT 0")
+        except aiosqlite.OperationalError:
+            pass
+        try:
+            await db.execute("ALTER TABLE user_stats ADD COLUMN anime_completed INTEGER DEFAULT 0")
+        except aiosqlite.OperationalError:
+            pass
+        await db.commit()
 
 # ------------------------------------------------------
 # ACHIEVEMENTS TABLE
@@ -1071,7 +1155,9 @@ async def upsert_user_stats(
     avg_manga_score: float,
     avg_anime_score: float,
     total_chapters: int = 0,
-    total_episodes: int = 0 
+    total_episodes: int = 0,
+    manga_completed: int = 0,
+    anime_completed: int = 0
 ):
     """Upsert user stats with comprehensive logging and validation."""
     logger.info(f"Upserting stats for user {username} (Discord ID: {discord_id})")
@@ -1090,7 +1176,9 @@ async def upsert_user_stats(
             'avg_manga_score': avg_manga_score,
             'avg_anime_score': avg_anime_score,
             'total_chapters': total_chapters,
-            'total_episodes': total_episodes
+            'total_episodes': total_episodes,
+            'manga_completed': manga_completed,
+            'anime_completed': anime_completed
         }
         
         for field_name, value in numeric_fields.items():
@@ -1101,12 +1189,13 @@ async def upsert_user_stats(
         logger.debug(f"User stats - Manga: {total_manga}, Anime: {total_anime}, Chapters: {total_chapters}, Episodes: {total_episodes}")
         logger.debug(f"Average scores - Manga: {avg_manga_score:.2f}, Anime: {avg_anime_score:.2f}")
         
+        # Upsert with completed counts when available (backwards compatible)
         query = """
             INSERT INTO user_stats (
                 discord_id, username, total_manga, total_anime,
-                avg_manga_score, avg_anime_score, total_chapters, total_episodes
+                avg_manga_score, avg_anime_score, total_chapters, total_episodes, manga_completed, anime_completed
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(discord_id) DO UPDATE SET
                 username=excluded.username,
                 total_manga=excluded.total_manga,
@@ -1114,15 +1203,26 @@ async def upsert_user_stats(
                 avg_manga_score=excluded.avg_manga_score,
                 avg_anime_score=excluded.avg_anime_score,
                 total_chapters=excluded.total_chapters,
-                total_episodes=excluded.total_episodes
+                total_episodes=excluded.total_episodes,
+                manga_completed=excluded.manga_completed,
+                anime_completed=excluded.anime_completed
         """
-        
+
         await execute_db_operation(
             f"upsert user stats for {username}",
             query,
-            (discord_id, username.strip(), numeric_fields['total_manga'], numeric_fields['total_anime'],
-             numeric_fields['avg_manga_score'], numeric_fields['avg_anime_score'], 
-             numeric_fields['total_chapters'], numeric_fields['total_episodes'])
+            (
+                discord_id,
+                username.strip(),
+                numeric_fields['total_manga'],
+                numeric_fields['total_anime'],
+                numeric_fields['avg_manga_score'],
+                numeric_fields['avg_anime_score'],
+                numeric_fields['total_chapters'],
+                numeric_fields['total_episodes'],
+                numeric_fields.get('manga_completed', 0),
+                numeric_fields.get('anime_completed', 0)
+            )
         )
         
         logger.info(f"✅ Successfully upserted stats for {username}")
@@ -1396,6 +1496,55 @@ async def init_steam_users_table():
         logger.info("Steam users table ready.")
 
 
+async def init_guild_challenge_roles_table():
+    """Initialize the guild challenge roles table for multi-guild support."""
+    logger.info("🔧 Initializing guild challenge roles table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_challenge_roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                challenge_id INTEGER NOT NULL,
+                threshold REAL NOT NULL,
+                role_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, challenge_id, threshold)
+            )
+        """)
+        await db.commit()
+        
+        # Migrate default roles for primary guild if they don't exist
+        await migrate_default_challenge_roles()
+        
+        logger.info("✅ Guild challenge roles table ready.")
+
+
+async def migrate_default_challenge_roles():
+    """Migrate default challenge roles from config.py to the database for the primary guild."""
+    try:
+        primary_guild_id = int(os.getenv("GUILD_ID"))
+        
+        # Check if roles already exist for primary guild
+        existing_roles = await get_guild_challenge_roles(primary_guild_id)
+        
+        if existing_roles:
+            logger.info(f"Default challenge roles already exist for primary guild {primary_guild_id}")
+            return
+        
+        # Migrate roles from config.CHALLENGE_ROLE_IDS
+        logger.info(f"Migrating default challenge roles for primary guild {primary_guild_id}")
+        
+        for challenge_id, thresholds in config.CHALLENGE_ROLE_IDS.items():
+            for threshold, role_id in thresholds.items():
+                await set_guild_challenge_role(primary_guild_id, challenge_id, threshold, role_id)
+                logger.info(f"Migrated: Challenge {challenge_id}, threshold {threshold} -> role {role_id}")
+        
+        logger.info(f"✅ Successfully migrated {len(config.CHALLENGE_ROLE_IDS)} default challenge roles")
+        
+    except Exception as e:
+        logger.error(f"Error migrating default challenge roles: {e}", exc_info=True)
 
 
 # ------------------------------------------------------
@@ -1418,6 +1567,7 @@ async def init_db():
         ("Manga Challenges", init_manga_challenges_table),
         ("User Progress", init_user_progress_table),
         ("Global Challenges", init_global_challenges_table),
+        ("Guild Challenge Roles", init_guild_challenge_roles_table),
         ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
@@ -1764,7 +1914,9 @@ async def upsert_user_stats_guild_aware(
     avg_manga_score: float,
     avg_anime_score: float,
     total_chapters: int = 0,
-    total_episodes: int = 0 
+    total_episodes: int = 0,
+    manga_completed: int = 0,
+    anime_completed: int = 0
 ):
     """Upsert user stats with guild context - note: user_stats table doesn't have guild_id yet, 
     so this function currently acts as a wrapper for backward compatibility.
@@ -1783,7 +1935,9 @@ async def upsert_user_stats_guild_aware(
         avg_manga_score=avg_manga_score,
         avg_anime_score=avg_anime_score,
         total_chapters=total_chapters,
-        total_episodes=total_episodes
+        total_episodes=total_episodes,
+        manga_completed=manga_completed,
+        anime_completed=anime_completed
     )
 
 
@@ -1794,12 +1948,13 @@ async def get_guild_leaderboard_data(guild_id: int, leaderboard_type: str = "man
     try:
         if not isinstance(guild_id, int) or guild_id <= 0:
             raise ValueError(f"Invalid guild_id: {guild_id}")
-        if leaderboard_type not in ["manga", "anime", "combined"]:
+        if leaderboard_type not in ["manga", "anime", "combined", "chapters", "episodes", "manga_completed", "anime_completed"]:
             raise ValueError(f"Invalid leaderboard_type: {leaderboard_type}")
-        
+
         query = """
             SELECT u.anilist_username, us.total_manga, us.total_anime, 
-                   us.total_chapters, us.total_episodes, us.avg_manga_score, us.avg_anime_score
+                   us.total_chapters, us.total_episodes, us.avg_manga_score, us.avg_anime_score,
+                   us.manga_completed, us.anime_completed
             FROM users u 
             JOIN user_stats us ON u.discord_id = us.discord_id
             WHERE u.guild_id = ? AND u.anilist_username IS NOT NULL
@@ -1819,14 +1974,35 @@ async def get_guild_leaderboard_data(guild_id: int, leaderboard_type: str = "man
         # Filter and sort based on leaderboard type
         leaderboard_data = []
         for row in results:
-            username, total_manga, total_anime, total_chapters, total_episodes, avg_manga_score, avg_anime_score = row
-            
+            # The SELECT may include added completed columns; safely unpack the first 7
+            username, total_manga, total_anime, total_chapters, total_episodes, avg_manga_score, avg_anime_score = row[:7]
+
+            # Pull completed counts if present (we added to SELECT)
+            manga_completed = row[7] if len(row) > 7 else 0
+            anime_completed = row[8] if len(row) > 8 else 0
+
             if leaderboard_type == "manga":
                 score = total_manga or 0
                 secondary_score = total_chapters or 0
             elif leaderboard_type == "anime":
                 score = total_anime or 0
                 secondary_score = total_episodes or 0
+            elif leaderboard_type == "chapters":
+                # Primary sort by total chapters read, secondary by number of manga titles
+                score = total_chapters or 0
+                secondary_score = total_manga or 0
+            elif leaderboard_type == "episodes":
+                # Primary sort by total episodes watched, secondary by number of anime titles
+                score = total_episodes or 0
+                secondary_score = total_anime or 0
+            elif leaderboard_type == "manga_completed":
+                # Primary sort by completed manga count, secondary by total manga titles
+                score = manga_completed or 0
+                secondary_score = total_manga or 0
+            elif leaderboard_type == "anime_completed":
+                # Primary sort by completed anime count, secondary by total anime titles
+                score = anime_completed or 0
+                secondary_score = total_anime or 0
             else:  # combined
                 score = (total_manga or 0) + (total_anime or 0)
                 secondary_score = (total_chapters or 0) + (total_episodes or 0)
@@ -1839,6 +2015,8 @@ async def get_guild_leaderboard_data(guild_id: int, leaderboard_type: str = "man
                 'total_episodes': total_episodes or 0,
                 'avg_manga_score': avg_manga_score or 0.0,
                 'avg_anime_score': avg_anime_score or 0.0,
+                'manga_completed': manga_completed or 0,
+                'anime_completed': anime_completed or 0,
                 'score': score,
                 'secondary_score': secondary_score
             })
@@ -2020,3 +2198,148 @@ async def get_guild_challenge_leaderboard_data(guild_id: int):
     except Exception as e:
         logger.error(f"❌ Error getting challenge leaderboard for guild {guild_id}: {e}", exc_info=True)
         raise
+
+
+# ------------------------------------------------------
+# Guild Challenge Roles Management Functions
+# ------------------------------------------------------
+
+async def set_guild_challenge_role(guild_id: int, challenge_id: int, threshold: float, role_id: int):
+    """Set a challenge role for a specific guild."""
+    logger.info(f"Setting challenge role for guild {guild_id}, challenge {challenge_id}, threshold {threshold} -> role {role_id}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        if not isinstance(challenge_id, int) or challenge_id <= 0:
+            raise ValueError(f"Invalid challenge_id: {challenge_id}")
+        if not isinstance(role_id, int) or role_id <= 0:
+            raise ValueError(f"Invalid role_id: {role_id}")
+        if not isinstance(threshold, (int, float)) or threshold <= 0:
+            raise ValueError(f"Invalid threshold: {threshold}")
+        
+        query = """
+            INSERT OR REPLACE INTO guild_challenge_roles 
+            (guild_id, challenge_id, threshold, role_id, updated_at)
+            VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+        """
+        
+        await execute_db_operation(
+            f"set challenge role for guild {guild_id}",
+            query,
+            (guild_id, challenge_id, threshold, role_id)
+        )
+        
+        logger.info(f"✅ Set challenge role for guild {guild_id}, challenge {challenge_id} -> role {role_id}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error setting guild challenge role: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error setting challenge role for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def get_guild_challenge_roles(guild_id: int) -> Dict[int, Dict[float, int]]:
+    """Get all challenge roles for a specific guild."""
+    logger.info(f"Getting challenge roles for guild {guild_id}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        
+        query = """
+            SELECT challenge_id, threshold, role_id 
+            FROM guild_challenge_roles 
+            WHERE guild_id = ?
+            ORDER BY challenge_id, threshold
+        """
+        
+        result = await execute_db_operation(
+            f"get challenge roles for guild {guild_id}",
+            query,
+            (guild_id,),
+            fetch_type='all'
+        )
+        
+        # Format as nested dictionary: {challenge_id: {threshold: role_id}}
+        roles = {}
+        if result:
+            for challenge_id, threshold, role_id in result:
+                if challenge_id not in roles:
+                    roles[challenge_id] = {}
+                roles[challenge_id][threshold] = role_id
+        
+        logger.info(f"✅ Retrieved {len(roles)} challenge role configurations for guild {guild_id}")
+        return roles
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error getting guild challenge roles: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error getting challenge roles for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def remove_guild_challenge_role(guild_id: int, challenge_id: int, threshold: float = None):
+    """Remove challenge role(s) for a specific guild."""
+    logger.info(f"Removing challenge role for guild {guild_id}, challenge {challenge_id}, threshold {threshold}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        if not isinstance(challenge_id, int) or challenge_id <= 0:
+            raise ValueError(f"Invalid challenge_id: {challenge_id}")
+        
+        if threshold is not None:
+            # Remove specific threshold
+            query = "DELETE FROM guild_challenge_roles WHERE guild_id = ? AND challenge_id = ? AND threshold = ?"
+            params = (guild_id, challenge_id, threshold)
+        else:
+            # Remove all thresholds for this challenge
+            query = "DELETE FROM guild_challenge_roles WHERE guild_id = ? AND challenge_id = ?"
+            params = (guild_id, challenge_id)
+        
+        await execute_db_operation(
+            f"remove challenge role for guild {guild_id}",
+            query,
+            params
+        )
+        
+        logger.info(f"✅ Removed challenge role for guild {guild_id}, challenge {challenge_id}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error removing guild challenge role: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error removing challenge role for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def get_challenge_role_ids_for_guild(guild_id: int) -> Dict[int, Dict[float, int]]:
+    """
+    Get challenge role IDs for a specific guild.
+    Falls back to config.CHALLENGE_ROLE_IDS if guild has no custom configuration.
+    """
+    try:
+        # Try to get guild-specific roles from database
+        guild_roles = await get_guild_challenge_roles(guild_id)
+        
+        if guild_roles:
+            logger.debug(f"Using database challenge roles for guild {guild_id}")
+            return guild_roles
+        
+        # Check if this is the primary guild - use config as fallback
+        primary_guild_id = int(os.getenv("GUILD_ID"))
+        if guild_id == primary_guild_id:
+            logger.debug(f"Using config fallback challenge roles for primary guild {guild_id}")
+            return config.CHALLENGE_ROLE_IDS
+        
+        # For other guilds, return empty dict (no roles configured)
+        logger.info(f"No challenge roles configured for guild {guild_id}")
+        return {}
+        
+    except Exception as e:
+        logger.error(f"Error getting challenge role IDs for guild {guild_id}: {e}", exc_info=True)
+        # Return config as ultimate fallback
+        return config.CHALLENGE_ROLE_IDS

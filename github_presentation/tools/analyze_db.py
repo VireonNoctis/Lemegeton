@@ -1,8 +1,9 @@
 import sqlite3
 import os
+import config
 
-# Use the database from the data folder
-db_path = os.path.join('..', 'data', 'database.db')
+# Use configured DB path when available
+db_path = os.getenv('DATABASE_PATH', getattr(config, 'DB_PATH', os.path.join('..', 'data', 'database.db')))
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 

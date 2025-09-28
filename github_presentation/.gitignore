@@ -1,72 +1,159 @@
-# Environment variables and secrets
-.env
-.env.local
-.env.production
-.env.staging
+# Lemegeton Discord Bot - .gitignore.env
 
-# Database files
-data/database.db
-*.db
-*.sqlite
-*.sqlite3
 
-# Log files
-logs/
-*.log
 
-# Cache and temporary files
-data/*.json
-cache/
-*.tmp
-*.temp
+# Environment and Configuration# Python cache
 
-# Process files
-bot_pid.txt
+.env__pycache__/
+
+.env.local*.py[cod]
+
+.env.production*$py.class
+
+.env.development
+
+config.json# Runtime files
+
+secrets.jsonbot_pid.txt
+
 *.pid
 
 # Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
+
+__pycache__/# OS generated files
+
+*.py[cod].DS_Store
+
+*$py.class.DS_Store?
+
+*.so._*
+
+.Python.Spotlight-V100
+
+build/.Trashes
+
+develop-eggs/ehthumbs.db
+
+dist/Thumbs.db
+
 downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
+
+eggs/# IDE
+
+.eggs/.vscode/settings.json
+
+lib/.vscode/launch.json
+
+lib64/.vscode/tasks.json
+
+parts/.vscode/.ropeproject
+
 sdist/
-var/
-wheels/
+
+var/# Virtual environments
+
+wheels/.venv/
+
+pip-wheel-metadata/venv/
+
+share/python-wheels/env/
+
 *.egg-info/
+
 .installed.cfg
 *.egg
 MANIFEST
 
-# Virtual environments
+# Virtual Environment
 .venv/
 venv/
 ENV/
 env/
-.env/
 
-# IDE
+# Database Files
+*.db
+*.sqlite
+*.sqlite3
+database.db
+data/*.db
+data/*.sqlite
+data/*.backup
+
+# Log Files
+logs/
+*.log
+*.log.*
+
+# Cache and Temporary Files
+cache/
+temp/
+tmp/
+.cache/
+.tmp/
+
+# Bot Runtime Data
+bot_pid.txt
+monitoring_metrics.json
+anilist_paginator_state.json
+data/*.json
+data/user_timezones.json
+data/embed_delete_buttons.json
+data/popular_titles_cache.json
+data/recommendation_cache.json
+
+# IDE and Editor Files
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
-desktop.ini
 
-# Bot specific sensitive files
-anilist_paginator_state.json
-embed_delete_buttons.json
+# Development and Testing
+.pytest_cache/
+.coverage
+.nyc_output
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
+# Deployment
+railway.json
+.railway/
+Procfile.local
+
+# Backup Files
+*.backup
+*.bak
+backup/
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Node.js (if any frontend is added)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Sensitive API Keys and Tokens
+steam_api_key.txt
+discord_token.txt
+anilist_token.txt
+*.key
+*.pem

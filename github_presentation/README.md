@@ -1,294 +1,273 @@
-# 🎌 Lemegeton - Discord Anime & Gaming Bot
+# Lemegeton Discord Bot
 
-A comprehensive Discord bot that combines anime/manga tracking with AI-powered recommendations, featuring interactive UIs, personalized suggestions, and community challenges.
+![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
 
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
-![Discord.py](https://img.shields.io/badge/discord.py-2.0+-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+A comprehensive Discord bot built with discord.py featuring anime/manga tracking, Steam integration, timestamp conversion, news monitoring, and much more.
 
-## ⚠️ Important Notice
+## ✨ Features
 
-**This is a presentation/demo version of the bot.** Before deploying:
+### 🎌 AniList Integration
+- **Profile Management**: Link and display AniList profiles
+- **Anime & Manga Tracking**: Browse, search, and track anime/manga
+- **Statistics**: View detailed user statistics and leaderboards
+- **Recommendations**: Get personalized anime/manga recommendations
+- **Daily Updates**: Automatic manga/anime completion tracking
+- **Watchlist Management**: Manage your anime watchlist
+- **Trending Content**: Stay updated with trending anime/manga
 
-1. **Replace placeholder values** in `config.py` with your actual Discord server role IDs
-2. **Update the admin user ID** in `bot.py` (search for `123456789012345678`)
-3. **Configure your environment variables** properly using the `.env.example` template
-4. **Test thoroughly** in a development environment first
+### 🎮 Steam Integration
+- **Profile Display**: Show Steam user profiles and game libraries
+- **Game Information**: Detailed game statistics and information
+- **Profile Comparison**: Compare Steam profiles between users
+- **Game Recommendations**: Get game recommendations based on your library
+- **Deals Tracking**: Monitor Steam deals and sales
+- **Trending Games**: View trending games on Steam
 
-**Security reminders:**
-- Never commit your `.env` file or database files
-- Keep your Discord bot token secure
-- Regularly update dependenciesegeton - Discord Anime & Gaming Bot
+### ⏰ Timestamp Conversion
+- **Smart Detection**: Automatically detects time mentions in chat
+- **Timezone Support**: Per-user timezone configuration
+- **Universal Display**: Times display correctly for all users
+- **Multiple Formats**: Supports various time formats (12h/24h, relative dates)
 
-A comprehensive Discord bot that combines anime/manga tracking with AI-powered recommendations, featuring interactive UIs, personalized suggestions, and community challenges.
+### 📰 News Monitoring (Guild-Only)
+- **Twitter Integration**: Monitor Twitter accounts for updates
+- **Custom Notifications**: Set up notifications in specific channels
+- **Keyword Filtering**: Filter out unwanted content
+- **Real-time Updates**: Background monitoring with instant notifications
 
-![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
-![Discord.py](https://img.shields.io/badge/discord.py-2.0+-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+### 🛠️ Server Management
+- **User Cleanup**: Automatic cleanup of inactive users
+- **Invite Tracking**: Track server invites and member recruitment
+- **Feedback System**: Collect and manage user feedback
+- **Server Configuration**: Comprehensive server settings management
 
-## ✨ Key Features
+### 🎯 Challenges & Gamification
+- **Custom Challenges**: Create and manage server challenges
+- **Progress Tracking**: Monitor challenge completion
+- **Leaderboards**: Competitive ranking systems
+- **Role Management**: Automatic role assignment based on achievements
 
-### 📚 Anime & Manga Tracking
-- **AniList Integration** - Connect your AniList profile for seamless tracking
-- **AI-Powered Recommendations** - Get personalized suggestions based on your highly-rated titles (8.0+)
-- **Interactive Browsing** - Browse anime, manga, light novels, and general novels with advanced filtering
-- **Profile Viewing** - Comprehensive user statistics and favorite series
-- **Watchlist Management** - Track your current and planned anime/manga
-- **Trending Lists** - Stay updated with the latest popular series
-
-### 🏆 Community Features
-- **Global Challenges** - Participate in community-wide anime/manga challenges
-- **Leaderboards** - Compete with other users across various metrics
-- **User Comparison** - Compare profiles and statistics with friends
-- **Achievement System** - Unlock achievements for various milestones
-- **Multi-Guild Support** - Works across unlimited Discord servers with complete data isolation
-
-### 🤖 Utility Commands
-- **Timestamp Converter** - Convert timestamps between formats
-- **Random Recommendations** - Get surprise anime/manga suggestions
-- **Statistics Tracking** - Detailed user engagement analytics
-- **AniList Username Verification** - Check username validity before registration
-- **Feedback System** - Report issues and suggest improvements
-
-## 🚀 Quick Start (Railway - Recommended)
-
-The easiest way to deploy Lemegeton is using Railway's free hosting:
-
-1. **Fork this repository** to your GitHub account
-2. **Create a Railway account** at [railway.app](https://railway.app)
-3. **Deploy from GitHub** - Select your forked repository
-4. **Set environment variables** (see [Railway Deployment Guide](docs/RAILWAY_DEPLOYMENT.md))
-5. **Deploy!** Your bot will be online 24/7
-
-📖 **Full Railway Guide**: [docs/RAILWAY_DEPLOYMENT.md](docs/RAILWAY_DEPLOYMENT.md)
-
-## 🛠️ Manual Installation
+## 🚀 Quick Start
 
 ### Prerequisites
-- **Python 3.8+** - [Download Python](https://python.org/downloads/)
-- **Discord Bot Token** - [Discord Developer Portal](https://discord.com/developers/applications)
-- **Git** - [Download Git](https://git-scm.com/downloads)
+- Python 3.9 or higher
+- Discord Bot Token ([Get one here](https://discord.com/developers/applications))
+- AniList API access (automatic)
+- Steam Web API Key (optional, for Steam features)
 
-### Step 1: Clone Repository
+### Installation
 
-```bash
-git clone https://github.com/Kyerstorm/lemegeton-test.git
-cd lemegeton-test
-```
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/Kyerstorm/lemegeton-test.git
+   cd lemegeton-test
+   ```
 
-### Step 2: Install Dependencies
+2. **Set up virtual environment**
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # Linux/Mac
+   source .venv/bin/activate
+   ```
 
-#### Option A: Quick Setup (Windows)
-```cmd
-# Run the automated setup script
-setup_user.bat
-```
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-#### Option B: Manual Setup
-```bash
-# Create virtual environment
-python -m venv venv
+4. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your bot token and other settings
+   ```
 
-# Activate virtual environment
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### Step 3: Configure Environment
-
-Create a `.env` file in the project root:
-
-```env
-DISCORD_TOKEN=your_discord_bot_token_here
-GUILD_ID=your_discord_server_id
-BOT_ID=your_bot_user_id
-CHANNEL_ID=your_main_channel_id
-DATABASE_PATH=data/database.db
-ENVIRONMENT=development
-```
-
-### Step 4: Run the Bot
-
-#### Local Development
-1. Run `start.bat` to start the bot with monitoring
-2. Visit `http://localhost:5000` for monitoring dashboard
-3. Bot supports unlimited Discord servers simultaneously
-
-#### Production Deployment
-1. See `docs/RAILWAY_DEPLOYMENT.md` for web-based deployment
-2. See `docs/RAILWAY_CLI_DEPLOYMENT.md` for CLI deployment
-3. All configuration files are in the `config/` folder
-
-## 🎯 Commands
-
-### Account Management
-- `/login` - Register your AniList username
-- `/check_anilist` - Verify if an AniList username exists
-- `/profile` - View your AniList profile and statistics
-
-### Recommendations & Discovery
-- `/recommendations` - Get AI-powered recommendations based on your 8.0+ rated titles
-- `/trending` - View current trending anime and manga
-- `/random` - Get random anime/manga suggestions
-- `/search_similar` - Find anime similar to a specific title
-
-### Interactive Features
-- `/browse` - Interactive category browsing (Anime/Manga/Light Novels/Novels)
-- `/compare` - Compare your profile with another user
-- `/watchlist` - Manage your anime/manga watchlist
-
-### Challenges & Competition
-- `/challenge_progress` - View your current challenge progress
-- `/challenge_leaderboard` - See challenge rankings
-- `/leaderboard` - View various community leaderboards
-
-### Utilities
-- `/timestamp` - Convert and format timestamps
-- `/stats` - View bot usage statistics
-- `/feedback` - Send feedback to the developers
-- `/help` - Interactive help system with command categories
-
-## 📁 Project Structure
-
-```
-lemegeton-test/
-├── 📂 bot.py                 # Main bot entry point
-├── 📂 config.py              # Configuration management
-├── 📂 database.py            # Database operations
-├── 📂 requirements.txt       # Python dependencies
-├── 📂 start.bat              # Windows startup script
-├── 📂 cogs/                  # Bot command modules
-│   ├── anilist.py           # AniList integration
-│   ├── recommendations.py   # AI recommendation system
-│   ├── browse.py            # Interactive browsing
-│   ├── challenge_*.py       # Challenge system
-│   ├── help.py              # Interactive help system
-│   └── ...                  # Other command modules
-├── 📂 helpers/               # Utility functions
-│   ├── media_helper.py      # AniList API helpers
-│   └── challenge_helper.py  # Challenge management
-├── 📂 data/                  # Database and cache files
-├── 📂 docs/                  # Documentation
-├── 📂 logs/                  # Application logs
-└── 📂 scripts/               # Maintenance scripts
-```
+5. **Run the bot**
+   ```bash
+   python bot.py
+   ```
 
 ## ⚙️ Configuration
 
 ### Environment Variables
 
-| Variable | Description | Required | Example |
-|----------|-------------|----------|---------|
-| `DISCORD_TOKEN` | Discord bot token | ✅ | `MTk4NjIyNDgzNDcxOTI1MjQ4...` |
-| `GUILD_ID` | Discord server ID | ✅ | `123456789012345678` |
-| `BOT_ID` | Discord bot user ID | ✅ | `987654321098765432` |
-| `CHANNEL_ID` | Main channel ID | ✅ | `555666777888999000` |
-| `DATABASE_PATH` | Database file path | ❌ | `/app/database.db` |
-| `ENVIRONMENT` | Runtime environment | ❌ | `production` |
+Create a `.env` file based on `.env.example`:
 
-### Bot Configuration (`config.py`)
+```env
+# Discord Bot Configuration
+DISCORD_TOKEN=your_discord_bot_token_here
+BOT_ID=your_bot_application_id
+GUILD_ID=your_primary_guild_id
 
-```python
-# Discord settings
-GUILD_ID = int(os.getenv("GUILD_ID"))
-CHANNEL_ID = int(os.getenv("CHANNEL_ID"))
+# API Keys (Optional)
+STEAM_API_KEY=your_steam_api_key
+ANILIST_CLIENT_ID=your_anilist_client_id
 
-# Database
-DB_PATH = os.getenv("DATABASE_PATH", "database.db")
+# Database Configuration
+DATABASE_URL=sqlite:///data/database.db
+
+# Logging
+LOG_LEVEL=INFO
 ```
 
-## 🐛 Troubleshooting
+### Guild vs Global Commands
 
-### Common Issues
+This bot uses a hybrid approach for command deployment:
 
-#### "Command failed with exit code 1"
-- **Check Python version**: Ensure Python 3.8+
-- **Dependencies**: Run `pip install -r requirements.txt`
-- **Permissions**: Ensure proper file permissions
+- **Global Commands**: Available in all servers (most features)
+- **Guild Commands**: Server-specific commands (news monitoring)
 
-#### "Bot not responding to commands"
-- **Permissions**: Check bot has necessary permissions in Discord
-- **Token**: Verify Discord bot token is correct
-- **Guild ID**: Ensure GUILD_ID matches your Discord server
+See `guild_sync.txt` for detailed command deployment information.
 
-#### "Database errors"
-- **File permissions**: Ensure bot can write to database directory
-- **Path**: Check DATABASE_PATH is correct
-- **SQLite**: Ensure SQLite3 is available
+## 📚 Command Categories
 
-#### "AniList API errors"
-- **Rate limits**: AniList API has rate limits
-- **Network issues**: Check internet connectivity
-- **Invalid usernames**: Ensure usernames exist on AniList
+### AniList Commands
+- `/profile` - Display your AniList profile
+- `/browse` - Browse anime/manga with filters
+- `/random` - Get random anime/manga recommendations
+- `/trending` - View trending content
+- `/stats` - View detailed statistics
+- `/leaderboard` - Server leaderboards
+- `/watchlist` - Manage your watchlist
 
-### Debug Mode
+### Steam Commands
+- `/steam profile` - Display Steam profile
+- `/steam game` - Get game information
+- `/steam compare` - Compare profiles
+- `/steam recommendations` - Get game recommendations
+- `/steam deals` - View current deals
+- `/steam trending` - View trending games
 
-Enable detailed logging by modifying `config.py`:
+### Utility Commands
+- `/timestamp_watch` - Toggle automatic timestamp conversion
+- `/set_timezone` - Set your timezone
+- `/help` - Comprehensive help system
+- `/feedback` - Submit feedback
 
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
+### Guild-Only Commands
+- `/news add` - Monitor Twitter accounts
+- `/news remove` - Stop monitoring accounts
+- `/news list` - List monitored accounts
+- `/news status` - Check system status
+
+## 🏗️ Architecture
+
+### Project Structure
+```
+├── bot.py              # Main bot entry point
+├── config.py           # Configuration management
+├── database.py         # Database utilities
+├── cogs/               # Command modules
+│   ├── anilist/        # AniList integration
+│   ├── gaming/         # Steam and gaming features
+│   ├── utilities/      # Utility commands
+│   ├── server_management/ # Server tools
+│   └── challenges/     # Challenge system
+├── helpers/            # Utility functions
+├── data/               # Database files
+├── logs/               # Log files (gitignored)
+└── docs/               # Documentation
 ```
 
-### Log Files
+### Key Technologies
+- **discord.py 2.6+**: Modern Discord API wrapper
+- **aiohttp**: Asynchronous HTTP requests
+- **aiosqlite**: Async SQLite database
+- **snscrape**: Twitter scraping (optional)
+- **Pillow**: Image processing
+- **python-dotenv**: Environment management
 
-The bot creates detailed logs in the `logs/` directory:
-- `bot.log` - Main bot operations
-- `database.log` - Database operations
-- `media_helper.log` - AniList API calls
-- Command-specific logs for debugging
+## 🔧 Development
+
+### Adding New Features
+
+1. Create a new cog in the appropriate category folder
+2. Follow the existing patterns for command structure
+3. Add proper error handling and logging
+4. Update documentation and help text
+5. Consider guild vs global command placement
+
+### Database Schema
+
+The bot uses SQLite with the following main tables:
+- `users`: User profiles and settings
+- `guilds`: Server configurations
+- `challenges`: Challenge tracking
+- `accounts`: Twitter monitoring (news feature)
+- `filters`: Content filtering rules
+
+### Logging
+
+Comprehensive logging system with:
+- Rotating log files
+- Per-cog log separation
+- Error tracking and reporting
+- Performance monitoring
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our contributing guidelines:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+We welcome contributions! Please see our [Contributing Guidelines](docs/CONTRIBUTING.md) for details.
 
 ### Development Setup
 
-```bash
-# Clone your fork
-git clone https://github.com/YourUsername/lemegeton-test.git
-cd lemegeton-test
-
-# Create development environment
-python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate on Windows
-pip install -r requirements.txt
-
-# Run in development mode
-python bot.py
-```
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
 
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](docs/LICENSE) file for details.
 
-## 🆘 Support
+## 🙏 Credits
 
-- **Discord Server**: [https://discord.gg/xUGD7krzws](https://discord.gg/xUGD7krzws)
-- **Documentation**: [docs/README.md](docs/README.md)
+**Created by**: [Vireon](https://github.com/Kyerstorm)
+
+### Special Thanks
+- discord.py community for excellent documentation
+- AniList for providing a robust API
+- Steam for the Web API
+- All contributors and users who helped improve this bot
+
+## 📞 Support
+
 - **Issues**: [GitHub Issues](https://github.com/Kyerstorm/lemegeton-test/issues)
-- **Feature Requests**: Use the `/feedback` command in Discord
+- **Documentation**: Check the `docs/` folder
+- **Discord**: Join our support server (link in bot status)
 
-## 🙏 Acknowledgments
+## 🚧 Roadmap
 
-- **AniList API** - For providing comprehensive anime/manga data
-- **Discord.py** - Excellent Discord bot framework
-- **Railway** - Reliable hosting platform
-- **Contributors** - Thank you to all who have contributed to this project
+### Upcoming Features
+- [ ] Web dashboard for server management
+- [ ] Enhanced statistics and analytics
+- [ ] Mobile app companion
+- [ ] Plugin system for custom extensions
+- [ ] Multi-language support
+- [ ] Voice channel integration
+- [ ] Advanced moderation tools
+
+### Recent Updates
+- ✅ Guild-specific news commands
+- ✅ Enhanced timezone support
+- ✅ Improved error handling
+- ✅ Performance optimizations
+- ✅ Better logging system
+
+## 🛡️ Privacy & Security
+
+This bot respects user privacy:
+- Minimal data collection
+- Secure API key handling
+- Local database storage
+- No data selling or sharing
+- Transparent data usage
+
+For more information, see our [Privacy Policy](docs/PRIVACY.md).
 
 ---
 
-**Made with ❤️ for the anime community**
+**Created by Kyerstom & Vireon | Powered by discord.py**

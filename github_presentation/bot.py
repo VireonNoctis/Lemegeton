@@ -12,7 +12,7 @@ from database import init_db
 # Add project root to sys.path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from config import TOKEN, GUILD_ID, BOT_ID
+from config import TOKEN, GUILD_ID, BOT_ID, ADMIN_DISCORD_ID
 import hashlib
 import json
 
@@ -337,16 +337,19 @@ async def _load_cogs_impl():
     Tracks file modification times to only reload changed cogs.
     """
     logger.debug("Starting cog loading/reloading process")
-    
     try:
         # Clean up any stuck extensions first (from previous crashes/forced shutdowns)
         loaded_extensions = list(bot.extensions.keys())
         for ext_name in loaded_extensions:
             if ext_name.startswith('cogs.'):
                 try:
-                    # Check if the corresponding file still exists
-                    cog_file = f"./cogs/{ext_name[5:]}.py"
-                    if not os.path.exists(cog_file):
+                    # Map dotted extension name to possible filesystem paths under ./cogs
+                    # e.g. cogs.anilist.watchlist -> ./cogs/anilist/watchlist.py
+                    rel_parts = ext_name.split('.')[1:]
+                    cog_file_py = os.path.join('.', 'cogs', *rel_parts) + '.py'
+                    cog_package_init = os.path.join('.', 'cogs', *rel_parts, '__init__.py')
+
+                    if not (os.path.exists(cog_file_py) or os.path.exists(cog_package_init)):
                         logger.debug(f"Cleaning up orphaned extension: {ext_name}")
                         await bot.unload_extension(ext_name)
                         if ext_name in cog_timestamps:
@@ -354,24 +357,49 @@ async def _load_cogs_impl():
                 except Exception as cleanup_error:
                     logger.error(f"Failed to cleanup extension {ext_name}: {cleanup_error}")
         
-        cogs_dir = "./cogs"
+        cogs_dir = os.path.join('.', 'cogs')
         if not os.path.exists(cogs_dir):
             logger.error(f"Cogs directory not found: {cogs_dir}")
             return
-            
-        # Get all Python files in cogs directory
-        cog_files = [f for f in os.listdir(cogs_dir) 
-                     if f.endswith(".py") and f != "__init__.py"]
-        
-        logger.debug(f"Found {len(cog_files)} potential cog files")
+
+        # Recursively find all Python files under cogs (skip package __init__.py files)
+        cog_files = []  # list of tuples (module_relative_path, file_path)
+        for root, dirs, files in os.walk(cogs_dir):
+            for f in files:
+                if not f.endswith('.py'):
+                    continue
+                full_path = os.path.join(root, f)
+
+                # If this is a package __init__.py, record the package module
+                # path (e.g. 'anilist') instead of skipping it. This allows cogs
+                # defined in package __init__.py to be discovered after moving
+                # commands into subfolders.
+                if f == '__init__.py':
+                    # module_rel should be the package path relative to cogs_dir
+                    rel_pkg = os.path.relpath(root, cogs_dir)
+                    # If rel_pkg is '.' it means top-level cogs package; skip that
+                    if rel_pkg and rel_pkg != '.':
+                        module_rel = rel_pkg.replace(os.path.sep, '.')
+                        cog_files.append((module_rel, full_path))
+                    # otherwise skip root-level __init__.py
+                    continue
+
+                rel_path = os.path.relpath(full_path, cogs_dir)  # e.g. 'anilist/watchlist.py'
+                module_rel = rel_path.replace(os.path.sep, '.')  # e.g. 'anilist.watchlist.py'
+                module_rel = module_rel[:-3]  # strip .py
+                cog_files.append((module_rel, full_path))
+
+        logger.debug(f"Found {len(cog_files)} potential cog files (recursive)")
+        # Debug: list all discovered module candidates so it's obvious what will be loaded.
+        for module_rel, full_path in cog_files:
+            logger.debug(f"Discovered cog candidate -> module: cogs.{module_rel}, path: {full_path}")
         
         loaded_count = 0
         reloaded_count = 0
         failed_count = 0
         
-        for filename in cog_files:
-            cog_name = f"cogs.{filename[:-3]}"
-            file_path = os.path.join(cogs_dir, filename)
+        for module_rel, file_path in cog_files:
+            cog_name = f"cogs.{module_rel}"
             
             try:
                 # Get file modification time
@@ -393,7 +421,7 @@ async def _load_cogs_impl():
                     
                     # Only reload if file was modified since last load
                     elif stored_timestamp < last_mod:
-                        logger.debug(f"File {filename} modified, reloading cog")
+                        logger.debug(f"File {file_path} modified, reloading cog")
                         
                         try:
                             await bot.reload_extension(cog_name)
@@ -727,7 +755,6 @@ async def on_guild_remove(guild):
     except Exception as e:
         logger.error(f"Error updating server log after guild remove: {e}")
 
-# Manual server logging command removed in presentation - server logging runs on guild join/remove events and on startup
 
 # ------------------------------------------------------
 # Main Function with Comprehensive Logging

@@ -198,6 +198,11 @@ def api_guilds():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
+    # Dashboard is optional in hosted environments. Enable with ENABLE_DASHBOARD=1
+    if os.getenv('ENABLE_DASHBOARD', '0') not in ('1', 'true', 'True'):
+        print('Monitoring dashboard disabled (set ENABLE_DASHBOARD=1 to enable)')
+        raise SystemExit(0)
+
     # Create templates directory if it doesn't exist
     os.makedirs('templates', exist_ok=True)
     
@@ -469,5 +474,11 @@ if __name__ == '__main__':
         
         print("Created dashboard template")
     
-    print("Starting monitoring dashboard on http://localhost:5000")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    # Bind to the PORT provided by Railway or default to 5000 for local testing
+    try:
+        port = int(os.getenv('PORT', '5000'))
+    except Exception:
+        port = 5000
+
+    print(f"Starting monitoring dashboard on http://0.0.0.0:{port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
