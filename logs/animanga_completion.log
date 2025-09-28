@@ -1,0 +1,205 @@
+[2025-09-27 04:36:34,363] [INFO] Finisher cog initialized
+[2025-09-27 04:36:34,363] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 04:36:34,364] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 04:36:34,400] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 04:39:29,100] [INFO] Finisher cog initialized
+[2025-09-27 04:39:29,101] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 04:39:29,101] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 04:39:29,135] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 04:42:33,354] [INFO] Finisher cog initialized
+[2025-09-27 04:42:33,354] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 04:42:33,354] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 04:42:33,387] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 04:46:51,579] [INFO] Finisher cog initialized
+[2025-09-27 04:46:51,580] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 04:46:51,580] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 04:46:51,610] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:08:55,376] [INFO] Finisher cog initialized
+[2025-09-27 05:08:55,376] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:08:55,377] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:08:55,426] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:14:15,880] [INFO] Finisher cog initialized
+[2025-09-27 05:14:15,881] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:14:15,881] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:17:15,660] [INFO] Finisher cog initialized
+[2025-09-27 05:17:15,661] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:17:15,661] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:45:49,098] [INFO] Finisher cog initialized
+[2025-09-27 05:45:49,098] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:45:49,099] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:45:49,143] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:46:18,657] [INFO] Finisher cog initialized
+[2025-09-27 05:46:18,657] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:46:18,658] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:46:18,706] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:46:38,344] [INFO] Finisher cog initialized
+[2025-09-27 05:46:38,345] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:46:38,345] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:46:38,394] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:50:11,846] [INFO] Finisher cog initialized
+[2025-09-27 05:50:11,846] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:50:11,847] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:50:11,891] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:56:39,146] [INFO] Finisher cog initialized
+[2025-09-27 05:56:39,147] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:56:39,147] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:56:39,193] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 05:58:37,496] [INFO] Finisher cog initialized
+[2025-09-27 05:58:37,497] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 05:58:37,497] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 05:58:37,541] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 14:14:55,624] [INFO] Finisher cog initialized
+[2025-09-27 14:14:55,625] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 14:14:55,625] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 14:14:55,690] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 14:20:35,972] [INFO] Finisher cog initialized
+[2025-09-27 14:20:35,972] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 14:20:35,972] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 14:20:36,018] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-27 14:23:25,874] [INFO] Finisher cog initialized
+[2025-09-27 14:23:25,875] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-27 14:23:25,875] [INFO] Finisher daily_check task started from cog_load
+[2025-09-27 14:23:25,948] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 13:36:21,566] [INFO] Finisher cog initialized
+[2025-09-28 13:36:21,566] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:36:21,567] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:36:21,649] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 13:39:53,460] [INFO] Finisher cog initialized
+[2025-09-28 13:39:53,460] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:39:53,460] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:39:53,496] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 13:49:35,337] [INFO] Finisher cog initialized
+[2025-09-28 13:49:35,338] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:49:35,338] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:49:35,372] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 13:51:38,864] [INFO] Finisher cog initialized
+[2025-09-28 13:51:38,864] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:51:38,864] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:51:38,906] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 13:52:27,625] [INFO] Finisher cog initialized
+[2025-09-28 13:52:27,625] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:52:27,626] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:52:27,659] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 13:53:48,801] [INFO] Finisher cog initialized
+[2025-09-28 13:53:48,802] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:53:48,802] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:54:37,694] [INFO] Finisher cog initialized
+[2025-09-28 13:54:37,694] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 13:54:37,695] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 13:54:37,729] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 13:56:25,062] [INFO] Finisher cog initialized
+[2025-09-28 13:56:25,063] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 13:56:25,070] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 13:57:13,559] [INFO] Finisher cog initialized
+[2025-09-28 13:57:13,560] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 13:57:13,566] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 13:57:16,390] [INFO] Finisher cog initialized
+[2025-09-28 13:57:16,390] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 13:57:16,424] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 13:57:20,773] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:09:01,812] [INFO] Finisher cog initialized
+[2025-09-28 14:09:01,813] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:09:01,847] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:09:06,089] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:20:30,951] [INFO] Finisher cog initialized
+[2025-09-28 14:20:30,951] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:20:30,988] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:20:35,278] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:28:53,482] [INFO] Finisher cog initialized
+[2025-09-28 14:28:53,482] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:28:53,490] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:29:05,651] [INFO] Finisher cog initialized
+[2025-09-28 14:29:05,652] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:29:05,660] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:30:06,288] [INFO] Finisher cog initialized
+[2025-09-28 14:30:06,288] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:30:06,294] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:32:17,463] [INFO] Fetching manga list from AniList
+[2025-09-28 14:32:17,759] [INFO] AniList returned 25 media entries
+[2025-09-28 14:32:18,629] [INFO] Loaded configured channel 1420499306300969063 for guild 897814031346319382
+[2025-09-28 14:32:18,629] [INFO] Posting manga updates to channel 📣•animanga-completion•
+[2025-09-28 14:32:18,629] [INFO] Fetching manga list from AniList
+[2025-09-28 14:32:18,918] [INFO] AniList returned 25 media entries
+[2025-09-28 14:32:18,918] [INFO] Found 3 new manga updates after filtering
+[2025-09-28 14:32:18,918] [INFO] Posting update for manga id=182177 title=Sseuregi Kkot status=FINISHED
+[2025-09-28 14:32:21,277] [INFO] Posting update for manga id=67683 title=Mobile Suit Gundam Thunderbolt status=FINISHED
+[2025-09-28 14:32:23,627] [INFO] Posting update for manga id=199361 title=[BL Danpyeonseon] Eumnanchimgong status=FINISHED
+[2025-09-28 14:32:25,975] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-28 14:32:25,976] [INFO] Post manga updates complete and state saved
+[2025-09-28 14:32:25,976] [INFO] Posting anime updates to channel 📣•animanga-completion•
+[2025-09-28 14:32:25,976] [INFO] Fetching anime list from AniList
+[2025-09-28 14:32:26,279] [INFO] AniList returned 25 anime entries
+[2025-09-28 14:32:26,279] [INFO] Found 8 new anime updates after filtering
+[2025-09-28 14:32:26,279] [INFO] Posting update for anime id=186003 title=Fermat Kitchen status=FINISHED
+[2025-09-28 14:32:28,633] [INFO] Posting update for anime id=185584 title=Everyday Host status=FINISHED
+[2025-09-28 14:32:31,103] [INFO] Posting update for anime id=184639 title=Anne Shirley status=FINISHED
+[2025-09-28 14:32:33,389] [INFO] Posting update for anime id=178754 title=Kaiju No. 8 Season 2 status=FINISHED
+[2025-09-28 14:32:35,683] [INFO] Posting update for anime id=177761 title=9-nine- Shihaisha no Oukan status=FINISHED
+[2025-09-28 14:32:37,948] [INFO] Posting update for anime id=177476 title=YAIBA: Samurai Legend status=FINISHED
+[2025-09-28 14:32:40,271] [INFO] Posting update for anime id=174188 title=Nukitashi THE ANIMATION status=FINISHED
+[2025-09-28 14:32:42,559] [INFO] Posting update for anime id=171046 title=Rascal Does Not Dream of Santa Claus status=FINISHED
+[2025-09-28 14:32:44,847] [INFO] Saved 25 current anime ids to data/anime_scan.json
+[2025-09-28 14:32:44,847] [INFO] Post anime updates complete and state saved
+[2025-09-28 14:32:44,848] [INFO] Saved last run timestamp 2025-09-28T13:32:44.847513 to data/manga_scan_meta.json
+[2025-09-28 14:40:15,436] [INFO] Finisher cog initialized
+[2025-09-28 14:40:15,436] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:40:15,470] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:40:19,704] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:49:43,258] [INFO] Finisher cog initialized
+[2025-09-28 14:49:43,258] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:49:43,295] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:49:47,392] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:50:53,151] [INFO] Finisher cog initialized
+[2025-09-28 14:50:53,152] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:50:53,186] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:50:57,342] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:52:46,320] [INFO] Finisher cog initialized
+[2025-09-28 14:52:46,321] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:52:46,358] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:52:50,608] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:55:57,949] [INFO] Finisher cog initialized
+[2025-09-28 14:55:57,949] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:55:57,985] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:56:02,157] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 14:58:35,908] [INFO] Finisher cog initialized
+[2025-09-28 14:58:35,908] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 14:58:35,941] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 14:58:40,276] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:00:50,307] [INFO] Finisher cog initialized
+[2025-09-28 15:00:50,307] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:00:50,343] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 15:00:54,738] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:03:00,893] [INFO] Finisher cog initialized
+[2025-09-28 15:03:00,893] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:03:00,925] [WARNING] bot.wait_until_ready() raised RuntimeError (RuntimeError); falling back to polling for readiness
+[2025-09-28 15:03:05,740] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:03:56,258] [INFO] Finisher cog initialized
+[2025-09-28 15:03:56,258] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:03:56,267] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:04:10,429] [INFO] Finisher cog initialized
+[2025-09-28 15:04:10,429] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:04:10,435] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:04:18,452] [INFO] Finisher cog initialized
+[2025-09-28 15:04:18,452] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:04:22,761] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:07:38,539] [INFO] Finisher cog initialized
+[2025-09-28 15:07:38,540] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:07:38,546] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:07:38,627] [INFO] Finisher cog initialized
+[2025-09-28 15:07:38,627] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:07:38,633] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:19:33,820] [INFO] Finisher cog initialized
+[2025-09-28 15:19:33,820] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:19:38,587] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:35:15,672] [INFO] Finisher cog initialized
+[2025-09-28 15:35:15,673] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:35:20,073] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:36:20,172] [INFO] Finisher cog initialized
+[2025-09-28 15:36:20,173] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:36:24,448] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 15:58:02,852] [INFO] Finisher cog initialized
+[2025-09-28 15:58:02,853] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 15:58:07,027] [INFO] Finisher daily_check task started from _ensure_daily_check_started
+[2025-09-28 16:08:05,284] [INFO] Finisher cog initialized
+[2025-09-28 16:08:05,284] [INFO] Finisher cog loaded - scheduling start of daily_check task
+[2025-09-28 16:08:09,493] [INFO] Finisher daily_check task started from _ensure_daily_check_started

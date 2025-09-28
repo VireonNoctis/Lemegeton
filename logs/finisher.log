@@ -297,3 +297,72 @@ AttributeError: 'Finisher' object has no attribute 'fetch_anime'. Did you mean: 
 [2025-09-25 04:10:56,472] [INFO] Finisher cog loaded - ensuring daily_check task is started
 [2025-09-25 04:10:56,472] [INFO] Finisher daily_check task started from cog_load
 [2025-09-25 04:10:56,482] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 13:04:55,982] [INFO] Finisher cog initialized
+[2025-09-25 13:04:55,982] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 13:04:55,982] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 13:04:55,997] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 13:05:42,545] [INFO] Finisher cog initialized
+[2025-09-25 13:05:42,546] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 13:05:42,546] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 13:05:42,556] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 13:09:47,912] [INFO] Finisher cog initialized
+[2025-09-25 13:09:47,913] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 13:09:47,913] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 13:09:47,923] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 13:18:57,670] [INFO] Fetching manga list from AniList
+[2025-09-25 13:18:58,048] [INFO] AniList returned 25 media entries
+[2025-09-25 13:18:59,026] [INFO] Loaded configured channel 1420499306300969063 for guild 897814031346319382
+[2025-09-25 13:18:59,027] [INFO] Posting manga updates to channel 📣•animanga-completion•
+[2025-09-25 13:18:59,027] [INFO] Fetching manga list from AniList
+[2025-09-25 13:18:59,335] [INFO] AniList returned 25 media entries
+[2025-09-25 13:18:59,335] [INFO] Found 0 new manga updates after filtering
+[2025-09-25 13:18:59,597] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-25 13:19:01,606] [INFO] Posting anime updates to channel 📣•animanga-completion•
+[2025-09-25 13:19:01,606] [INFO] Fetching anime list from AniList
+[2025-09-25 13:19:01,996] [INFO] AniList returned 25 anime entries
+[2025-09-25 13:19:01,997] [INFO] Found 4 new anime updates after filtering
+[2025-09-25 13:19:01,997] [INFO] Posting update for anime id=195209 title=With Vengeance, Sincerely, Your Broken Saintess status=FINISHED
+[2025-09-25 13:19:04,343] [INFO] Posting update for anime id=178090 title=I Was Reincarnated as the 7th Prince so I Can Take My Time Perfecting My Magical Ability Season 2 status=FINISHED
+[2025-09-25 13:19:07,111] [INFO] Posting update for anime id=159981 title=Future Kid Takara status=FINISHED
+[2025-09-25 13:19:09,462] [INFO] Posting update for anime id=151799 title=New PANTY & STOCKING with GARTERBELT status=FINISHED
+[2025-09-25 13:19:11,752] [INFO] Saved 25 current anime ids to data/anime_scan.json
+[2025-09-25 13:19:11,752] [INFO] Post anime updates complete and state saved
+[2025-09-25 13:19:11,754] [INFO] Saved last run timestamp 2025-09-25T12:19:11.753005 to data/manga_scan_meta.json
+[2025-09-25 13:31:39,218] [INFO] Finisher cog initialized
+[2025-09-25 13:31:39,219] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 13:31:39,219] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 13:31:39,230] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 13:37:33,139] [INFO] Finisher cog initialized
+[2025-09-25 13:37:33,140] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 13:37:33,140] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 13:37:33,149] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-25 13:41:21,939] [INFO] Finisher cog initialized
+[2025-09-25 13:41:21,940] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-25 13:41:21,940] [INFO] Finisher daily_check task started from cog_load
+[2025-09-25 13:41:21,950] [WARNING] bot.wait_until_ready() raised RuntimeError; falling back to polling for readiness
+[2025-09-28 16:22:39,176] [INFO] Finisher cog initialized
+[2025-09-28 16:22:39,176] [INFO] Finisher cog loaded - ensuring daily_check task is started
+[2025-09-28 16:22:39,176] [INFO] Finisher daily_check task started from cog_load
+[2025-09-28 16:22:39,555] [INFO] Running daily_check scheduled task (24h interval reached)
+[2025-09-28 16:22:39,556] [INFO] Loaded channel mapping for 1 guild(s)
+[2025-09-28 16:22:39,556] [INFO] Posting manga updates to channel 📣•animanga-news•
+[2025-09-28 16:22:39,561] [INFO] Fetching manga list from AniList
+[2025-09-28 16:22:39,872] [INFO] AniList returned 25 media entries
+[2025-09-28 16:22:39,872] [INFO] Found 3 new manga updates after filtering
+[2025-09-28 16:22:39,873] [INFO] Posting update for manga id=182177 title=Sseuregi Kkot status=FINISHED
+[2025-09-28 16:22:42,323] [INFO] Posting update for manga id=67683 title=Mobile Suit Gundam Thunderbolt status=FINISHED
+[2025-09-28 16:22:44,660] [INFO] Posting update for manga id=199361 title=[BL Danpyeonseon] Eumnanchimgong status=FINISHED
+[2025-09-28 16:22:47,013] [INFO] Saved 25 current manga ids to data/manga_scan.json
+[2025-09-28 16:22:47,013] [INFO] Post manga updates complete and state saved
+[2025-09-28 16:22:47,014] [INFO] Posting anime updates to channel 📣•animanga-news•
+[2025-09-28 16:22:47,021] [INFO] Fetching anime list from AniList
+[2025-09-28 16:22:47,320] [INFO] AniList returned 25 anime entries
+[2025-09-28 16:22:47,321] [INFO] Found 5 new anime updates after filtering
+[2025-09-28 16:22:47,321] [INFO] Posting update for anime id=181444 title=The Fragrant Flower Blooms With Dignity status=FINISHED
+[2025-09-28 16:22:49,576] [INFO] Posting update for anime id=180929 title=Ruri Rocks status=FINISHED
+[2025-09-28 16:22:52,128] [INFO] Posting update for anime id=180794 title=Cultural Exchange with a Game Centre Girl status=FINISHED
+[2025-09-28 16:22:54,481] [INFO] Posting update for anime id=178433 title=Apocalypse Bringer Mynoghra: World Conquest Starts with the Civilization of Ruin status=FINISHED
+[2025-09-28 16:22:56,845] [INFO] Posting update for anime id=177689 title=The Summer Hikaru Died status=FINISHED
+[2025-09-28 16:22:59,133] [INFO] Saved 25 current anime ids to data/anime_scan.json
+[2025-09-28 16:22:59,133] [INFO] Post anime updates complete and state saved
+[2025-09-28 16:22:59,134] [INFO] Saved last run timestamp 2025-09-28T15:22:39.548455 to data/manga_scan_meta.json

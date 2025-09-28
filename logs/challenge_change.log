@@ -1,3 +1,435 @@
-[2025-09-25 04:10:56] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
-[2025-09-25 04:10:56] [INFO    ] [ChallengeChange] Challenge Management cog initialized
-[2025-09-25 04:10:56] [INFO    ] [ChallengeChange] Challenge Management cog successfully loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Change cog logging system initialized (file or stream fallback)
+[2025-09-28 16:24:26] [INFO    ] [ChallengeChange] Challenge Management cog initialized
+[2025-09-28 16:24:26] [ERROR   ] [ChallengeChange] Failed to load Challenge Management cog: Cog named 'ChallengeManage' already loaded
+Traceback (most recent call last):
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\challenge_manage.py", line 851, in setup
+    await bot.add_cog(ChallengeManage(bot))
+  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded
+C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
+    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
+discord.errors.ClientException: Cog named 'ChallengeManage' already loaded

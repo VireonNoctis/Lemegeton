@@ -1,0 +1,78 @@
+2025-09-27 05:08:55,564 - INFO - TimestampConverter cog initialized
+2025-09-27 05:45:49,416 - INFO - TimestampConverter cog initialized
+2025-09-27 05:46:19,066 - INFO - TimestampConverter cog initialized
+2025-09-27 05:46:38,713 - INFO - TimestampConverter cog initialized
+2025-09-27 05:50:12,027 - INFO - TimestampConverter cog initialized
+2025-09-27 05:56:39,319 - INFO - TimestampConverter cog initialized
+2025-09-27 05:58:37,685 - INFO - TimestampConverter cog initialized
+2025-09-27 14:14:55,941 - INFO - TimestampConverter cog initialized
+2025-09-27 14:20:36,370 - INFO - TimestampConverter cog initialized
+2025-09-27 14:23:26,227 - INFO - TimestampConverter cog initialized
+2025-09-28 13:36:22,128 - INFO - TimestampConverter cog initialized
+2025-09-28 13:39:53,758 - INFO - TimestampConverter cog initialized
+2025-09-28 13:49:35,668 - INFO - TimestampConverter cog initialized
+2025-09-28 13:51:39,186 - INFO - TimestampConverter cog initialized
+2025-09-28 13:52:27,937 - INFO - TimestampConverter cog initialized
+2025-09-28 13:54:37,983 - INFO - TimestampConverter cog initialized
+2025-09-28 13:57:16,688 - INFO - TimestampConverter cog initialized
+2025-09-28 14:09:02,093 - INFO - TimestampConverter cog initialized
+2025-09-28 14:20:31,309 - INFO - TimestampConverter cog initialized
+2025-09-28 14:34:28,528 - INFO - Auto-converted timestamps for slopking._ in bot-test
+2025-09-28 14:40:15,622 - INFO - TimestampConverter cog initialized
+2025-09-28 14:49:43,423 - INFO - TimestampConverter cog initialized
+2025-09-28 14:50:53,302 - INFO - TimestampConverter cog initialized
+2025-09-28 14:52:46,482 - INFO - TimestampConverter cog initialized
+2025-09-28 14:55:58,102 - INFO - TimestampConverter cog initialized
+2025-09-28 14:58:36,218 - INFO - TimestampConverter cog initialized
+2025-09-28 15:00:50,616 - INFO - TimestampConverter cog initialized
+2025-09-28 15:03:01,202 - INFO - TimestampConverter cog initialized
+2025-09-28 15:04:18,746 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:20,390 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:21,506 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:28,487 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:29,587 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:51,786 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:52,687 - INFO - TimestampConverter cog initialized
+2025-09-28 15:09:59,061 - INFO - Auto-converted timestamps for kyerstorm in bot-test
+2025-09-28 15:09:59,064 - INFO - Auto-converted timestamps for kyerstorm in bot-test
+2025-09-28 15:10:11,604 - INFO - Auto-converted timestamps for slopking._ in bot-test
+2025-09-28 15:10:11,636 - INFO - Auto-converted timestamps for slopking._ in bot-test
+2025-09-28 15:10:25,394 - INFO - Auto-converted timestamps for slopking._ in bot-test
+2025-09-28 15:10:25,533 - ERROR - Error in on_message timestamp detection: 404 Not Found (error code: 10008): Unknown Message
+2025-09-28 15:10:59,614 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
+2025-09-28 15:10:59,992 - ERROR - Error in on_message timestamp detection: 404 Not Found (error code: 10008): Unknown Message
+2025-09-28 15:11:55,796 - INFO - TimestampConverter cog initialized
+2025-09-28 15:11:56,863 - INFO - TimestampConverter cog initialized
+2025-09-28 15:12:06,961 - INFO - TimestampConverter cog initialized
+2025-09-28 15:12:07,902 - INFO - TimestampConverter cog initialized
+2025-09-28 15:12:40,198 - INFO - TimestampConverter cog initialized
+2025-09-28 15:12:41,249 - INFO - TimestampConverter cog initialized
+2025-09-28 15:14:39,096 - INFO - Auto-converted timestamps for slopking._ in bot-test
+2025-09-28 15:14:40,646 - ERROR - Error in on_message timestamp detection: 404 Not Found (error code: 10008): Unknown Message
+2025-09-28 15:14:45,012 - INFO - TimestampConverter cog initialized
+2025-09-28 15:14:45,337 - INFO - TimestampConverter cog initialized
+2025-09-28 15:19:03,892 - INFO - TimestampConverter cog initialized
+2025-09-28 15:19:34,119 - INFO - TimestampConverter cog initialized
+2025-09-28 15:19:43,395 - INFO - Auto-converted timestamps for kyerstorm in private-bot-test
+2025-09-28 15:20:38,070 - INFO - Auto-converted timestamps for slopking._ in bot-test
+2025-09-28 15:21:21,607 - INFO - TimestampConverter cog initialized
+2025-09-28 15:23:18,798 - INFO - TimestampConverter cog initialized
+2025-09-28 15:23:26,894 - INFO - TimestampConverter cog initialized
+2025-09-28 15:24:01,242 - INFO - TimestampConverter cog initialized
+2025-09-28 15:24:26,370 - INFO - TimestampConverter cog initialized
+2025-09-28 15:24:34,486 - INFO - TimestampConverter cog initialized
+2025-09-28 15:25:22,034 - INFO - TimestampConverter cog initialized
+2025-09-28 15:35:15,964 - INFO - TimestampConverter cog initialized
+2025-09-28 15:36:20,456 - INFO - TimestampConverter cog initialized
+2025-09-28 15:54:16,041 - INFO - Auto-converted timestamps for kyerstorm in bot-test
+2025-09-28 15:57:05,780 - ERROR - Error in on_message timestamp detection: 400 Bad Request (error code: 50035): Invalid Form Body
+In content: Must be 2000 or fewer in length.
+2025-09-28 15:57:24,546 - ERROR - Error in on_message timestamp detection: 400 Bad Request (error code: 50035): Invalid Form Body
+In content: Must be 2000 or fewer in length.
+2025-09-28 15:58:03,130 - INFO - TimestampConverter cog initialized
+2025-09-28 16:04:12,346 - INFO - TimestampConverter cog initialized
+2025-09-28 16:05:43,286 - INFO - TimestampConverter cog initialized
+2025-09-28 16:08:05,579 - INFO - TimestampConverter cog initialized
+2025-09-28 16:10:46,039 - INFO - TimestampConverter cog initialized
+2025-09-28 16:11:18,398 - INFO - TimestampConverter cog initialized
+2025-09-28 16:12:02,830 - INFO - TimestampConverter cog initialized

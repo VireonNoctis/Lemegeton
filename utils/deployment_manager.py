@@ -9,10 +9,12 @@ import json
 import sqlite3
 import logging
 import sys
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 import subprocess
 import time
+import config
 
 # Setup deployment logging
 deploy_logger = logging.getLogger("Deployment")
@@ -24,8 +26,9 @@ deploy_logger.addHandler(deploy_handler)
 deploy_logger.setLevel(logging.INFO)
 
 class DeploymentManager:
-    def __init__(self, database_path="database.db"):
-        self.database_path = database_path
+    def __init__(self, database_path: str = None):
+        # Use provided path, otherwise fall back to configured DB_PATH
+        self.database_path = str(database_path or getattr(config, 'DB_PATH', os.path.join(os.path.dirname(__file__), '..', 'data', 'database.db')))
         self.deployment_config = {
             "phase": "pre-deployment",
             "start_time": None,

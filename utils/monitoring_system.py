@@ -16,6 +16,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 import discord
 from discord.ext import commands, tasks
+import config
 
 # Configure monitoring logger
 monitor_logger = logging.getLogger("BotMonitor")
@@ -57,15 +58,20 @@ class BotMetrics:
     response_times: List[float]
 
 class MonitoringSystem:
-    def __init__(self, bot: commands.Bot, database_path: str = "database.db"):
+    def __init__(self, bot: commands.Bot, database_path: Optional[str] = None):
+        """Monitoring system.
+
+        database_path: path to the sqlite DB. If None, falls back to config.DB_PATH.
+    """
         self.bot = bot
-        self.database_path = database_path
+        # Use configured DB path by default to avoid accidental creation of database.db in repo root
+        self.database_path = str(database_path or getattr(config, 'DB_PATH', 'data/database.db'))
         self.start_time = datetime.utcnow()
         self.command_usage = {}
         self.error_count = 0
         self.response_times = []
         self.guild_activity = {}
-        
+
         # Metrics storage
         self.metrics_file = "monitoring_metrics.json"
         self.load_historical_metrics()
@@ -413,7 +419,8 @@ monitoring_system: Optional[MonitoringSystem] = None
 def setup_monitoring(bot: commands.Bot) -> MonitoringSystem:
     """Initialize monitoring system"""
     global monitoring_system
-    monitoring_system = MonitoringSystem(bot)
+    # Pass configured DB path so monitoring reads the same DB used by the rest of the app
+    monitoring_system = MonitoringSystem(bot, database_path=getattr(config, 'DB_PATH', None))
     # Do NOT start the @tasks.loop here because the bot's event loop may not be
     # running yet (setup_monitoring can be called during module import or before
     # bot.run()). Starting the loop must happen when the event loop is active.

@@ -78,3 +78,586 @@
 2025-09-25 04:11:00,672 | INFO | BotMonitor | 🖥️  System: CPU 50.9%, RAM 62.1%, Latency 108.15ms
 2025-09-25 04:11:00,672 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 0 registered users, 0 recent commands
 2025-09-25 04:11:00,673 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:04:55,864 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 13:04:55,865 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 13:05:00,153 | ERROR | BotMonitor | Failed to get system metrics: [WinError 2] The system cannot find the file specified: 'database.db'
+2025-09-25 13:05:00,154 | WARNING | BotMonitor | Monitoring DB unavailable or missing tables, continuing with zeroed registered users: no such table: users
+2025-09-25 13:05:00,154 | INFO | BotMonitor | 🖥️  System: CPU 0%, RAM 0%, Latency 0ms
+2025-09-25 13:05:00,154 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 0 registered users, 0 recent commands
+2025-09-25 13:05:00,155 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:05:42,439 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 13:05:42,440 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 13:05:46,900 | ERROR | BotMonitor | Failed to get system metrics: [WinError 2] The system cannot find the file specified: 'database.db'
+2025-09-25 13:05:46,901 | WARNING | BotMonitor | Monitoring DB unavailable or missing tables, continuing with zeroed registered users: no such table: users
+2025-09-25 13:05:46,901 | INFO | BotMonitor | 🖥️  System: CPU 0%, RAM 0%, Latency 0ms
+2025-09-25 13:05:46,902 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 0 registered users, 0 recent commands
+2025-09-25 13:05:46,902 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:09:47,808 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 13:09:47,808 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 13:09:51,995 | INFO | BotMonitor | 🖥️  System: CPU 23.8%, RAM 43.8%, Latency 106.24ms
+2025-09-25 13:09:51,995 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:09:51,996 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:14:52,010 | INFO | BotMonitor | 🖥️  System: CPU 30.8%, RAM 43.4%, Latency 107.31ms
+2025-09-25 13:14:52,010 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:15:43,460 | ERROR | BotMonitor | 🚨 Error recorded: CommandNotFound: Command "changelog" is not found | Guild: 897814031346319382 | Command: unknown
+2025-09-25 13:19:52,000 | INFO | BotMonitor | 🖥️  System: CPU 48.0%, RAM 44.2%, Latency 110.71ms
+2025-09-25 13:19:52,000 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:24:52,009 | INFO | BotMonitor | 🖥️  System: CPU 28.0%, RAM 42.6%, Latency 105.24ms
+2025-09-25 13:24:52,009 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:29:52,009 | INFO | BotMonitor | 🖥️  System: CPU 25.2%, RAM 43.1%, Latency 101.23ms
+2025-09-25 13:29:52,009 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:31:39,114 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 13:31:39,115 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 13:31:43,240 | INFO | BotMonitor | 🖥️  System: CPU 38.1%, RAM 43.8%, Latency 105.82ms
+2025-09-25 13:31:43,240 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:31:43,241 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:36:43,249 | INFO | BotMonitor | 🖥️  System: CPU 28.5%, RAM 43.3%, Latency 116.01ms
+2025-09-25 13:36:43,250 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:37:33,042 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 13:37:33,042 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 13:37:37,172 | INFO | BotMonitor | 🖥️  System: CPU 35.6%, RAM 43.6%, Latency 106.66ms
+2025-09-25 13:37:37,172 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:37:37,172 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:41:21,844 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-25 13:41:21,845 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-25 13:41:26,247 | INFO | BotMonitor | 🖥️  System: CPU 30.4%, RAM 43.6%, Latency 107.28ms
+2025-09-25 13:41:26,247 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:41:26,248 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 13:46:26,253 | INFO | BotMonitor | 🖥️  System: CPU 16.3%, RAM 43.5%, Latency 114.91ms
+2025-09-25 13:46:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:51:26,260 | INFO | BotMonitor | 🖥️  System: CPU 17.9%, RAM 43.6%, Latency 104.79ms
+2025-09-25 13:51:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 13:56:26,251 | INFO | BotMonitor | 🖥️  System: CPU 19.7%, RAM 43.7%, Latency 104.96ms
+2025-09-25 13:56:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:01:26,256 | INFO | BotMonitor | 🖥️  System: CPU 28.6%, RAM 43.9%, Latency 105.7ms
+2025-09-25 14:01:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:01:26,257 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 14:06:26,255 | INFO | BotMonitor | 🖥️  System: CPU 35.9%, RAM 44.8%, Latency 105.01ms
+2025-09-25 14:06:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:11:26,262 | INFO | BotMonitor | 🖥️  System: CPU 34.9%, RAM 44.8%, Latency 108.66ms
+2025-09-25 14:11:26,262 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:16:26,254 | INFO | BotMonitor | 🖥️  System: CPU 32.0%, RAM 45.4%, Latency 115.67ms
+2025-09-25 14:16:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:21:26,257 | INFO | BotMonitor | 🖥️  System: CPU 32.1%, RAM 49.3%, Latency 104.7ms
+2025-09-25 14:21:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:26:26,250 | INFO | BotMonitor | 🖥️  System: CPU 34.0%, RAM 48.2%, Latency 107.62ms
+2025-09-25 14:26:26,250 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:31:26,253 | INFO | BotMonitor | 🖥️  System: CPU 44.6%, RAM 48.7%, Latency 113.29ms
+2025-09-25 14:31:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:36:26,250 | INFO | BotMonitor | 🖥️  System: CPU 31.3%, RAM 48.5%, Latency 112.02ms
+2025-09-25 14:36:26,250 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:41:26,253 | INFO | BotMonitor | 🖥️  System: CPU 36.1%, RAM 48.9%, Latency 110.02ms
+2025-09-25 14:41:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:46:26,257 | INFO | BotMonitor | 🖥️  System: CPU 34.6%, RAM 49.1%, Latency 123.21ms
+2025-09-25 14:46:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:51:26,249 | INFO | BotMonitor | 🖥️  System: CPU 36.4%, RAM 49.2%, Latency 105.72ms
+2025-09-25 14:51:26,249 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 14:56:26,249 | INFO | BotMonitor | 🖥️  System: CPU 38.4%, RAM 48.2%, Latency 105.68ms
+2025-09-25 14:56:26,249 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:01:26,251 | INFO | BotMonitor | 🖥️  System: CPU 31.8%, RAM 48.9%, Latency 109.28ms
+2025-09-25 15:01:26,251 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:01:26,252 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 15:06:26,248 | INFO | BotMonitor | 🖥️  System: CPU 37.8%, RAM 49.0%, Latency 105.92ms
+2025-09-25 15:06:26,248 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:11:26,250 | INFO | BotMonitor | 🖥️  System: CPU 35.3%, RAM 49.3%, Latency 105.81ms
+2025-09-25 15:11:26,250 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:16:26,257 | INFO | BotMonitor | 🖥️  System: CPU 32.7%, RAM 49.2%, Latency 110.69ms
+2025-09-25 15:16:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:21:26,254 | INFO | BotMonitor | 🖥️  System: CPU 33.0%, RAM 49.2%, Latency 110.59ms
+2025-09-25 15:21:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:26:26,257 | INFO | BotMonitor | 🖥️  System: CPU 38.2%, RAM 49.0%, Latency 120.64ms
+2025-09-25 15:26:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:31:26,253 | INFO | BotMonitor | 🖥️  System: CPU 52.4%, RAM 49.4%, Latency 112.07ms
+2025-09-25 15:31:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:36:26,255 | INFO | BotMonitor | 🖥️  System: CPU 36.0%, RAM 49.4%, Latency 103.92ms
+2025-09-25 15:36:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:41:26,261 | INFO | BotMonitor | 🖥️  System: CPU 49.2%, RAM 49.6%, Latency 110.24ms
+2025-09-25 15:41:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:46:26,255 | INFO | BotMonitor | 🖥️  System: CPU 32.3%, RAM 50.2%, Latency 107.32ms
+2025-09-25 15:46:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:51:26,251 | INFO | BotMonitor | 🖥️  System: CPU 33.6%, RAM 48.1%, Latency 110.62ms
+2025-09-25 15:51:26,251 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 15:56:26,256 | INFO | BotMonitor | 🖥️  System: CPU 26.7%, RAM 47.9%, Latency 113.16ms
+2025-09-25 15:56:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:01:26,254 | INFO | BotMonitor | 🖥️  System: CPU 26.3%, RAM 47.2%, Latency 141.74ms
+2025-09-25 16:01:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:01:26,255 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 16:06:26,248 | INFO | BotMonitor | 🖥️  System: CPU 34.1%, RAM 47.8%, Latency 103.69ms
+2025-09-25 16:06:26,248 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:11:26,251 | INFO | BotMonitor | 🖥️  System: CPU 29.9%, RAM 47.8%, Latency 112.73ms
+2025-09-25 16:11:26,251 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:16:26,257 | INFO | BotMonitor | 🖥️  System: CPU 26.1%, RAM 50.2%, Latency 126.61ms
+2025-09-25 16:16:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:21:26,260 | INFO | BotMonitor | 🖥️  System: CPU 35.1%, RAM 50.8%, Latency 104.71ms
+2025-09-25 16:21:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:26:26,257 | INFO | BotMonitor | 🖥️  System: CPU 30.6%, RAM 50.9%, Latency 114.73ms
+2025-09-25 16:26:26,258 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:31:26,249 | INFO | BotMonitor | 🖥️  System: CPU 27.6%, RAM 51.1%, Latency 121.81ms
+2025-09-25 16:31:26,249 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:36:26,253 | INFO | BotMonitor | 🖥️  System: CPU 30.2%, RAM 51.2%, Latency 114.11ms
+2025-09-25 16:36:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:41:26,257 | INFO | BotMonitor | 🖥️  System: CPU 31.1%, RAM 51.2%, Latency 116.8ms
+2025-09-25 16:41:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:46:26,248 | INFO | BotMonitor | 🖥️  System: CPU 34.2%, RAM 51.3%, Latency 109.71ms
+2025-09-25 16:46:26,248 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:51:26,258 | INFO | BotMonitor | 🖥️  System: CPU 28.7%, RAM 51.4%, Latency 106.75ms
+2025-09-25 16:51:26,258 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 16:56:26,261 | INFO | BotMonitor | 🖥️  System: CPU 30.6%, RAM 51.6%, Latency 110.46ms
+2025-09-25 16:56:26,262 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:01:26,261 | INFO | BotMonitor | 🖥️  System: CPU 37.1%, RAM 51.8%, Latency 105.12ms
+2025-09-25 17:01:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:01:26,262 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 17:06:26,262 | INFO | BotMonitor | 🖥️  System: CPU 37.3%, RAM 50.1%, Latency 123.36ms
+2025-09-25 17:06:26,262 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:11:26,253 | INFO | BotMonitor | 🖥️  System: CPU 28.2%, RAM 53.7%, Latency 107.56ms
+2025-09-25 17:11:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:16:26,259 | INFO | BotMonitor | 🖥️  System: CPU 35.1%, RAM 54.2%, Latency 121.8ms
+2025-09-25 17:16:26,259 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:21:26,259 | INFO | BotMonitor | 🖥️  System: CPU 13.0%, RAM 52.0%, Latency 105.47ms
+2025-09-25 17:21:26,259 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:26:26,259 | INFO | BotMonitor | 🖥️  System: CPU 23.7%, RAM 52.3%, Latency 112.96ms
+2025-09-25 17:26:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:31:26,255 | INFO | BotMonitor | 🖥️  System: CPU 13.5%, RAM 52.2%, Latency 107.88ms
+2025-09-25 17:31:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:36:26,251 | INFO | BotMonitor | 🖥️  System: CPU 27.2%, RAM 52.6%, Latency 125.46ms
+2025-09-25 17:36:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:41:26,260 | INFO | BotMonitor | 🖥️  System: CPU 27.3%, RAM 52.0%, Latency 112.77ms
+2025-09-25 17:41:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:46:26,248 | INFO | BotMonitor | 🖥️  System: CPU 11.3%, RAM 52.3%, Latency 106.72ms
+2025-09-25 17:46:26,248 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:51:26,261 | INFO | BotMonitor | 🖥️  System: CPU 15.4%, RAM 52.2%, Latency 106.96ms
+2025-09-25 17:51:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 17:56:26,253 | INFO | BotMonitor | 🖥️  System: CPU 36.5%, RAM 53.3%, Latency 110.29ms
+2025-09-25 17:56:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:01:26,258 | INFO | BotMonitor | 🖥️  System: CPU 18.5%, RAM 53.0%, Latency 106.49ms
+2025-09-25 18:01:26,259 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:01:26,259 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 18:06:26,253 | INFO | BotMonitor | 🖥️  System: CPU 27.0%, RAM 53.4%, Latency 102.84ms
+2025-09-25 18:06:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:11:26,259 | INFO | BotMonitor | 🖥️  System: CPU 58.3%, RAM 63.9%, Latency 119.39ms
+2025-09-25 18:11:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:16:26,254 | INFO | BotMonitor | 🖥️  System: CPU 58.8%, RAM 65.7%, Latency 104.37ms
+2025-09-25 18:16:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:21:26,251 | INFO | BotMonitor | 🖥️  System: CPU 67.5%, RAM 67.3%, Latency 137.25ms
+2025-09-25 18:21:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:26:26,251 | INFO | BotMonitor | 🖥️  System: CPU 69.0%, RAM 69.0%, Latency 122.21ms
+2025-09-25 18:26:26,251 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:31:26,254 | INFO | BotMonitor | 🖥️  System: CPU 66.4%, RAM 70.7%, Latency 96.69ms
+2025-09-25 18:31:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:36:26,252 | INFO | BotMonitor | 🖥️  System: CPU 78.4%, RAM 68.2%, Latency 103.96ms
+2025-09-25 18:36:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:41:26,264 | INFO | BotMonitor | 🖥️  System: CPU 80.5%, RAM 69.2%, Latency 108.46ms
+2025-09-25 18:41:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:41:26,264 | WARNING | BotMonitor | 🚨 High CPU usage: 80.5%
+2025-09-25 18:46:26,259 | INFO | BotMonitor | 🖥️  System: CPU 68.2%, RAM 69.0%, Latency 115.78ms
+2025-09-25 18:46:26,259 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:51:26,254 | INFO | BotMonitor | 🖥️  System: CPU 79.4%, RAM 72.6%, Latency 103.71ms
+2025-09-25 18:51:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 18:56:26,254 | INFO | BotMonitor | 🖥️  System: CPU 73.5%, RAM 72.0%, Latency 105.61ms
+2025-09-25 18:56:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:01:26,264 | INFO | BotMonitor | 🖥️  System: CPU 88.1%, RAM 72.2%, Latency 106.84ms
+2025-09-25 19:01:26,265 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:01:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 88.1%
+2025-09-25 19:01:26,266 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 19:06:26,255 | INFO | BotMonitor | 🖥️  System: CPU 67.2%, RAM 71.7%, Latency 108.41ms
+2025-09-25 19:06:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:11:26,265 | INFO | BotMonitor | 🖥️  System: CPU 79.6%, RAM 71.8%, Latency 112.6ms
+2025-09-25 19:11:26,265 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:16:26,253 | INFO | BotMonitor | 🖥️  System: CPU 81.4%, RAM 72.0%, Latency 124.59ms
+2025-09-25 19:16:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:16:26,253 | WARNING | BotMonitor | 🚨 High CPU usage: 81.4%
+2025-09-25 19:21:26,252 | INFO | BotMonitor | 🖥️  System: CPU 71.7%, RAM 71.8%, Latency 109.33ms
+2025-09-25 19:21:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:26:26,258 | INFO | BotMonitor | 🖥️  System: CPU 30.1%, RAM 57.4%, Latency 107.35ms
+2025-09-25 19:26:26,258 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:31:26,266 | INFO | BotMonitor | 🖥️  System: CPU 81.3%, RAM 71.8%, Latency 121.95ms
+2025-09-25 19:31:26,267 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:31:26,268 | WARNING | BotMonitor | 🚨 High CPU usage: 81.3%
+2025-09-25 19:36:26,264 | INFO | BotMonitor | 🖥️  System: CPU 84.1%, RAM 71.5%, Latency 109.39ms
+2025-09-25 19:36:26,265 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:36:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 84.1%
+2025-09-25 19:41:26,262 | INFO | BotMonitor | 🖥️  System: CPU 77.6%, RAM 71.6%, Latency 109.93ms
+2025-09-25 19:41:26,263 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:46:26,262 | INFO | BotMonitor | 🖥️  System: CPU 66.2%, RAM 71.5%, Latency 124.28ms
+2025-09-25 19:46:26,262 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:51:26,257 | INFO | BotMonitor | 🖥️  System: CPU 69.6%, RAM 71.4%, Latency 109.93ms
+2025-09-25 19:51:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 19:56:26,256 | INFO | BotMonitor | 🖥️  System: CPU 69.4%, RAM 71.2%, Latency 108.52ms
+2025-09-25 19:56:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:01:26,264 | INFO | BotMonitor | 🖥️  System: CPU 70.0%, RAM 71.7%, Latency 114.89ms
+2025-09-25 20:01:26,265 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:01:26,266 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 20:06:26,253 | INFO | BotMonitor | 🖥️  System: CPU 82.2%, RAM 72.1%, Latency 113.09ms
+2025-09-25 20:06:26,253 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:06:26,254 | WARNING | BotMonitor | 🚨 High CPU usage: 82.2%
+2025-09-25 20:11:26,260 | INFO | BotMonitor | 🖥️  System: CPU 17.1%, RAM 58.2%, Latency 108.98ms
+2025-09-25 20:11:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:16:26,254 | INFO | BotMonitor | 🖥️  System: CPU 57.4%, RAM 61.2%, Latency 109.48ms
+2025-09-25 20:16:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:21:26,252 | INFO | BotMonitor | 🖥️  System: CPU 87.1%, RAM 73.8%, Latency 122.2ms
+2025-09-25 20:21:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:21:26,253 | WARNING | BotMonitor | 🚨 High CPU usage: 87.1%
+2025-09-25 20:26:26,268 | INFO | BotMonitor | 🖥️  System: CPU 93.2%, RAM 71.7%, Latency 119.61ms
+2025-09-25 20:26:26,268 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:26:26,269 | WARNING | BotMonitor | 🚨 High CPU usage: 93.2%
+2025-09-25 20:31:26,256 | INFO | BotMonitor | 🖥️  System: CPU 85.3%, RAM 76.1%, Latency 120.71ms
+2025-09-25 20:31:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:31:26,258 | WARNING | BotMonitor | 🚨 High CPU usage: 85.3%
+2025-09-25 20:36:26,262 | INFO | BotMonitor | 🖥️  System: CPU 91.4%, RAM 75.8%, Latency 200.04ms
+2025-09-25 20:36:26,263 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:36:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 91.4%
+2025-09-25 20:41:26,260 | INFO | BotMonitor | 🖥️  System: CPU 89.4%, RAM 75.8%, Latency 118.11ms
+2025-09-25 20:41:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:41:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 89.4%
+2025-09-25 20:46:26,263 | INFO | BotMonitor | 🖥️  System: CPU 92.6%, RAM 75.5%, Latency 123.91ms
+2025-09-25 20:46:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:46:26,287 | WARNING | BotMonitor | 🚨 High CPU usage: 92.6%
+2025-09-25 20:51:26,261 | INFO | BotMonitor | 🖥️  System: CPU 74.8%, RAM 74.8%, Latency 117.46ms
+2025-09-25 20:51:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 20:56:26,257 | INFO | BotMonitor | 🖥️  System: CPU 78.5%, RAM 74.6%, Latency 107.98ms
+2025-09-25 20:56:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:01:26,263 | INFO | BotMonitor | 🖥️  System: CPU 75.9%, RAM 74.6%, Latency 111.76ms
+2025-09-25 21:01:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:01:26,265 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 21:06:26,270 | INFO | BotMonitor | 🖥️  System: CPU 84.1%, RAM 76.1%, Latency 108.61ms
+2025-09-25 21:06:26,271 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:06:26,271 | WARNING | BotMonitor | 🚨 High CPU usage: 84.1%
+2025-09-25 21:11:26,264 | INFO | BotMonitor | 🖥️  System: CPU 86.3%, RAM 76.3%, Latency 112.75ms
+2025-09-25 21:11:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:11:26,264 | WARNING | BotMonitor | 🚨 High CPU usage: 86.3%
+2025-09-25 21:16:26,261 | INFO | BotMonitor | 🖥️  System: CPU 80.6%, RAM 76.2%, Latency 135.29ms
+2025-09-25 21:16:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:16:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 80.6%
+2025-09-25 21:21:26,303 | INFO | BotMonitor | 🖥️  System: CPU 98.2%, RAM 71.6%, Latency 116.34ms
+2025-09-25 21:21:26,315 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:21:26,319 | WARNING | BotMonitor | 🚨 High CPU usage: 98.2%
+2025-09-25 21:26:26,261 | INFO | BotMonitor | 🖥️  System: CPU 89.3%, RAM 75.8%, Latency 115.27ms
+2025-09-25 21:26:26,262 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:26:26,262 | WARNING | BotMonitor | 🚨 High CPU usage: 89.3%
+2025-09-25 21:31:26,266 | INFO | BotMonitor | 🖥️  System: CPU 77.0%, RAM 75.6%, Latency 111.61ms
+2025-09-25 21:31:26,267 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:36:26,264 | INFO | BotMonitor | 🖥️  System: CPU 82.7%, RAM 76.0%, Latency 129.91ms
+2025-09-25 21:36:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:36:26,264 | WARNING | BotMonitor | 🚨 High CPU usage: 82.7%
+2025-09-25 21:41:26,263 | INFO | BotMonitor | 🖥️  System: CPU 89.3%, RAM 77.0%, Latency 123.59ms
+2025-09-25 21:41:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:41:26,264 | WARNING | BotMonitor | 🚨 High CPU usage: 89.3%
+2025-09-25 21:46:26,265 | INFO | BotMonitor | 🖥️  System: CPU 84.2%, RAM 76.6%, Latency 124.63ms
+2025-09-25 21:46:26,266 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:46:26,266 | WARNING | BotMonitor | 🚨 High CPU usage: 84.2%
+2025-09-25 21:51:26,263 | INFO | BotMonitor | 🖥️  System: CPU 89.3%, RAM 77.5%, Latency 119.18ms
+2025-09-25 21:51:26,263 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 21:51:26,264 | WARNING | BotMonitor | 🚨 High CPU usage: 89.3%
+2025-09-25 21:56:26,264 | INFO | BotMonitor | 🖥️  System: CPU 77.1%, RAM 77.0%, Latency 117.83ms
+2025-09-25 21:56:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:01:26,417 | INFO | BotMonitor | 🖥️  System: CPU 97.6%, RAM 77.5%, Latency 129.02ms
+2025-09-25 22:01:26,422 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:01:26,424 | WARNING | BotMonitor | 🚨 High CPU usage: 97.6%
+2025-09-25 22:01:26,426 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 22:06:26,262 | INFO | BotMonitor | 🖥️  System: CPU 96.2%, RAM 78.4%, Latency 124.0ms
+2025-09-25 22:06:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:06:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 96.2%
+2025-09-25 22:11:26,298 | INFO | BotMonitor | 🖥️  System: CPU 80.1%, RAM 79.0%, Latency 125.84ms
+2025-09-25 22:11:26,298 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:11:26,299 | WARNING | BotMonitor | 🚨 High CPU usage: 80.1%
+2025-09-25 22:16:26,314 | INFO | BotMonitor | 🖥️  System: CPU 83.4%, RAM 79.2%, Latency 172.15ms
+2025-09-25 22:16:26,315 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:16:26,315 | WARNING | BotMonitor | 🚨 High CPU usage: 83.4%
+2025-09-25 22:21:26,262 | INFO | BotMonitor | 🖥️  System: CPU 78.0%, RAM 79.1%, Latency 126.68ms
+2025-09-25 22:21:26,263 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:26:26,258 | INFO | BotMonitor | 🖥️  System: CPU 78.2%, RAM 78.9%, Latency 130.99ms
+2025-09-25 22:26:26,258 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:31:26,253 | INFO | BotMonitor | 🖥️  System: CPU 71.1%, RAM 79.1%, Latency 117.58ms
+2025-09-25 22:31:26,254 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:36:26,256 | INFO | BotMonitor | 🖥️  System: CPU 86.6%, RAM 79.6%, Latency 111.03ms
+2025-09-25 22:36:26,256 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:36:26,257 | WARNING | BotMonitor | 🚨 High CPU usage: 86.6%
+2025-09-25 22:41:26,260 | INFO | BotMonitor | 🖥️  System: CPU 80.1%, RAM 79.2%, Latency 120.6ms
+2025-09-25 22:41:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:41:26,260 | WARNING | BotMonitor | 🚨 High CPU usage: 80.1%
+2025-09-25 22:46:26,252 | INFO | BotMonitor | 🖥️  System: CPU 70.2%, RAM 79.2%, Latency 114.82ms
+2025-09-25 22:46:26,252 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:51:26,285 | INFO | BotMonitor | 🖥️  System: CPU 74.4%, RAM 78.8%, Latency 121.92ms
+2025-09-25 22:51:26,295 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:56:26,264 | INFO | BotMonitor | 🖥️  System: CPU 84.0%, RAM 79.1%, Latency 110.81ms
+2025-09-25 22:56:26,264 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 22:56:26,265 | WARNING | BotMonitor | 🚨 High CPU usage: 84.0%
+2025-09-25 23:01:26,257 | INFO | BotMonitor | 🖥️  System: CPU 86.1%, RAM 79.4%, Latency 119.11ms
+2025-09-25 23:01:26,257 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:01:26,257 | WARNING | BotMonitor | 🚨 High CPU usage: 86.1%
+2025-09-25 23:01:26,258 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-25 23:06:26,265 | INFO | BotMonitor | 🖥️  System: CPU 78.5%, RAM 79.3%, Latency 160.48ms
+2025-09-25 23:06:26,266 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:11:26,260 | INFO | BotMonitor | 🖥️  System: CPU 87.4%, RAM 79.6%, Latency 109.78ms
+2025-09-25 23:11:26,260 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:11:26,261 | WARNING | BotMonitor | 🚨 High CPU usage: 87.4%
+2025-09-25 23:16:26,255 | INFO | BotMonitor | 🖥️  System: CPU 78.9%, RAM 79.4%, Latency 109.53ms
+2025-09-25 23:16:26,255 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:21:26,261 | INFO | BotMonitor | 🖥️  System: CPU 78.7%, RAM 79.2%, Latency 110.92ms
+2025-09-25 23:21:26,261 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:26:26,258 | INFO | BotMonitor | 🖥️  System: CPU 80.9%, RAM 79.2%, Latency 119.64ms
+2025-09-25 23:26:26,258 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:26:26,259 | WARNING | BotMonitor | 🚨 High CPU usage: 80.9%
+2025-09-25 23:31:26,267 | INFO | BotMonitor | 🖥️  System: CPU 86.9%, RAM 79.0%, Latency 106.68ms
+2025-09-25 23:31:26,267 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-25 23:31:26,267 | WARNING | BotMonitor | 🚨 High CPU usage: 86.9%
+2025-09-25 23:36:26,262 | INFO | BotMonitor | 🖥️  System: CPU 73.2%, RAM 79.8%, Latency 117.03ms
+2025-09-25 23:36:26,262 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 04:36:34,242 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 04:36:34,242 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 04:36:38,655 | INFO | BotMonitor | 🖥️  System: CPU 47.8%, RAM 61.2%, Latency 112.81ms
+2025-09-27 04:36:38,656 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 04:36:38,656 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 04:39:29,011 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 04:39:29,012 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 04:39:33,658 | INFO | BotMonitor | 🖥️  System: CPU 41.5%, RAM 60.8%, Latency 110.65ms
+2025-09-27 04:39:33,658 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 04:39:33,659 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 04:42:33,263 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 04:42:33,264 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 04:42:37,492 | INFO | BotMonitor | 🖥️  System: CPU 32.4%, RAM 61.5%, Latency 107.94ms
+2025-09-27 04:42:37,492 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 04:42:37,493 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 04:46:51,495 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 04:46:51,496 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 04:46:55,704 | INFO | BotMonitor | 🖥️  System: CPU 41.8%, RAM 61.1%, Latency 109.0ms
+2025-09-27 04:46:55,705 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 04:46:55,705 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 04:51:55,707 | INFO | BotMonitor | 🖥️  System: CPU 43.3%, RAM 61.5%, Latency 114.89ms
+2025-09-27 04:51:55,707 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 04:56:55,708 | INFO | BotMonitor | 🖥️  System: CPU 45.5%, RAM 61.4%, Latency 114.38ms
+2025-09-27 04:56:55,708 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:01:55,719 | INFO | BotMonitor | 🖥️  System: CPU 59.4%, RAM 62.1%, Latency 105.74ms
+2025-09-27 05:01:55,719 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:01:55,720 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:06:55,715 | INFO | BotMonitor | 🖥️  System: CPU 45.2%, RAM 62.2%, Latency 109.21ms
+2025-09-27 05:06:55,715 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:08:55,282 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:08:55,282 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:08:59,679 | INFO | BotMonitor | 🖥️  System: CPU 43.5%, RAM 62.2%, Latency 108.03ms
+2025-09-27 05:08:59,680 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:08:59,680 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:13:59,682 | INFO | BotMonitor | 🖥️  System: CPU 41.5%, RAM 63.2%, Latency 108.01ms
+2025-09-27 05:13:59,682 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:18:59,684 | INFO | BotMonitor | 🖥️  System: CPU 33.5%, RAM 62.9%, Latency 109.28ms
+2025-09-27 05:18:59,684 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:23:59,687 | INFO | BotMonitor | 🖥️  System: CPU 56.8%, RAM 63.2%, Latency 107.38ms
+2025-09-27 05:23:59,687 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:28:59,692 | INFO | BotMonitor | 🖥️  System: CPU 37.5%, RAM 63.1%, Latency 108.57ms
+2025-09-27 05:28:59,692 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:33:59,691 | INFO | BotMonitor | 🖥️  System: CPU 41.7%, RAM 63.4%, Latency 109.24ms
+2025-09-27 05:33:59,691 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:38:59,690 | INFO | BotMonitor | 🖥️  System: CPU 51.7%, RAM 63.9%, Latency 108.79ms
+2025-09-27 05:38:59,690 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:43:59,682 | INFO | BotMonitor | 🖥️  System: CPU 49.9%, RAM 64.0%, Latency 107.01ms
+2025-09-27 05:43:59,682 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:45:49,013 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:45:49,013 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:45:53,361 | INFO | BotMonitor | 🖥️  System: CPU 40.5%, RAM 63.7%, Latency 106.95ms
+2025-09-27 05:45:53,361 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:45:53,362 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:46:18,557 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:46:18,558 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:46:23,147 | INFO | BotMonitor | 🖥️  System: CPU 57.9%, RAM 63.8%, Latency 109.0ms
+2025-09-27 05:46:23,147 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:46:23,149 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:46:38,242 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:46:38,242 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:46:42,679 | INFO | BotMonitor | 🖥️  System: CPU 56.6%, RAM 63.9%, Latency 108.62ms
+2025-09-27 05:46:42,680 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:46:42,680 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:50:11,754 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:50:11,754 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:50:16,880 | INFO | BotMonitor | 🖥️  System: CPU 39.3%, RAM 64.3%, Latency 106.2ms
+2025-09-27 05:50:16,880 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:50:16,881 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:56:39,049 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:56:39,049 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:56:43,396 | INFO | BotMonitor | 🖥️  System: CPU 46.9%, RAM 64.1%, Latency 107.34ms
+2025-09-27 05:56:43,396 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:56:43,397 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 05:58:37,406 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 05:58:37,406 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 05:58:41,665 | INFO | BotMonitor | 🖥️  System: CPU 39.2%, RAM 64.1%, Latency 125.86ms
+2025-09-27 05:58:41,665 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 05:58:41,666 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 14:14:55,522 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 14:14:55,522 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 14:15:00,010 | INFO | BotMonitor | 🖥️  System: CPU 19.3%, RAM 46.4%, Latency 109.71ms
+2025-09-27 14:15:00,011 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 14:15:00,012 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 14:20:35,888 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 14:20:35,888 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 14:20:40,734 | INFO | BotMonitor | 🖥️  System: CPU 31.9%, RAM 47.3%, Latency 108.27ms
+2025-09-27 14:20:40,734 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 14:20:40,735 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-27 14:23:25,787 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-27 14:23:25,787 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-27 14:23:30,295 | INFO | BotMonitor | 🖥️  System: CPU 39.7%, RAM 48.5%, Latency 108.42ms
+2025-09-27 14:23:30,295 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-27 14:23:30,296 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:36:21,438 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:36:21,438 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:36:26,134 | INFO | BotMonitor | 🖥️  System: CPU 20.4%, RAM 42.8%, Latency 107.54ms
+2025-09-28 13:36:26,134 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:36:26,135 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:39:53,361 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:39:53,361 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:39:58,034 | INFO | BotMonitor | 🖥️  System: CPU 21.8%, RAM 43.2%, Latency 108.28ms
+2025-09-28 13:39:58,034 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:39:58,035 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:49:35,228 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:49:35,228 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:49:39,625 | INFO | BotMonitor | 🖥️  System: CPU 16.5%, RAM 43.9%, Latency 110.68ms
+2025-09-28 13:49:39,625 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:49:39,626 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:51:38,772 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:51:38,772 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:51:43,186 | INFO | BotMonitor | 🖥️  System: CPU 35.9%, RAM 43.9%, Latency 108.08ms
+2025-09-28 13:51:43,186 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:51:43,187 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:52:27,538 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:52:27,539 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:52:32,067 | INFO | BotMonitor | 🖥️  System: CPU 20.8%, RAM 43.5%, Latency 111.65ms
+2025-09-28 13:52:32,067 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:52:32,068 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:54:37,614 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:54:37,615 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:54:42,035 | INFO | BotMonitor | 🖥️  System: CPU 22.8%, RAM 43.3%, Latency 109.61ms
+2025-09-28 13:54:42,035 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:54:42,035 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 13:57:16,308 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 13:57:16,308 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 13:57:20,772 | INFO | BotMonitor | 🖥️  System: CPU 30.1%, RAM 43.4%, Latency 106.2ms
+2025-09-28 13:57:20,772 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 13:57:20,772 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:02:20,774 | INFO | BotMonitor | 🖥️  System: CPU 30.3%, RAM 43.5%, Latency 117.84ms
+2025-09-28 14:02:20,774 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:02:20,775 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:07:20,778 | INFO | BotMonitor | 🖥️  System: CPU 22.5%, RAM 43.5%, Latency 108.18ms
+2025-09-28 14:07:20,778 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:07:43,321 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:07:43,321 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:09:01,727 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:09:01,727 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:09:06,085 | INFO | BotMonitor | 🖥️  System: CPU 20.9%, RAM 45.8%, Latency 102.33ms
+2025-09-28 14:09:06,085 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:09:06,086 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:14:06,093 | INFO | BotMonitor | 🖥️  System: CPU 28.1%, RAM 45.5%, Latency 113.4ms
+2025-09-28 14:14:06,093 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:20:30,863 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:20:30,863 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:20:35,274 | INFO | BotMonitor | 🖥️  System: CPU 27.6%, RAM 45.9%, Latency 111.72ms
+2025-09-28 14:20:35,274 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:20:35,275 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:25:35,277 | INFO | BotMonitor | 🖥️  System: CPU 28.3%, RAM 45.8%, Latency 119.92ms
+2025-09-28 14:25:35,278 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:30:35,287 | INFO | BotMonitor | 🖥️  System: CPU 37.9%, RAM 45.7%, Latency 111.09ms
+2025-09-28 14:30:35,287 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:35:35,283 | INFO | BotMonitor | 🖥️  System: CPU 26.7%, RAM 44.0%, Latency 108.15ms
+2025-09-28 14:35:35,283 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:40:15,352 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:40:15,352 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:40:19,701 | INFO | BotMonitor | 🖥️  System: CPU 39.7%, RAM 45.0%, Latency 109.58ms
+2025-09-28 14:40:19,701 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:40:19,701 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:40:35,285 | INFO | BotMonitor | 🖥️  System: CPU 41.4%, RAM 45.1%, Latency 109.25ms
+2025-09-28 14:40:35,285 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:49:43,172 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:49:43,173 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:49:47,388 | INFO | BotMonitor | 🖥️  System: CPU 23.5%, RAM 47.1%, Latency 113.15ms
+2025-09-28 14:49:47,388 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:49:47,389 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:50:53,068 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:50:53,069 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:50:57,338 | INFO | BotMonitor | 🖥️  System: CPU 21.5%, RAM 46.9%, Latency 112.12ms
+2025-09-28 14:50:57,339 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:50:57,340 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:52:46,232 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:52:46,233 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:52:50,604 | INFO | BotMonitor | 🖥️  System: CPU 44.1%, RAM 47.3%, Latency 105.07ms
+2025-09-28 14:52:50,604 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:52:50,605 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:55:57,858 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:55:57,858 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:56:02,152 | INFO | BotMonitor | 🖥️  System: CPU 26.5%, RAM 47.2%, Latency 112.48ms
+2025-09-28 14:56:02,153 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:56:02,154 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 14:56:35,931 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:56:35,931 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:58:35,824 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 14:58:35,824 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 14:58:40,272 | INFO | BotMonitor | 🖥️  System: CPU 28.8%, RAM 46.9%, Latency 116.83ms
+2025-09-28 14:58:40,273 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 14:58:40,273 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:00:50,221 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:00:50,221 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:00:54,734 | INFO | BotMonitor | 🖥️  System: CPU 23.9%, RAM 47.2%, Latency 108.61ms
+2025-09-28 15:00:54,734 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:00:54,735 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:03:00,814 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:03:00,814 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:03:05,737 | INFO | BotMonitor | 🖥️  System: CPU 27.1%, RAM 48.5%, Latency 120.76ms
+2025-09-28 15:03:05,737 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:03:05,738 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:04:18,369 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:04:18,369 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:04:22,757 | INFO | BotMonitor | 🖥️  System: CPU 28.4%, RAM 48.6%, Latency 116.19ms
+2025-09-28 15:04:22,757 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:04:22,758 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:08:05,738 | INFO | BotMonitor | 🖥️  System: CPU 14.0%, RAM 48.9%, Latency 116.92ms
+2025-09-28 15:08:05,738 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:09:22,769 | INFO | BotMonitor | 🖥️  System: CPU 32.5%, RAM 48.6%, Latency 122.06ms
+2025-09-28 15:09:22,770 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:13:05,747 | INFO | BotMonitor | 🖥️  System: CPU 28.8%, RAM 49.3%, Latency 110.14ms
+2025-09-28 15:13:05,747 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:14:22,761 | INFO | BotMonitor | 🖥️  System: CPU 23.2%, RAM 48.8%, Latency 108.99ms
+2025-09-28 15:14:22,761 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:19:33,738 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:19:33,738 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:19:38,585 | INFO | BotMonitor | 🖥️  System: CPU 21.7%, RAM 48.5%, Latency 111.67ms
+2025-09-28 15:19:38,585 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:19:38,586 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:24:38,622 | INFO | BotMonitor | 🖥️  System: CPU 48.9%, RAM 53.9%, Latency 120.92ms
+2025-09-28 15:24:38,622 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:29:38,591 | INFO | BotMonitor | 🖥️  System: CPU 23.9%, RAM 50.7%, Latency 108.45ms
+2025-09-28 15:29:38,592 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:34:38,591 | INFO | BotMonitor | 🖥️  System: CPU 25.1%, RAM 50.0%, Latency 108.46ms
+2025-09-28 15:34:38,591 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:35:15,586 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:35:15,587 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:35:20,070 | INFO | BotMonitor | 🖥️  System: CPU 19.3%, RAM 50.0%, Latency 107.56ms
+2025-09-28 15:35:20,070 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:35:20,071 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:36:20,090 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:36:20,090 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:36:24,446 | INFO | BotMonitor | 🖥️  System: CPU 17.2%, RAM 49.3%, Latency 108.15ms
+2025-09-28 15:36:24,447 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:36:24,447 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 15:41:24,450 | INFO | BotMonitor | 🖥️  System: CPU 23.4%, RAM 49.2%, Latency 111.48ms
+2025-09-28 15:41:24,450 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:46:24,458 | INFO | BotMonitor | 🖥️  System: CPU 19.5%, RAM 50.0%, Latency 121.02ms
+2025-09-28 15:46:24,458 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:51:24,455 | INFO | BotMonitor | 🖥️  System: CPU 28.0%, RAM 49.9%, Latency 112.46ms
+2025-09-28 15:51:24,455 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:56:33,407 | INFO | BotMonitor | 🖥️  System: CPU 21.9%, RAM 50.2%, Latency 108.47ms
+2025-09-28 15:56:33,407 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:58:02,772 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 15:58:02,772 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 15:58:07,025 | INFO | BotMonitor | 🖥️  System: CPU 25.0%, RAM 50.3%, Latency 108.09ms
+2025-09-28 15:58:07,025 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 15:58:07,026 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 16:03:07,032 | INFO | BotMonitor | 🖥️  System: CPU 15.9%, RAM 50.9%, Latency 112.73ms
+2025-09-28 16:03:07,033 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 16:03:07,033 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 16:08:05,200 | INFO | BotMonitor | 📊 Loaded historical metrics
+2025-09-28 16:08:05,201 | INFO | BotMonitor | 🚀 Monitoring system initialized (task start deferred)
+2025-09-28 16:08:09,491 | INFO | BotMonitor | 🖥️  System: CPU 23.5%, RAM 51.0%, Latency 109.02ms
+2025-09-28 16:08:09,492 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 16:08:09,492 | INFO | BotMonitor | 🔄 Reset hourly monitoring counters
+2025-09-28 16:13:09,496 | INFO | BotMonitor | 🖥️  System: CPU 35.8%, RAM 50.8%, Latency 117.11ms
+2025-09-28 16:13:09,496 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 16:18:09,496 | INFO | BotMonitor | 🖥️  System: CPU 39.2%, RAM 53.8%, Latency 107.96ms
+2025-09-28 16:18:09,497 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands
+2025-09-28 16:23:09,495 | INFO | BotMonitor | 🖥️  System: CPU 27.6%, RAM 54.3%, Latency 120.45ms
+2025-09-28 16:23:09,495 | INFO | BotMonitor | 🤖 Bot: 3 guilds, 18 registered users, 0 recent commands

@@ -12,8 +12,10 @@ It's safe to run multiple times (idempotent).
 """
 import sqlite3
 from pathlib import Path
+import config
 
-DB_PATH = Path('data/database.db')
+# Use configured DB path when available to avoid creating repo-root database
+DB_PATH = Path(getattr(config, 'DB_PATH', Path('data') / 'database.db'))
 GUILD_ID = 897814031346319382
 
 if not DB_PATH.exists():
