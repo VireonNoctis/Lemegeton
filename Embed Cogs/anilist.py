@@ -42,88 +42,125 @@ class AniListCog(commands.Cog):
     # ---------------------
     async def build_user_progress_embed(self, media: dict, media_type: str) -> Optional[discord.Embed]:
         """Build embed showing registered users' progress for a given media"""
-        users = await get_all_users()
-        if not users:
+        import time
+        start_time = time.time()
+        logger.info(f"Building user progress embed for media ID: {media.get('id')}, type: {media_type}")
+        
+        try:
+            users = await get_all_users()
+            logger.info(f"Retrieved {len(users) if users else 0} users from database")
+            
+            if not users:
+                return discord.Embed(
+                    title="👥 Registered Users' Progress",
+                    description="No registered users found.",
+                    color=discord.Color.red()
+                )
+
+            col_name = "Episodes" if media_type.upper() == "ANIME" else "Chapters"
+            progress_lines = [f"`{'AniList User':<20} {col_name:<10} {'Rating':<7}`"]
+            progress_lines.append("`{:-<20} {:-<10} {:-<7}`".format("", "", ""))
+
+            # Use a single session for all requests to improve performance
+            successful_users = 0
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
+                for user in users:
+                    discord_name = user[3]  # Discord username (from username column)
+                    anilist_username = user[4] if len(user) > 4 else None  # AniList username
+                    
+                    if not anilist_username:
+                        logger.debug(f"Skipping user {discord_name} - no AniList username")
+                        continue
+                    
+                    logger.debug(f"Fetching progress for {discord_name} (AniList: {anilist_username})")
+                    
+                    # Fetch user progress with timeout
+                    query = """
+                    query($userName: String, $mediaId: Int, $type: MediaType) {
+                        User(name: $userName) {
+                            mediaListOptions { scoreFormat }
+                        }
+                        MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
+                            progress
+                            score
+                        }
+                    }
+                    """
+                    variables = {"userName": anilist_username, "mediaId": media.get("id", 0), "type": media_type}
+
+                    try:
+                        async with session.post(ANILIST_API, 
+                                              json={"query": query, "variables": variables},
+                                              timeout=10) as resp:
+                            if resp.status != 200:
+                                logger.debug(f"API error {resp.status} for user {anilist_username}")
+                                continue
+                            payload = await resp.json()
+                    except asyncio.TimeoutError:
+                        logger.debug(f"Timeout fetching progress for {anilist_username}")
+                        continue
+                    except Exception as e:
+                        logger.debug(f"Error fetching progress for {anilist_username}: {e}")
+                        continue
+
+                    user_opts = payload.get("data", {}).get("User", {}).get("mediaListOptions", {})
+                    score_format = user_opts.get("scoreFormat", "POINT_100")
+
+                    entry = payload.get("data", {}).get("MediaList")
+                    if not entry:
+                        continue
+
+                    progress = entry.get("progress")
+                    score = entry.get("score")
+
+                    # Normalize rating to /10
+                    rating10: Optional[float] = None
+                    if score is not None:
+                        if score_format == "POINT_100":
+                            rating10 = round(score / 10.0, 1)
+                        elif score_format in ("POINT_10", "POINT_10_DECIMAL"):
+                            rating10 = float(score)
+                        elif score_format == "POINT_5":
+                            rating10 = round((score / 5) * 10, 1)
+                        elif score_format == "POINT_3":
+                            mapping = {1: 3.0, 2: 6.0, 3: 9.0}
+                            rating10 = mapping.get(score, None)
+
+                    total = media.get("episodes") if media_type.upper() == "ANIME" else media.get("chapters")
+                    progress_text = f"{progress}/{total or '?'}" if progress is not None else "—"
+                    rating_text = f"{rating10}/10" if rating10 is not None else "—"
+
+                    # Use AniList username for display, fallback to Discord username if needed
+                    display_name = anilist_username or discord_name
+                    progress_lines.append(f"`{display_name:<20} {progress_text:<10} {rating_text:<7}`")
+                    successful_users += 1
+
+            elapsed_time = time.time() - start_time
+            logger.info(f"User progress fetch completed in {elapsed_time:.2f}s for {successful_users} users")
+
+            if len(progress_lines) <= 2:
+                return discord.Embed(
+                    title="👥 Registered Users' Progress",
+                    description="No progress found for this title.",
+                    color=discord.Color.red()
+                )
+
+            embed = discord.Embed(
+                title="👥 Registered Users' Progress",
+                description="\n".join(progress_lines),
+                color=discord.Color.blue()
+            )
+            embed.set_footer(text="Fetched from AniList")
+            logger.info(f"Successfully built user progress embed with {successful_users} users in {elapsed_time:.2f}s")
+            return embed
+        
+        except Exception as e:
+            logger.error(f"Error building user progress embed: {e}", exc_info=True)
             return discord.Embed(
                 title="👥 Registered Users' Progress",
-                description="No registered users found.",
+                description="❌ An error occurred while fetching user progress data.",
                 color=discord.Color.red()
             )
-
-        col_name = "Episodes" if media_type.upper() == "ANIME" else "Chapters"
-        progress_lines = [f"`{'User':<20} {col_name:<10} {'Rating':<7}`"]
-        progress_lines.append("`{:-<20} {:-<10} {:-<7}`".format("", "", ""))
-
-        for user in users:
-            discord_name = user[2]  # Assuming: (discord_id, discord_name, anilist_username)
-            anilist_username = user[2] if len(user) > 2 else None
-
-            # Fetch user progress
-            query = """
-            query($userName: String, $mediaId: Int, $type: MediaType) {
-                User(name: $userName) {
-                    mediaListOptions { scoreFormat }
-                }
-                MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
-                    progress
-                    score
-                }
-            }
-            """
-            variables = {"userName": anilist_username, "mediaId": media.get("id", 0), "type": media_type}
-
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.post(ANILIST_API, json={"query": query, "variables": variables}) as resp:
-                        if resp.status != 200:
-                            continue
-                        payload = await resp.json()
-            except Exception:
-                continue
-
-            user_opts = payload.get("data", {}).get("User", {}).get("mediaListOptions", {})
-            score_format = user_opts.get("scoreFormat", "POINT_100")
-
-            entry = payload.get("data", {}).get("MediaList")
-            if not entry:
-                continue
-
-            progress = entry.get("progress")
-            score = entry.get("score")
-
-            # Normalize rating to /10
-            rating10: Optional[float] = None
-            if score is not None:
-                if score_format == "POINT_100":
-                    rating10 = round(score / 10.0, 1)
-                elif score_format in ("POINT_10", "POINT_10_DECIMAL"):
-                    rating10 = float(score)
-                elif score_format == "POINT_5":
-                    rating10 = round((score / 5) * 10, 1)
-                elif score_format == "POINT_3":
-                    mapping = {1: 3.0, 2: 6.0, 3: 9.0}
-                    rating10 = mapping.get(score, None)
-
-            total = media.get("episodes") if media_type.upper() == "ANIME" else media.get("chapters")
-            progress_text = f"{progress}/{total or '?'}" if progress is not None else "—"
-            rating_text = f"{rating10}/10" if rating10 is not None else "—"
-
-            progress_lines.append(f"`{discord_name:<20} {progress_text:<10} {rating_text:<7}`")
-
-        if len(progress_lines) <= 2:
-            return discord.Embed(
-                title="👥 Registered Users' Progress",
-                description="No progress found for this title.",
-                color=discord.Color.red()
-            )
-
-        embed = discord.Embed(
-            title="👥 Registered Users' Progress",
-            description="\n".join(progress_lines),
-            color=discord.Color.blue()
-        )
-        embed.set_footer(text="Fetched from AniList")
-        return embed
     
 
     
@@ -1080,157 +1117,194 @@ class AniListCog(commands.Cog):
     
 
     class MediaPaginator(ui.View):
-    def __init__(self, cog: "AniListCog", message_id: int, channel_id: int, media_id: int, media_type: str, total_pages: int, current_page: int = 1):
-        super().__init__(timeout=None)
-        self.cog = cog
-        self.message_id = str(message_id)
-        self.channel_id = int(channel_id)
-        self.media_id = int(media_id)
-        self.media_type = media_type
-        self.total_pages = max(1, int(total_pages))
-        self.current_page = max(1, int(current_page))
+        def __init__(self, cog: "AniListCog", message_id: int, channel_id: int, media_id: int, media_type: str, total_pages: int, current_page: int = 1):
+            super().__init__(timeout=None)
+            self.cog = cog
+            self.message_id = str(message_id)
+            self.channel_id = int(channel_id)
+            self.media_id = int(media_id)
+            self.media_type = media_type
+            self.total_pages = max(1, int(total_pages))
+            self.current_page = max(1, int(current_page))
 
-        # Buttons
-        self.main_button = ui.Button(
-            label="📖 Description",
-            style=discord.ButtonStyle.primary,
-            custom_id=f"media_next:{self.message_id}"
-        )
-        self.back_button = ui.Button(
-            label="⬅ Back to Main Page",
-            style=discord.ButtonStyle.secondary,
-            custom_id=f"media_prev:{self.message_id}"
-        )
-        self.rec_button = ui.Button(
-            label="🎯 Recommendations",
-            style=discord.ButtonStyle.success,
-            custom_id=f"media_rec:{self.message_id}"
-        )
+            # Buttons
+            self.main_button = ui.Button(
+                label="📖 Description",
+                style=discord.ButtonStyle.primary,
+                custom_id=f"media_next:{self.message_id}"
+            )
+            self.back_button = ui.Button(
+                label="⬅ Back to Main Page",
+                style=discord.ButtonStyle.secondary,
+                custom_id=f"media_prev:{self.message_id}"
+            )
+            self.rec_button = ui.Button(
+                label="🎯 Recommendations",
+                style=discord.ButtonStyle.success,
+                custom_id=f"media_rec:{self.message_id}"
+            )
 
-        self.main_button.callback = self.show_description
-        self.back_button.callback = self.show_main
-        self.rec_button.callback = self.show_recommendations
-        self.add_item(self.main_button)
-        self.add_item(self.rec_button)
-
-        # Dropdown options
-        options = [
-            discord.SelectOption(label="🔗 Relations", value="relations", description="Show related media"),
-            discord.SelectOption(label="🎭 Characters (Main)", value="characters_main", description="Main characters"),
-            discord.SelectOption(label="🌟 Support Cast", value="characters_support", description="Support characters"),
-            discord.SelectOption(label="🛡️ Staff", value="staff", description="All staff"),
-            discord.SelectOption(label="📊 Stats Distribution", value="stats", description="Status & score distribution"),
-            discord.SelectOption(label="🎯 Recommendations", value="recommendations", description="Top recommendations"),
-            discord.SelectOption(label="🗂️ Tags", value="tags", description="All tags"),
-            discord.SelectOption(label="👥 User Progress", value="user_progress", description="See registered users' progress"),
-        ]
-        select = ui.Select(
-            placeholder="Choose details...",
-            min_values=1,
-            max_values=1,
-            options=options,
-            custom_id=f"media_select:{self.message_id}"
-        )
-        select.callback = self.select_callback
-        self.add_item(select)
-
-    async def show_description(self, interaction: discord.Interaction):
-        try:
-            media = await self.cog.fetch_media(self.media_id, self.media_type)
-            if not media:
-                await interaction.response.send_message("❌ Could not fetch description.", ephemeral=True)
-                return
-            embeds = self.cog.render_media_pages(media, page=2, total_pages=2)
-            self.clear_items()
-            self.add_item(self.back_button)
-            self.add_item(self.rec_button)
-            for item in self.children:
-                if isinstance(item, ui.Select):
-                    self.add_item(item)
-            await interaction.response.edit_message(embeds=embeds, view=self)
-        except Exception:
-            logger.exception("Failed to show description")
-            try:
-                await interaction.response.send_message("⚠️ Could not load description.", ephemeral=True)
-            except Exception:
-                pass
-
-    async def show_main(self, interaction: discord.Interaction):
-        try:
-            media = await self.cog.fetch_media(self.media_id, self.media_type)
-            if not media:
-                await interaction.response.send_message("❌ Could not fetch main page.", ephemeral=True)
-                return
-            embeds = self.cog.render_media_pages(media, page=1, total_pages=2)
-            self.clear_items()
+            self.main_button.callback = self.show_description
+            self.back_button.callback = self.show_main
+            self.rec_button.callback = self.show_recommendations
             self.add_item(self.main_button)
             self.add_item(self.rec_button)
-            for item in self.children:
-                if isinstance(item, ui.Select):
-                    self.add_item(item)
-            await interaction.response.edit_message(embeds=embeds, view=self)
-        except Exception:
-            logger.exception("Failed to show main page")
+
+            # Dropdown options
+            options = [
+                discord.SelectOption(label="🔗 Relations", value="relations", description="Show related media"),
+                discord.SelectOption(label="🎭 Characters (Main)", value="characters_main", description="Main characters"),
+                discord.SelectOption(label="🌟 Support Cast", value="characters_support", description="Support characters"),
+                discord.SelectOption(label="🛡️ Staff", value="staff", description="All staff"),
+                discord.SelectOption(label="📊 Stats Distribution", value="stats", description="Status & score distribution"),
+                discord.SelectOption(label="🎯 Recommendations", value="recommendations", description="Top recommendations"),
+                discord.SelectOption(label="🗂️ Tags", value="tags", description="All tags"),
+                discord.SelectOption(label="👥 User Progress", value="user_progress", description="See registered users' progress"),
+            ]
+            select = ui.Select(
+                placeholder="Choose details...",
+                min_values=1,
+                max_values=1,
+                options=options,
+                custom_id=f"media_select:{self.message_id}"
+            )
+            select.callback = self.select_callback
+            self.add_item(select)
+
+        async def show_description(self, interaction: discord.Interaction):
             try:
-                await interaction.response.send_message("⚠️ Could not load main page.", ephemeral=True)
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("❌ Could not fetch description.", ephemeral=True)
+                    return
+                embeds = self.cog.render_media_pages(media, page=2, total_pages=2)
+                self.clear_items()
+                self.add_item(self.back_button)
+                self.add_item(self.rec_button)
+                for item in self.children:
+                    if isinstance(item, ui.Select):
+                        self.add_item(item)
+                await interaction.response.edit_message(embeds=embeds, view=self)
             except Exception:
-                pass
+                logger.exception("Failed to show description")
+                try:
+                    await interaction.response.send_message("⚠️ Could not load description.", ephemeral=True)
+                except Exception:
+                    pass
 
-    async def show_recommendations(self, interaction: discord.Interaction):
-        try:
-            media = await self.cog.fetch_media(self.media_id, self.media_type)
-            if not media:
-                await interaction.response.send_message("❌ Could not fetch recommendations.", ephemeral=True)
-                return
-            embed = self.cog.build_recommendations_embed(media)
-            await interaction.response.edit_message(embeds=[embed], view=self)
-        except Exception:
-            logger.exception("show_recommendations failed")
+        async def show_main(self, interaction: discord.Interaction):
             try:
-                await interaction.response.send_message("⚠️ Failed to fetch recommendations.", ephemeral=True)
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("❌ Could not fetch main page.", ephemeral=True)
+                    return
+                embeds = self.cog.render_media_pages(media, page=1, total_pages=2)
+                self.clear_items()
+                self.add_item(self.main_button)
+                self.add_item(self.rec_button)
+                for item in self.children:
+                    if isinstance(item, ui.Select):
+                        self.add_item(item)
+                await interaction.response.edit_message(embeds=embeds, view=self)
             except Exception:
-                pass
+                logger.exception("Failed to show main page")
+                try:
+                    await interaction.response.send_message("⚠️ Could not load main page.", ephemeral=True)
+                except Exception:
+                    pass
 
-    async def select_callback(self, interaction: discord.Interaction):
-        try:
-            value = interaction.data.get("values", [None])[0]
-            media = await self.cog.fetch_media(self.media_id, self.media_type)
-            if not media:
-                await interaction.response.send_message("❌ Could not fetch media details.", ephemeral=True)
-                return
-
-            if value == "user_progress":
-                embed = await self.cog.build_user_progress_embed(media, self.media_type)
-                await interaction.response.edit_message(embeds=[embed], view=self); return
-            if value == "relations":
-                embeds = self.cog.build_relations_embed(media)
-                await interaction.response.edit_message(embeds=embeds, view=self); return
-            if value == "characters_main":
-                embeds = self.cog.build_characters_embed(media, support=False)
-                await interaction.response.edit_message(embeds=embeds, view=self); return
-            if value == "characters_support":
-                embeds = self.cog.build_characters_embed(media, support=True)
-                await interaction.response.edit_message(embeds=embeds, view=self); return
-            if value == "staff":
-                embeds = self.cog.build_staff_embed(media)
-                await interaction.response.edit_message(embeds=embeds, view=self); return
-            if value == "stats":
-                embed = self.cog.build_stats_embed(media)
-                await interaction.response.edit_message(embeds=[embed], view=self); return
-            if value == "recommendations":
+        async def show_recommendations(self, interaction: discord.Interaction):
+            try:
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    await interaction.response.send_message("❌ Could not fetch recommendations.", ephemeral=True)
+                    return
                 embed = self.cog.build_recommendations_embed(media)
-                await interaction.response.edit_message(embeds=[embed], view=self); return
-            if value == "tags":
-                embed = self.cog.build_tags_embed(media)
-                await interaction.response.edit_message(embeds=[embed], view=self); return
-
-            await interaction.response.send_message("Unknown option.", ephemeral=True)
-        except Exception:
-            logger.exception("Media select callback failed")
-            try:
-                await interaction.response.send_message("⚠️ Failed to show details.", ephemeral=True)
+                await interaction.response.edit_message(embeds=[embed], view=self)
             except Exception:
-                pass
+                logger.exception("show_recommendations failed")
+                try:
+                    await interaction.response.send_message("⚠️ Failed to fetch recommendations.", ephemeral=True)
+                except Exception:
+                    pass
+
+        async def select_callback(self, interaction: discord.Interaction):
+            try:
+                value = interaction.data.get("values", [None])[0]
+                media = await self.cog.fetch_media(self.media_id, self.media_type)
+                if not media:
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message("❌ Could not fetch media details.", ephemeral=True)
+                    else:
+                        await interaction.followup.send("❌ Could not fetch media details.", ephemeral=True)
+                    return
+
+                if value == "user_progress":
+                    # Acknowledge the interaction immediately to prevent timeout
+                    if not interaction.response.is_done():
+                        await interaction.response.defer()
+                    
+                    embed = await self.cog.build_user_progress_embed(media, self.media_type)
+                    if embed:
+                        await interaction.followup.edit_message(interaction.message.id, embeds=[embed], view=self)
+                    else:
+                        await interaction.followup.send("❌ Could not fetch user progress data.", ephemeral=True)
+                    return
+                    
+                # Handle other dropdown options
+                embeds = None
+                embed = None
+                
+                if value == "relations":
+                    embeds = self.cog.build_relations_embed(media)
+                elif value == "characters_main":
+                    embeds = self.cog.build_characters_embed(media, support=False)
+                elif value == "characters_support":
+                    embeds = self.cog.build_characters_embed(media, support=True)
+                elif value == "staff":
+                    embeds = self.cog.build_staff_embed(media)
+                elif value == "stats":
+                    embed = self.cog.build_stats_embed(media)
+                elif value == "recommendations":
+                    embed = self.cog.build_recommendations_embed(media)
+                elif value == "tags":
+                    embed = self.cog.build_tags_embed(media)
+                else:
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message("Unknown option.", ephemeral=True)
+                    else:
+                        await interaction.followup.send("Unknown option.", ephemeral=True)
+                    return
+
+                # Send the response
+                if embeds:
+                    if not interaction.response.is_done():
+                        await interaction.response.edit_message(embeds=embeds, view=self)
+                    else:
+                        await interaction.followup.edit_message(interaction.message.id, embeds=embeds, view=self)
+                elif embed:
+                    if not interaction.response.is_done():
+                        await interaction.response.edit_message(embeds=[embed], view=self)
+                    else:
+                        await interaction.followup.edit_message(interaction.message.id, embeds=[embed], view=self)
+                        
+            except discord.NotFound:
+                # Interaction expired or message was deleted
+                logger.warning("Interaction expired or message deleted during select callback")
+                try:
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message("⚠️ This interaction has expired. Please try the command again.", ephemeral=True)
+                except:
+                    pass
+            except Exception as e:
+                logger.exception("Media select callback failed")
+                try:
+                    if not interaction.response.is_done():
+                        await interaction.response.send_message("⚠️ Failed to show details. Please try again.", ephemeral=True)
+                    else:
+                        await interaction.followup.send("⚠️ Failed to show details. Please try again.", ephemeral=True)
+                except Exception:
+                    logger.exception("Failed to send error message")
 
 
 
