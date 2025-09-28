@@ -113,6 +113,11 @@ class AniListCog(commands.Cog):
                     progress = entry.get("progress")
                     score = entry.get("score")
 
+                    # Skip users with no progress (0 or None)
+                    if not progress or progress == 0:
+                        logger.debug(f"Skipping user {anilist_username} - no progress recorded")
+                        continue
+
                     # Normalize rating to /10
                     rating10: Optional[float] = None
                     if score is not None:
