@@ -269,122 +269,21 @@ class NewsCog(commands.Cog):
         if self.check_tweets.is_running():
             self.check_tweets.cancel()
 
-    news_group = app_commands.Group(name="news", description="Twitter monitoring commands")
-
-    @news_group.command(name="add", description="Add a Twitter account to monitor")
-    @app_commands.describe(username="The Twitter @username you want to track (without @)")
+    # Replace individual commands with single admin interface
+    @app_commands.command(name="news-manage", description="Manage Twitter news monitoring system")
     @log_command
-    async def add_account(self, interaction: discord.Interaction, username: str):
+    async def news_manage(self, interaction: discord.Interaction):
+        """Main news management interface with all functionality."""
         await interaction.response.defer()
-        username = username.replace("@", "").lower()
-        try:
-            success = await database.add_news_account(username, interaction.channel.id)
-            if success:
-                embed = discord.Embed(
-                    title="✅ Account Added",
-                    description=f"Now monitoring [@{username}](https://twitter.com/{username}) in {interaction.channel.mention}",
-                    color=0x00ff00
-                )
-                await interaction.followup.send(embed=embed)
-            else:
-                await interaction.followup.send(embed=discord.Embed(
-                    title="❌ Error",
-                    description="Failed to add account to database",
-                    color=0xff0000
-                ))
-        except Exception as e:
-            await interaction.followup.send(embed=discord.Embed(
-                title="❌ Error",
-                description=str(e),
-                color=0xff0000
-            ))
-
-    @news_group.command(name="remove", description="Remove a monitored Twitter account")
-    @app_commands.describe(username="The Twitter @username you want to stop tracking")
-    @log_command
-    async def remove_account(self, interaction: discord.Interaction, username: str):
-        await interaction.response.defer()
-        username = username.replace("@", "").lower()
-        success = await database.remove_news_account(username)
-        if success:
-            embed = discord.Embed(
-                title="🗑️ Account Removed",
-                description=f"Stopped monitoring [@{username}](https://twitter.com/{username})",
-                color=0xff5555
-            )
-        else:
-            embed = discord.Embed(
-                title="⚠️ Not Found",
-                description=f"[@{username}](https://twitter.com/{username}) was not being monitored.",
-                color=0xffaa00
-            )
-        await interaction.followup.send(embed=embed)
-
-    @news_group.command(name="list", description="List all monitored accounts")
-    @log_command
-    async def list_accounts(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        
+        # Get current system status
         accounts = await database.get_news_accounts()
-        if accounts:
-            desc = "\n".join(
-                f"[ @{acc['handle']} ](https://twitter.com/{acc['handle']}) → <#{acc['channel_id']}>"
-                for acc in accounts
-            )
-            embed = discord.Embed(title="📋 Monitored Accounts", description=desc, color=0x1DA1F2)
-        else:
-            embed = discord.Embed(title="📋 Monitored Accounts", description="No accounts are being monitored.", color=0xffaa00)
-        await interaction.followup.send(embed=embed)
-
-    @news_group.command(name="addfilter", description="Add a keyword filter")
-    @app_commands.describe(keyword="Tweets containing this word will be suppressed")
-    @log_command
-    async def add_filter(self, interaction: discord.Interaction, keyword: str):
-        await interaction.response.defer()
-        success = await database.add_news_filter(keyword)
-        if success:
-            embed = discord.Embed(
-                title="🔍 Filter Added",
-                description=f"Tweets containing **{keyword}** will be suppressed.",
-                color=0x00ff00
-            )
-        else:
-            embed = discord.Embed(
-                title="⚠️ Filter Already Exists",
-                description=f"Filter for **{keyword}** already exists.",
-                color=0xffaa00
-            )
-        await interaction.followup.send(embed=embed)
-
-    @news_group.command(name="listfilters", description="List all keyword filters")
-    @log_command
-    async def list_filters(self, interaction: discord.Interaction):
-        await interaction.response.defer()
         filters = await database.get_news_filters()
-        if filters:
-            desc = "\n".join([f"• {word}" for word in filters])
-            embed = discord.Embed(title="🔍 Active Filters", description=desc, color=0x1DA1F2)
-        else:
-            embed = discord.Embed(title="🔍 Active Filters", description="No filters configured.", color=0xffaa00)
-        await interaction.followup.send(embed=embed)
-
-    @news_group.command(name="removefilter", description="Remove a keyword filter")
-    @app_commands.describe(keyword="The word you want to remove from filters")
-    @log_command
-    async def remove_filter(self, interaction: discord.Interaction, keyword: str):
-        await interaction.response.defer()
-        success = await database.remove_news_filter(keyword)
-        if success:
-            embed = discord.Embed(title="🗑️ Filter Removed", description=f"Removed filter: **{keyword}**", color=0xff5555)
-        else:
-            embed = discord.Embed(title="⚠️ Not Found", description=f"Filter **{keyword}** not found.", color=0xffaa00)
-        await interaction.followup.send(embed=embed)
-
-    @news_group.command(name="status", description="Check bot status and scraping health")
-    @log_command
-    async def status(self, interaction: discord.Interaction):
-        await interaction.response.defer()
+        
+        # Create status embed
         status_lines = []
         status_lines.append("✅ Database: Connected (Main Database)")
+        
         try:
             tweets = await fetch_tweets("nasa", 1)
             if tweets:
@@ -400,13 +299,34 @@ class NewsCog(commands.Cog):
         else:
             status_lines.append("⚠️ Background Task: Not running")
 
-        accounts = await database.get_news_accounts()
-        filters = await database.get_news_filters()
         status_lines.append(f"📊 Tracked Accounts: {len(accounts)}")
         status_lines.append(f"🔍 Active Filters: {len(filters)}")
 
-        embed = discord.Embed(title="📰 News Cog Status", description="\n".join(status_lines), color=0x1DA1F2)
-        await interaction.followup.send(embed=embed)
+        embed = discord.Embed(
+            title="📰 News Management System",
+            description="\n".join(status_lines),
+            color=0x1DA1F2
+        )
+        
+        # Add accounts field if any exist
+        if accounts:
+            account_list = "\n".join(
+                f"[@{acc['handle']}](https://twitter.com/{acc['handle']}) → <#{acc['channel_id']}>"
+                for acc in accounts[:10]  # Limit to 10 to avoid embed limits
+            )
+            if len(accounts) > 10:
+                account_list += f"\n... and {len(accounts) - 10} more"
+            embed.add_field(name="📋 Monitored Accounts", value=account_list, inline=False)
+        
+        # Add filters field if any exist
+        if filters:
+            filter_list = ", ".join(filters[:20])  # Limit to avoid embed limits
+            if len(filters) > 20:
+                filter_list += f" ... and {len(filters) - 20} more"
+            embed.add_field(name="🔍 Active Filters", value=filter_list, inline=False)
+        
+        view = NewsManagementView(self)
+        await interaction.followup.send(embed=embed, view=view)
 
     @tasks.loop(minutes=5)
     async def check_tweets(self):
@@ -449,6 +369,324 @@ class NewsCog(commands.Cog):
     @check_tweets.before_loop
     async def before_check_tweets(self):
         await self.bot.wait_until_ready()
+
+
+class NewsManagementView(discord.ui.View):
+    """Interactive view for managing news system."""
+    
+    def __init__(self, cog):
+        super().__init__(timeout=300)
+        self.cog = cog
+    
+    @discord.ui.button(label="Add Account", style=discord.ButtonStyle.green, emoji="➕")
+    async def add_account(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Add a new Twitter account to monitor."""
+        modal = AddAccountModal(self.cog)
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="Remove Account", style=discord.ButtonStyle.red, emoji="➖")
+    async def remove_account(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Remove a monitored Twitter account."""
+        accounts = await database.get_news_accounts()
+        if not accounts:
+            await interaction.response.send_message("❌ No accounts are currently being monitored.", ephemeral=True)
+            return
+        
+        # Create dropdown with accounts
+        options = []
+        for acc in accounts[:25]:  # Discord limit
+            options.append(discord.SelectOption(
+                label=f"@{acc['handle']}",
+                value=acc['handle'],
+                description=f"Channel: #{interaction.guild.get_channel(acc['channel_id']).name if interaction.guild.get_channel(acc['channel_id']) else 'Unknown'}"
+            ))
+        
+        if len(accounts) > 25:
+            await interaction.response.send_message(f"❌ Too many accounts ({len(accounts)}). Please use individual removal commands.", ephemeral=True)
+            return
+        
+        select = AccountRemoveSelect(self.cog, options)
+        view = discord.ui.View()
+        view.add_item(select)
+        await interaction.response.send_message("🗑️ Select an account to remove:", view=view, ephemeral=True)
+    
+    @discord.ui.button(label="Manage Filters", style=discord.ButtonStyle.blurple, emoji="🔍", row=1)
+    async def manage_filters(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Manage keyword filters."""
+        await interaction.response.send_message("🔍 Choose filter action:", view=FilterManagementView(self.cog), ephemeral=True)
+    
+    @discord.ui.button(label="View Details", style=discord.ButtonStyle.gray, emoji="📋", row=1)
+    async def view_details(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """View detailed information about accounts and filters."""
+        accounts = await database.get_news_accounts()
+        filters = await database.get_news_filters()
+        
+        embed = discord.Embed(title="📊 Detailed News System Information", color=0x1DA1F2)
+        
+        if accounts:
+            account_details = []
+            for acc in accounts:
+                channel = interaction.guild.get_channel(acc['channel_id']) if interaction.guild else None
+                channel_name = f"#{channel.name}" if channel else f"ID:{acc['channel_id']}"
+                last_id = f" (Last: {acc['last_tweet_id'][:8]}...)" if acc['last_tweet_id'] else " (No tweets yet)"
+                account_details.append(f"[@{acc['handle']}](https://twitter.com/{acc['handle']}) → {channel_name}{last_id}")
+            
+            # Split into multiple fields if needed
+            chunk_size = 10
+            for i in range(0, len(account_details), chunk_size):
+                chunk = account_details[i:i + chunk_size]
+                field_name = f"📋 Monitored Accounts ({i+1}-{min(i+chunk_size, len(account_details))})"
+                embed.add_field(name=field_name, value="\n".join(chunk), inline=False)
+        else:
+            embed.add_field(name="📋 Monitored Accounts", value="None", inline=False)
+        
+        if filters:
+            # Split filters into chunks if needed
+            chunk_size = 20
+            filter_chunks = [filters[i:i + chunk_size] for i in range(0, len(filters), chunk_size)]
+            for i, chunk in enumerate(filter_chunks):
+                field_name = f"🔍 Active Filters {f'({i+1})' if len(filter_chunks) > 1 else ''}"
+                embed.add_field(name=field_name, value=", ".join(chunk), inline=False)
+        else:
+            embed.add_field(name="🔍 Active Filters", value="None", inline=False)
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+    
+    @discord.ui.button(label="Refresh Status", style=discord.ButtonStyle.gray, emoji="🔄")
+    async def refresh_status(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Refresh the status display."""
+        # Re-run the main command logic
+        await interaction.response.defer()
+        
+        accounts = await database.get_news_accounts()
+        filters = await database.get_news_filters()
+        
+        status_lines = []
+        status_lines.append("✅ Database: Connected (Main Database)")
+        
+        try:
+            tweets = await fetch_tweets("nasa", 1)
+            if tweets:
+                status_lines.append("✅ Scraping: Working")
+            else:
+                status_lines.append("⚠️ Scraping: No tweets found")
+        except Exception:
+            status_lines.append("❌ Scraping: Error")
+
+        if hasattr(self.cog, 'check_tweets') and self.cog.check_tweets.is_running():
+            status_lines.append("✅ Background Task: Running")
+            status_lines.append(f"📅 Next check: <t:{int(time.time()) + 300}:R>")
+        else:
+            status_lines.append("⚠️ Background Task: Not running")
+
+        status_lines.append(f"📊 Tracked Accounts: {len(accounts)}")
+        status_lines.append(f"🔍 Active Filters: {len(filters)}")
+
+        embed = discord.Embed(
+            title="📰 News Management System",
+            description="\n".join(status_lines),
+            color=0x1DA1F2
+        )
+        
+        if accounts:
+            account_list = "\n".join(
+                f"[@{acc['handle']}](https://twitter.com/{acc['handle']}) → <#{acc['channel_id']}>"
+                for acc in accounts[:10]
+            )
+            if len(accounts) > 10:
+                account_list += f"\n... and {len(accounts) - 10} more"
+            embed.add_field(name="📋 Monitored Accounts", value=account_list, inline=False)
+        
+        if filters:
+            filter_list = ", ".join(filters[:20])
+            if len(filters) > 20:
+                filter_list += f" ... and {len(filters) - 20} more"
+            embed.add_field(name="🔍 Active Filters", value=filter_list, inline=False)
+        
+        await interaction.edit_original_response(embed=embed, view=self)
+
+
+class AddAccountModal(discord.ui.Modal):
+    """Modal for adding a new Twitter account."""
+    
+    def __init__(self, cog):
+        super().__init__(title="➕ Add Twitter Account")
+        self.cog = cog
+    
+    username = discord.ui.TextInput(
+        label="Twitter Username",
+        placeholder="Enter username without @ (e.g., nasa, elonmusk)",
+        required=True,
+        max_length=50
+    )
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        username = self.username.value.replace("@", "").lower()
+        try:
+            success = await database.add_news_account(username, interaction.channel.id)
+            if success:
+                embed = discord.Embed(
+                    title="✅ Account Added",
+                    description=f"Now monitoring [@{username}](https://twitter.com/{username}) in {interaction.channel.mention}",
+                    color=0x00ff00
+                )
+            else:
+                embed = discord.Embed(
+                    title="❌ Error",
+                    description="Failed to add account (may already exist)",
+                    color=0xff0000
+                )
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Error",
+                description=f"Error: {str(e)}",
+                color=0xff0000
+            )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class AccountRemoveSelect(discord.ui.Select):
+    """Select dropdown for removing accounts."""
+    
+    def __init__(self, cog, options):
+        super().__init__(placeholder="Choose an account to remove...", options=options)
+        self.cog = cog
+    
+    async def callback(self, interaction: discord.Interaction):
+        username = self.values[0]
+        success = await database.remove_news_account(username)
+        
+        if success:
+            embed = discord.Embed(
+                title="🗑️ Account Removed",
+                description=f"Stopped monitoring [@{username}](https://twitter.com/{username})",
+                color=0xff5555
+            )
+        else:
+            embed = discord.Embed(
+                title="❌ Error",
+                description=f"Failed to remove [@{username}](https://twitter.com/{username})",
+                color=0xff0000
+            )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class FilterManagementView(discord.ui.View):
+    """View for managing keyword filters."""
+    
+    def __init__(self, cog):
+        super().__init__(timeout=300)
+        self.cog = cog
+    
+    @discord.ui.button(label="➕ Add Filter", style=discord.ButtonStyle.green)
+    async def add_filter(self, interaction: discord.Interaction, button: discord.ui.Button):
+        modal = AddFilterModal(self.cog)
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="➖ Remove Filter", style=discord.ButtonStyle.red)
+    async def remove_filter(self, interaction: discord.Interaction, button: discord.ui.Button):
+        filters = await database.get_news_filters()
+        if not filters:
+            await interaction.response.send_message("❌ No filters are currently active.", ephemeral=True)
+            return
+        
+        options = [discord.SelectOption(label=f, value=f) for f in filters[:25]]
+        
+        if len(filters) > 25:
+            await interaction.response.send_message(f"❌ Too many filters ({len(filters)}). Please use individual removal.", ephemeral=True)
+            return
+        
+        select = FilterRemoveSelect(self.cog, options)
+        view = discord.ui.View()
+        view.add_item(select)
+        await interaction.response.send_message("🗑️ Select a filter to remove:", view=view, ephemeral=True)
+    
+    @discord.ui.button(label="📋 List All Filters", style=discord.ButtonStyle.gray)
+    async def list_filters(self, interaction: discord.Interaction, button: discord.ui.Button):
+        filters = await database.get_news_filters()
+        if filters:
+            # Split into chunks to avoid embed limits
+            chunk_size = 30
+            filter_chunks = [filters[i:i + chunk_size] for i in range(0, len(filters), chunk_size)]
+            
+            embed = discord.Embed(title="🔍 All Active Filters", color=0x1DA1F2)
+            
+            for i, chunk in enumerate(filter_chunks):
+                field_name = f"Filters {i+1}" if len(filter_chunks) > 1 else "Active Keywords"
+                embed.add_field(name=field_name, value=", ".join(chunk), inline=False)
+            
+            embed.set_footer(text=f"Total: {len(filters)} filters")
+        else:
+            embed = discord.Embed(
+                title="🔍 Active Filters", 
+                description="No filters configured.", 
+                color=0xffaa00
+            )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class AddFilterModal(discord.ui.Modal):
+    """Modal for adding a new keyword filter."""
+    
+    def __init__(self, cog):
+        super().__init__(title="➕ Add Keyword Filter")
+        self.cog = cog
+    
+    keyword = discord.ui.TextInput(
+        label="Keyword to Filter",
+        placeholder="Enter keyword/phrase to suppress in tweets",
+        required=True,
+        max_length=100
+    )
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        keyword = self.keyword.value.strip()
+        success = await database.add_news_filter(keyword)
+        
+        if success:
+            embed = discord.Embed(
+                title="🔍 Filter Added",
+                description=f"Tweets containing **{keyword}** will be suppressed.",
+                color=0x00ff00
+            )
+        else:
+            embed = discord.Embed(
+                title="⚠️ Filter Already Exists",
+                description=f"Filter for **{keyword}** already exists.",
+                color=0xffaa00
+            )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class FilterRemoveSelect(discord.ui.Select):
+    """Select dropdown for removing filters."""
+    
+    def __init__(self, cog, options):
+        super().__init__(placeholder="Choose a filter to remove...", options=options)
+        self.cog = cog
+    
+    async def callback(self, interaction: discord.Interaction):
+        keyword = self.values[0]
+        success = await database.remove_news_filter(keyword)
+        
+        if success:
+            embed = discord.Embed(
+                title="🗑️ Filter Removed", 
+                description=f"Removed filter: **{keyword}**", 
+                color=0xff5555
+            )
+        else:
+            embed = discord.Embed(
+                title="❌ Error", 
+                description=f"Failed to remove filter: **{keyword}**", 
+                color=0xff0000
+            )
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
 async def setup(bot):
