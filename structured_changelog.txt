@@ -1,0 +1,16 @@
+### ✨ Added
+- **New command**: `/planned-features` - Displays all planned features for the bot
+- **New command**: `/notifications` - Allows users to receive a role for bot updates
+
+### 🔧 Fixed
+- **User Registration**: Fixed FOREIGN KEY constraint error during user registration that prevented new users from joining
+- **Browse Command**: Fixed duplicate user entries in user progress section 
+- **Browse Command**: Fixed issue where some users' progress wasn't being fetched properly
+- **Login Command**: Fixed intermittent login failures
+
+### 🗑️ Removed
+- **Recommendations**: Removed genre-based `/recommendations` option
+- **Recommendations**: Removed server-wide based `/recommendations` option
+
+### ⚠️ Known Issues
+- **Railway Deployment**: There is an issue with deploying to Railway, causing the bot to be offline during night hours
