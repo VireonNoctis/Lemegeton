@@ -57,23 +57,21 @@ class PlannedFeatures(commands.Cog):
             logger.error(f"Error saving planned features data: {e}")
             return False
     
-    def has_mod_permissions(self, interaction: discord.Interaction) -> bool:
+    async def has_mod_permissions(self, interaction: discord.Interaction) -> bool:
         """Check if user has moderator permissions"""
         try:
-            import config
-            mod_role_id = config.MOD_ROLE_ID
+            from database import is_user_moderator
             
-            # Check if user has the mod role
-            if hasattr(interaction.user, 'roles') and mod_role_id:
-                for role in interaction.user.roles:
-                    if role.id == mod_role_id:
-                        return True
-            
-            # Check if user is guild owner
-            if interaction.guild and interaction.user.id == interaction.guild.owner_id:
-                return True
+            if not interaction.guild:
+                return False
                 
-            return False
+            # Check if user is guild owner
+            if interaction.user.id == interaction.guild.owner_id:
+                return True
+            
+            # Check using the database mod role system
+            return await is_user_moderator(interaction.user, interaction.guild.id)
+                
         except Exception as e:
             logger.error(f"Error checking mod permissions: {e}")
             return False
@@ -176,7 +174,7 @@ class PlannedFeatures(commands.Cog):
         @discord.ui.button(label="➕ Add Feature", style=discord.ButtonStyle.green, row=1)
         async def add_feature(self, interaction: discord.Interaction, button: discord.ui.Button):
             # Check permissions
-            if not self.cog.has_mod_permissions(interaction):
+            if not await self.cog.has_mod_permissions(interaction):
                 await interaction.response.send_message(
                     "❌ **Permission Denied**\n\nYou need moderator permissions to add features.",
                     ephemeral=True
@@ -190,7 +188,7 @@ class PlannedFeatures(commands.Cog):
         @discord.ui.button(label="✏️ Edit Feature", style=discord.ButtonStyle.blurple, row=1)
         async def edit_feature(self, interaction: discord.Interaction, button: discord.ui.Button):
             # Check permissions
-            if not self.cog.has_mod_permissions(interaction):
+            if not await self.cog.has_mod_permissions(interaction):
                 await interaction.response.send_message(
                     "❌ **Permission Denied**\n\nYou need moderator permissions to edit features.",
                     ephemeral=True
@@ -216,7 +214,7 @@ class PlannedFeatures(commands.Cog):
         @discord.ui.button(label="🗑️ Remove Feature", style=discord.ButtonStyle.red, row=1)
         async def remove_feature(self, interaction: discord.Interaction, button: discord.ui.Button):
             # Check permissions
-            if not self.cog.has_mod_permissions(interaction):
+            if not await self.cog.has_mod_permissions(interaction):
                 await interaction.response.send_message(
                     "❌ **Permission Denied**\n\nYou need moderator permissions to remove features.",
                     ephemeral=True
@@ -674,7 +672,7 @@ class PlannedFeatures(commands.Cog):
         """Upload planned features from a text file"""
         
         # Check permissions
-        if not self.has_mod_permissions(interaction):
+        if not await self.has_mod_permissions(interaction):
             await interaction.response.send_message(
                 "❌ **Permission Denied**\n\nYou need moderator permissions to upload planned features.",
                 ephemeral=True
@@ -841,7 +839,7 @@ class PlannedFeatures(commands.Cog):
         """Upload planned features from a text file"""
         
         # Check permissions
-        if not self.has_mod_permissions(interaction):
+        if not await self.has_mod_permissions(interaction):
             await interaction.response.send_message(
                 "❌ **Permission Denied**\n\nYou need moderator permissions to upload planned features.",
                 ephemeral=True
