@@ -6,6 +6,15 @@ import aiohttp
 import io
 from typing import Optional
 
+from database import (
+    set_guild_bot_update_channel, 
+    get_guild_bot_update_channel,
+    get_all_guild_bot_update_channels,
+    remove_guild_bot_update_channel,
+    is_user_bot_moderator,
+    is_bot_moderator
+)
+
 # IDs from your setup
 CHANGELOG_CHANNEL_ID = 1420500068678762537
 ALLOWED_ROLE_ID = 1420451296304959641
@@ -34,6 +43,19 @@ def changelog_only():
         except Exception:
             return False
         return False
+
+    return app_commands.check(predicate)
+
+
+def bot_moderator_only():
+    """App command check that allows only bot moderators and admins.
+    Used for bot-wide actions like publishing changelogs to all servers.
+    """
+    async def predicate(interaction: discord.Interaction) -> bool:
+        try:
+            return await is_user_bot_moderator(interaction.user)
+        except Exception:
+            return False
 
     return app_commands.check(predicate)
 
@@ -414,9 +436,182 @@ class Changelog(commands.Cog):
             'sections': sections
         }
 
+    @changelog_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="set_bot_updates_channel", description="Set channel to receive bot updates and announcements (Admin only)")
+    async def set_bot_updates_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
+        """Set the channel where bot updates and announcements will be published."""
+        if interaction.guild is None:
+            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+            
+        await interaction.response.defer(ephemeral=True)
+        try:
+            # Check bot can send messages in channel
+            bot_member = interaction.guild.me
+            perms = channel.permissions_for(bot_member) if bot_member else None
+            if perms and not perms.send_messages:
+                await interaction.followup.send("❌ I don't have permission to send messages in that channel.", ephemeral=True)
+                return
 
+            await set_guild_bot_update_channel(interaction.guild.id, channel.id)
+            await interaction.followup.send(f"✅ Bot updates will be sent to {channel.mention}", ephemeral=True)
+            
+        except Exception as e:
+            await interaction.followup.send("❌ Failed to set bot updates channel.", ephemeral=True)
+            raise e
 
+    @changelog_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="show_bot_updates_channel", description="Show currently configured bot updates channel (Admin only)")
+    async def show_bot_updates_channel(self, interaction: discord.Interaction):
+        """Show the currently configured bot updates channel."""
+        if interaction.guild is None:
+            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+            
+        try:
+            channel_id = await get_guild_bot_update_channel(interaction.guild.id)
+            if channel_id:
+                channel = self.bot.get_channel(channel_id)
+                if channel:
+                    await interaction.response.send_message(f"Current bot updates channel: {channel.mention}", ephemeral=True)
+                else:
+                    await interaction.response.send_message(f"Configured channel id {channel_id} is not visible to the bot.", ephemeral=True)
+            else:
+                await interaction.response.send_message("No bot updates channel configured for this server.", ephemeral=True)
+                
+        except Exception as e:
+            await interaction.response.send_message("❌ Failed to get bot updates channel information.", ephemeral=True)
+            raise e
 
+    @changelog_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="remove_bot_updates_channel", description="Remove bot updates channel configuration (Admin only)")
+    async def remove_bot_updates_channel(self, interaction: discord.Interaction):
+        """Remove the bot updates channel configuration for this server."""
+        if interaction.guild is None:
+            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+            
+        await interaction.response.defer(ephemeral=True)
+        try:
+            channel_id = await get_guild_bot_update_channel(interaction.guild.id)
+            if not channel_id:
+                await interaction.followup.send("No bot updates channel is currently configured.", ephemeral=True)
+                return
+                
+            await remove_guild_bot_update_channel(interaction.guild.id)
+            await interaction.followup.send("✅ Bot updates channel configuration has been removed.", ephemeral=True)
+            
+        except Exception as e:
+            await interaction.followup.send("❌ Failed to remove bot updates channel configuration.", ephemeral=True)
+            raise e
+
+    @bot_moderator_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="publish_bot_update", description="Publish update to all configured bot update channels (Bot Moderator only)")
+    @app_commands.describe(
+        title="Update title",
+        content="Update content (supports markdown)",
+        update_type="Type of update",
+        color="Embed color (hex code like #FF5733 or color name)",
+        image_url="Optional image URL to embed"
+    )
+    @app_commands.choices(update_type=[
+        app_commands.Choice(name="🐛 Bug Fix", value="bugfix"),
+        app_commands.Choice(name="✨ New Feature", value="feature"),
+        app_commands.Choice(name="🔄 Update", value="update"),
+        app_commands.Choice(name="📢 Announcement", value="announcement"),
+        app_commands.Choice(name="🔧 Maintenance", value="maintenance"),
+        app_commands.Choice(name="📝 General", value="general")
+    ])
+    async def publish_bot_update(
+        self,
+        interaction: discord.Interaction,
+        title: str,
+        content: str,
+        update_type: str = "general",
+        color: str = None,
+        image_url: str = None
+    ):
+        """Publish an update to all servers that have configured bot update channels."""
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            # Get all configured bot update channels
+            update_channels = await get_all_guild_bot_update_channels()
+            
+            if not update_channels:
+                await interaction.followup.send("❌ No servers have configured bot update channels.", ephemeral=True)
+                return
+            
+            # Create embed
+            embed_color = self._parse_color(color, update_type)
+            type_config = self._get_type_config(update_type)
+            
+            embed = discord.Embed(
+                title=f"{type_config['emoji']} {title}",
+                description=self._format_markdown(content),
+                color=embed_color
+            )
+            
+            # Author info
+            embed.set_author(
+                name=f"Bot Update by {interaction.user.display_name}",
+                icon_url=interaction.user.display_avatar.url
+            )
+            
+            # Footer
+            embed.set_footer(
+                text=f"{type_config['footer']} • Published on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
+            )
+            
+            # Process image if provided
+            image_file = None
+            if image_url:
+                image_file = await self._process_image(image_url)
+                if image_file:
+                    embed.set_image(url=f"attachment://{image_file.filename}")
+            
+            # Send to all configured channels
+            success_count = 0
+            failed_guilds = []
+            
+            for guild_id, channel_id in update_channels.items():
+                try:
+                    channel = self.bot.get_channel(channel_id)
+                    if channel:
+                        if image_file:
+                            # Create a new file object for each send
+                            new_image_file = discord.File(
+                                io.BytesIO(image_file.fp.getvalue()),
+                                filename=image_file.filename
+                            ) if hasattr(image_file, 'fp') else None
+                            if new_image_file:
+                                await channel.send(embed=embed, file=new_image_file)
+                            else:
+                                await channel.send(embed=embed)
+                        else:
+                            await channel.send(embed=embed)
+                        success_count += 1
+                    else:
+                        failed_guilds.append(f"Guild {guild_id} (Channel {channel_id} not found)")
+                except Exception as e:
+                    failed_guilds.append(f"Guild {guild_id}: {str(e)}")
+            
+            # Send summary
+            summary = f"✅ Update published to {success_count}/{len(update_channels)} configured servers."
+            if failed_guilds:
+                summary += f"\n\n❌ Failed to send to:\n" + "\n".join(f"• {failure}" for failure in failed_guilds[:5])
+                if len(failed_guilds) > 5:
+                    summary += f"\n• ... and {len(failed_guilds) - 5} more"
+            
+            await interaction.followup.send(summary, ephemeral=True)
+            
+        except Exception as e:
+            await interaction.followup.send(f"❌ Failed to publish bot update: {str(e)}", ephemeral=True)
+            raise e
 
 
 async def setup(bot: commands.Bot):
