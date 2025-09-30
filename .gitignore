@@ -9,6 +9,14 @@ __pycache__/
 bot_pid.txt
 *.pid
 
+# Logs directory
+logs/
+*.log
+
+# Database backups
+*.backup
+data/*.backup
+
 # OS generated files
 .DS_Store
 .DS_Store?

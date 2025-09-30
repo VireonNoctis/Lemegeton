@@ -1,9 +1,0 @@
-[2025-09-28 16:24:26] [INFO    ] [UserCleanup] User cleanup system initialized
-[2025-09-28 16:24:26] [INFO    ] [UserCleanup] UserCleanup cog initialized
-[2025-09-28 16:24:26] [ERROR   ] [UserCleanup] Failed to load UserCleanup cog: Cog named 'UserCleanup' already loaded
-Traceback (most recent call last):
-  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\cogs\user_cleanup.py", line 505, in setup
-    await bot.add_cog(UserCleanup(bot))
-  File "C:\Users\benet\OneDrive\Documents\Coding\Projects\Personal Projects\Lemegeton_test\.venv\Lib\site-packages\discord\ext\commands\bot.py", line 805, in add_cog
-    raise discord.ClientException(f'Cog named {cog_name!r} already loaded')
-discord.errors.ClientException: Cog named 'UserCleanup' already loaded
