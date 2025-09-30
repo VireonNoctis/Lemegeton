@@ -4,6 +4,7 @@ from discord import app_commands
 import logging
 import os
 from pathlib import Path
+from datetime import datetime
 
 from database import (
     set_guild_challenge_role, get_guild_challenge_roles, remove_guild_challenge_role,
@@ -437,10 +438,25 @@ class GuildConfig(commands.Cog):
                 added_by_user = self.bot.get_user(added_by)
                 added_by_mention = added_by_user.display_name if added_by_user else f"ID: {added_by}"
                 
+                # Parse timestamp string to datetime object, then to Unix timestamp
+                try:
+                    if isinstance(created_at, str):
+                        # Parse string timestamp format "2025-09-30 16:33:22"
+                        dt = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
+                        timestamp = int(dt.timestamp())
+                    elif hasattr(created_at, 'timestamp'):
+                        timestamp = int(created_at.timestamp())
+                    else:
+                        timestamp = int(created_at)
+                    date_display = f"<t:{timestamp}:R>"
+                except (ValueError, TypeError):
+                    # Fallback if parsing fails
+                    date_display = str(created_at)
+                    
                 moderator_list.append(
                     f"👑 {user_mention} (`{username}`)\n"
                     f"   Added by: {added_by_mention}\n"
-                    f"   Date: <t:{int(created_at.timestamp()) if hasattr(created_at, 'timestamp') else int(created_at)}:R>"
+                    f"   Date: {date_display}"
                 )
             
             embed.add_field(
