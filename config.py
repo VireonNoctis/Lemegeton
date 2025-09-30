@@ -23,8 +23,9 @@ CHANNEL_ID = _int_env("CHANNEL_ID")
 STEAM_API_KEY = os.getenv("STEAM_API_KEY")
 ADMIN_DISCORD_ID = _int_env("ADMIN_DISCORD_ID")
 
-# Moderator role id used by cogs that restrict commands to moderators.
-# Set MOD_ROLE_ID in your .env as the numeric role id. If unset, will be None.
+# Moderator role id - DEPRECATED: Use per-guild mod role system via /set_mod_role command instead
+# Legacy support: Set MOD_ROLE_ID in your .env as the numeric role id for backward compatibility.
+# This will be used as fallback if no guild-specific mod role is configured.
 MOD_ROLE_ID = _int_env("MOD_ROLE_ID")
 
 # Primary Guild ID for backwards compatibility and default operations
