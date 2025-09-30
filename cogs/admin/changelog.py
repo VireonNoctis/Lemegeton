@@ -217,28 +217,36 @@ class Changelog(commands.Cog):
 
 
 
-    @changelog_only()
-    @app_commands.command(name="changelog", description="Create a changelog from an uploaded text file.")
+    @bot_moderator_only()
+    @app_commands.command(name="changelog", description="Create and publish a changelog from an uploaded text file (Bot Moderator only)")
     @app_commands.describe(
         file="Text file to convert into changelog",
+        publish_to="Where to publish the changelog",
         changelog_type="Type of changelog update",
         color="Embed color (hex code like #FF5733 or color name)",
-        role="Optional role to ping",
+        role="Optional role to ping (only used for current server)",
         image_url="Optional image URL to embed",
         title_override="Override the auto-detected title"
     )
-    @app_commands.choices(changelog_type=[
-        app_commands.Choice(name="🐛 Bug Fix", value="bugfix"),
-        app_commands.Choice(name="✨ New Feature", value="feature"),
-        app_commands.Choice(name="🔄 Update", value="update"),
-        app_commands.Choice(name="📢 Announcement", value="announcement"),
-        app_commands.Choice(name="🔧 Maintenance", value="maintenance"),
-        app_commands.Choice(name="📝 General", value="general")
-    ])
+    @app_commands.choices(
+        publish_to=[
+            app_commands.Choice(name="📡 All Servers (Bot Update)", value="all_servers"),
+            app_commands.Choice(name="🏠 Current Server Only", value="current_server")
+        ],
+        changelog_type=[
+            app_commands.Choice(name="🐛 Bug Fix", value="bugfix"),
+            app_commands.Choice(name="✨ New Feature", value="feature"),
+            app_commands.Choice(name="🔄 Update", value="update"),
+            app_commands.Choice(name="📢 Announcement", value="announcement"),
+            app_commands.Choice(name="🔧 Maintenance", value="maintenance"),
+            app_commands.Choice(name="📝 General", value="general")
+        ]
+    )
     async def changelog(
         self,
         interaction: discord.Interaction,
         file: discord.Attachment,
+        publish_to: str = "current_server",
         changelog_type: str = "general",
         color: str = None,
         role: discord.Role = None,
@@ -323,31 +331,80 @@ class Changelog(commands.Cog):
                 if image_file:
                     embed.set_image(url=f"attachment://{image_file.filename}")
             
-            # Send to server's configured bot updates channel
-            channel_id = await get_guild_bot_update_channel(interaction.guild.id)
-            if not channel_id:
-                await interaction.followup.send(
-                    "❌ No bot updates channel configured for this server. Use `/set_bot_updates_channel` to configure one.", 
-                    ephemeral=True
-                )
-                return
+            # Determine where to publish based on user choice
+            if publish_to == "all_servers":
+                # Publish to all servers with configured bot update channels
+                update_channels = await get_all_guild_bot_update_channels()
                 
-            channel = self.bot.get_channel(channel_id)
-            if not channel:
-                await interaction.followup.send(
-                    "❌ Configured bot updates channel not found. Please reconfigure with `/set_bot_updates_channel`.", 
-                    ephemeral=True
-                )
-                return
+                if not update_channels:
+                    await interaction.followup.send("❌ No servers have configured bot update channels.", ephemeral=True)
+                    return
+                
+                # Send to all configured channels
+                success_count = 0
+                failed_guilds = []
+                
+                for guild_id, channel_id in update_channels.items():
+                    try:
+                        channel = self.bot.get_channel(channel_id)
+                        if channel:
+                            if image_file:
+                                # Create a new file object for each send
+                                new_image_file = discord.File(
+                                    io.BytesIO(image_file.fp.getvalue()),
+                                    filename=image_file.filename
+                                ) if hasattr(image_file, 'fp') else None
+                                if new_image_file:
+                                    await channel.send(embed=embed, file=new_image_file)
+                                else:
+                                    await channel.send(embed=embed)
+                            else:
+                                await channel.send(embed=embed)
+                            success_count += 1
+                        else:
+                            failed_guilds.append(f"Guild {guild_id} (Channel {channel_id} not found)")
+                    except Exception as e:
+                        failed_guilds.append(f"Guild {guild_id}: {str(e)}")
+                
+                # Send summary
+                summary = f"✅ {type_config['title']} published to {success_count}/{len(update_channels)} configured servers."
+                if failed_guilds:
+                    summary += f"\n\n❌ Failed to send to:\n" + "\n".join(f"• {failure}" for failure in failed_guilds[:5])
+                    if len(failed_guilds) > 5:
+                        summary += f"\n• ... and {len(failed_guilds) - 5} more"
+                
+                await interaction.followup.send(summary, ephemeral=True)
             
-            content_msg = role.mention if role else None
-            
-            if image_file:
-                await channel.send(content=content_msg, embed=embed, file=image_file)
             else:
-                await channel.send(content=content_msg, embed=embed)
-            
-            await interaction.followup.send(f"✅ {type_config['title']} created from file **{file.filename}** and published successfully!", ephemeral=True)
+                # Publish to current server only
+                if not interaction.guild:
+                    await interaction.followup.send("❌ This command must be used in a server for current server publishing.", ephemeral=True)
+                    return
+                    
+                channel_id = await get_guild_bot_update_channel(interaction.guild.id)
+                if not channel_id:
+                    await interaction.followup.send(
+                        "❌ No bot updates channel configured for this server. Use `/set_bot_updates_channel` to configure one.", 
+                        ephemeral=True
+                    )
+                    return
+                    
+                channel = self.bot.get_channel(channel_id)
+                if not channel:
+                    await interaction.followup.send(
+                        "❌ Configured bot updates channel not found. Please reconfigure with `/set_bot_updates_channel`.", 
+                        ephemeral=True
+                    )
+                    return
+                
+                content_msg = role.mention if role else None
+                
+                if image_file:
+                    await channel.send(content=content_msg, embed=embed, file=image_file)
+                else:
+                    await channel.send(content=content_msg, embed=embed)
+                
+                await interaction.followup.send(f"✅ {type_config['title']} created from file **{file.filename}** and published to {channel.mention}!", ephemeral=True)
             
         except Exception as e:
             try:
@@ -512,112 +569,6 @@ class Changelog(commands.Cog):
         except Exception as e:
             await interaction.followup.send("❌ Failed to remove bot updates channel configuration.", ephemeral=True)
             raise e
-
-    @bot_moderator_only()
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.command(name="publish_bot_update", description="Publish update to all configured bot update channels (Bot Moderator only)")
-    @app_commands.describe(
-        title="Update title",
-        content="Update content (supports markdown)",
-        update_type="Type of update",
-        color="Embed color (hex code like #FF5733 or color name)",
-        image_url="Optional image URL to embed"
-    )
-    @app_commands.choices(update_type=[
-        app_commands.Choice(name="🐛 Bug Fix", value="bugfix"),
-        app_commands.Choice(name="✨ New Feature", value="feature"),
-        app_commands.Choice(name="🔄 Update", value="update"),
-        app_commands.Choice(name="📢 Announcement", value="announcement"),
-        app_commands.Choice(name="🔧 Maintenance", value="maintenance"),
-        app_commands.Choice(name="📝 General", value="general")
-    ])
-    async def publish_bot_update(
-        self,
-        interaction: discord.Interaction,
-        title: str,
-        content: str,
-        update_type: str = "general",
-        color: str = None,
-        image_url: str = None
-    ):
-        """Publish an update to all servers that have configured bot update channels."""
-        await interaction.response.defer(ephemeral=True)
-        
-        try:
-            # Get all configured bot update channels
-            update_channels = await get_all_guild_bot_update_channels()
-            
-            if not update_channels:
-                await interaction.followup.send("❌ No servers have configured bot update channels.", ephemeral=True)
-                return
-            
-            # Create embed
-            embed_color = self._parse_color(color, update_type)
-            type_config = self._get_type_config(update_type)
-            
-            embed = discord.Embed(
-                title=f"{type_config['emoji']} {title}",
-                description=self._format_markdown(content),
-                color=embed_color
-            )
-            
-            # Author info
-            embed.set_author(
-                name=f"Bot Update by {interaction.user.display_name}",
-                icon_url=interaction.user.display_avatar.url
-            )
-            
-            # Footer
-            embed.set_footer(
-                text=f"{type_config['footer']} • Published on {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
-            )
-            
-            # Process image if provided
-            image_file = None
-            if image_url:
-                image_file = await self._process_image(image_url)
-                if image_file:
-                    embed.set_image(url=f"attachment://{image_file.filename}")
-            
-            # Send to all configured channels
-            success_count = 0
-            failed_guilds = []
-            
-            for guild_id, channel_id in update_channels.items():
-                try:
-                    channel = self.bot.get_channel(channel_id)
-                    if channel:
-                        if image_file:
-                            # Create a new file object for each send
-                            new_image_file = discord.File(
-                                io.BytesIO(image_file.fp.getvalue()),
-                                filename=image_file.filename
-                            ) if hasattr(image_file, 'fp') else None
-                            if new_image_file:
-                                await channel.send(embed=embed, file=new_image_file)
-                            else:
-                                await channel.send(embed=embed)
-                        else:
-                            await channel.send(embed=embed)
-                        success_count += 1
-                    else:
-                        failed_guilds.append(f"Guild {guild_id} (Channel {channel_id} not found)")
-                except Exception as e:
-                    failed_guilds.append(f"Guild {guild_id}: {str(e)}")
-            
-            # Send summary
-            summary = f"✅ Update published to {success_count}/{len(update_channels)} configured servers."
-            if failed_guilds:
-                summary += f"\n\n❌ Failed to send to:\n" + "\n".join(f"• {failure}" for failure in failed_guilds[:5])
-                if len(failed_guilds) > 5:
-                    summary += f"\n• ... and {len(failed_guilds) - 5} more"
-            
-            await interaction.followup.send(summary, ephemeral=True)
-            
-        except Exception as e:
-            await interaction.followup.send(f"❌ Failed to publish bot update: {str(e)}", ephemeral=True)
-            raise e
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Changelog(bot))
