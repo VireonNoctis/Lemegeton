@@ -1555,6 +1555,24 @@ async def init_guild_challenge_roles_table():
         
         logger.info("✅ Guild challenge roles table ready.")
 
+async def init_guild_manga_channels_table():
+    """Initialize the guild manga channels table for multi-guild animanga completion support."""
+    logger.info("🔧 Initializing guild manga channels table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_manga_channels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL UNIQUE,
+                channel_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.commit()
+        
+        logger.info("✅ Guild manga channels table ready.")
+
 
 async def migrate_default_challenge_roles():
     """Migrate default challenge roles from config.py to the database for the primary guild."""
@@ -1603,6 +1621,7 @@ async def init_db():
         ("User Progress", init_user_progress_table),
         ("Global Challenges", init_global_challenges_table),
         ("Guild Challenge Roles", init_guild_challenge_roles_table),
+        ("Guild Manga Channels", init_guild_manga_channels_table),
         ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
@@ -2378,6 +2397,104 @@ async def remove_guild_challenge_role(guild_id: int, challenge_id: int, threshol
         logger.error(f"❌ Error removing challenge role for guild {guild_id}: {e}", exc_info=True)
         raise
 
+
+# ------------------------------------------------------
+# Guild Manga Channels Management Functions
+# ------------------------------------------------------
+
+async def set_guild_manga_channel(guild_id: int, channel_id: int):
+    """Set the manga completion channel for a specific guild."""
+    logger.info(f"Setting manga channel for guild {guild_id} to channel {channel_id}")
+    
+    try:
+        # Validate input
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        if not isinstance(channel_id, int) or channel_id <= 0:
+            raise ValueError(f"Invalid channel_id: {channel_id}")
+        
+        query = """
+            INSERT INTO guild_manga_channels (guild_id, channel_id, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(guild_id) DO UPDATE SET
+                channel_id=excluded.channel_id,
+                updated_at=CURRENT_TIMESTAMP
+        """
+        
+        await execute_db_operation(
+            f"set manga channel for guild {guild_id}",
+            query,
+            (guild_id, channel_id)
+        )
+        
+        logger.info(f"✅ Set manga channel for guild {guild_id} to channel {channel_id}")
+        
+    except ValueError as validation_error:
+        logger.error(f"Validation error setting manga channel: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error setting manga channel for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+async def get_guild_manga_channel(guild_id: int) -> Optional[int]:
+    """Get the manga completion channel for a specific guild."""
+    logger.debug(f"Getting manga channel for guild {guild_id}")
+    
+    try:
+        if not isinstance(guild_id, int) or guild_id <= 0:
+            raise ValueError(f"Invalid guild_id: {guild_id}")
+        
+        query = """
+            SELECT channel_id FROM guild_manga_channels
+            WHERE guild_id = ?
+        """
+        
+        result = await execute_db_operation(
+            f"get manga channel for guild {guild_id}",
+            query,
+            (guild_id,),
+            fetch_type='one'
+        )
+        
+        if result:
+            channel_id = result[0]
+            logger.debug(f"✅ Found manga channel {channel_id} for guild {guild_id}")
+            return channel_id
+        else:
+            logger.debug(f"No manga channel configured for guild {guild_id}")
+            return None
+            
+    except ValueError as validation_error:
+        logger.error(f"Validation error getting manga channel: {validation_error}")
+        raise
+    except Exception as e:
+        logger.error(f"❌ Error getting manga channel for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+async def get_all_guild_manga_channels() -> Dict[int, int]:
+    """Get all guild manga channel configurations."""
+    logger.debug("Getting all guild manga channels")
+    
+    try:
+        query = """
+            SELECT guild_id, channel_id FROM guild_manga_channels
+            ORDER BY guild_id
+        """
+        
+        result = await execute_db_operation(
+            "get all guild manga channels",
+            query,
+            fetch_type='all'
+        )
+        
+        channels = {row[0]: row[1] for row in result} if result else {}
+        
+        logger.info(f"✅ Retrieved {len(channels)} guild manga channel configurations")
+        return channels
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting all guild manga channels: {e}", exc_info=True)
+        raise
 
 async def get_challenge_role_ids_for_guild(guild_id: int) -> Dict[int, Dict[float, int]]:
     """

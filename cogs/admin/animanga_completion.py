@@ -10,9 +10,9 @@ import logging
 import aiohttp
 
 from config import CHANNEL_ID, MOD_ROLE_ID
+from database import set_guild_manga_channel, get_guild_manga_channel, get_all_guild_manga_channels
 ANILIST_URL = "https://graphql.anilist.co"
 SAVE_FILE = "data/manga_scan.json"
-CHANNEL_SAVE_FILE = "data/manga_channel.json"  # stores mapping {guild_id: channel_id}
 LAST_RUN_FILE = "data/manga_scan_meta.json"  # stores metadata like last run timestamp
 ANIME_SAVE_FILE = "data/anime_scan.json"
 ANIME_LAST_RUN_FILE = "data/anime_scan_meta.json"
@@ -122,7 +122,6 @@ class Finisher(commands.Cog):
         self.logger.info("Finisher cog initialized")
         # Ensure data directory exists when saving
         os.makedirs(os.path.dirname(SAVE_FILE) or '.', exist_ok=True)
-        os.makedirs(os.path.dirname(CHANNEL_SAVE_FILE) or '.', exist_ok=True)
 
     def cog_unload(self):
         self.daily_check.cancel()
@@ -330,26 +329,16 @@ class Finisher(commands.Cog):
     # === Channel configuration persistence ===
     async def load_defined_channel(self, guild_id: int):
         """Return configured channel_id for a specific guild (or None)."""
-        def _read(gid: int):
-            try:
-                if os.path.exists(CHANNEL_SAVE_FILE):
-                    with open(CHANNEL_SAVE_FILE, "r", encoding="utf-8") as f:
-                        data = json.load(f) or {}
-                        cid = data.get(str(gid))
-                        return int(cid) if cid else None
-                return None
-            except Exception:
-                return None
-
-        result = await asyncio.to_thread(_read, guild_id)
         try:
+            result = await get_guild_manga_channel(guild_id)
             if result:
                 self.logger.info(f"Loaded configured channel {result} for guild {guild_id}")
             else:
                 self.logger.info(f"No configured channel for guild {guild_id}")
-        except Exception:
-            self.logger.debug("Loaded defined channel (unable to log details)")
-        return result
+            return result
+        except Exception as e:
+            self.logger.error(f"Error loading defined channel for guild {guild_id}: {e}")
+            return None
 
     async def save_current_anime(self, data):
         def _write():
@@ -372,52 +361,23 @@ class Finisher(commands.Cog):
             self.logger.info("Saved current anime ids")
 
     async def load_all_defined_channels(self) -> dict:
-        """Return the full mapping of guild_id -> channel_id (strings) or empty dict."""
-        def _read_all():
-            try:
-                if os.path.exists(CHANNEL_SAVE_FILE):
-                    with open(CHANNEL_SAVE_FILE, "r", encoding="utf-8") as f:
-                        return json.load(f) or {}
-                return {}
-            except Exception:
-                return {}
-
-        result = await asyncio.to_thread(_read_all)
+        """Return the full mapping of guild_id -> channel_id or empty dict."""
         try:
+            result = await get_all_guild_manga_channels()
             self.logger.info(f"Loaded channel mapping for {len(result)} guild(s)")
-        except Exception:
-            self.logger.debug("Loaded channel mapping")
-        return result
+            return result
+        except Exception as e:
+            self.logger.error(f"Error loading all defined channels: {e}")
+            return {}
 
     async def save_defined_channel(self, guild_id: int, channel_id: int):
-        """Persist a guild -> channel mapping atomically."""
-        def _write(gid: int, ch_id: int):
-            temp = CHANNEL_SAVE_FILE + ".tmp"
-            try:
-                data = {}
-                if os.path.exists(CHANNEL_SAVE_FILE):
-                    try:
-                        with open(CHANNEL_SAVE_FILE, "r", encoding="utf-8") as f:
-                            data = json.load(f) or {}
-                    except Exception:
-                        data = {}
-
-                data[str(gid)] = int(ch_id)
-                with open(temp, "w", encoding="utf-8") as f:
-                    json.dump(data, f)
-                os.replace(temp, CHANNEL_SAVE_FILE)
-            finally:
-                try:
-                    if os.path.exists(temp):
-                        os.remove(temp)
-                except Exception:
-                    pass
-
-        await asyncio.to_thread(_write, guild_id, channel_id)
+        """Persist a guild -> channel mapping to database."""
         try:
-            self.logger.info(f"Saved configured channel {channel_id} for guild {guild_id} to {CHANNEL_SAVE_FILE}")
-        except Exception:
-            self.logger.debug("Saved configured channel mapping")
+            await set_guild_manga_channel(guild_id, channel_id)
+            self.logger.info(f"Saved configured channel {channel_id} for guild {guild_id} to database")
+        except Exception as e:
+            self.logger.error(f"Error saving defined channel for guild {guild_id}: {e}")
+            raise
 
     # === Last-run persistence (to ensure runs are once-per-24h) ===
     async def load_last_run(self) -> datetime.datetime | None:
@@ -488,6 +448,7 @@ class Finisher(commands.Cog):
 
     # === Admin commands to configure channel ===
     @mod_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="set_animanga_completion_channel", description="Set channel to receive anime/manga updates (Mod only)")
     async def set_animanga_completion_channel(self, interaction: discord.Interaction, channel: discord.TextChannel):
         if interaction.guild is None:
@@ -518,10 +479,16 @@ class Finisher(commands.Cog):
             except Exception:
                 pass
 
-    @app_commands.command(name="show_manga_channel", description="Show currently configured manga update channel")
+    @mod_only()
+    @app_commands.default_permissions(manage_guild=True)
+    @app_commands.command(name="show_manga_channel", description="Show currently configured manga update channel (Mod only)")
     async def show_manga_channel(self, interaction: discord.Interaction):
         if interaction.guild is None:
             await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
+            return
+        # Permission check
+        if not await self._user_is_mod(interaction):
+            await interaction.response.send_message("❌ You don't have permission to use this command.", ephemeral=True)
             return
         self.logger.info(f"/show_manga_channel invoked by {interaction.user} in guild {interaction.guild.id}")
         cid = await self.load_defined_channel(interaction.guild.id)
@@ -678,7 +645,7 @@ class Finisher(commands.Cog):
             if mapping:
                 for gid, cid in mapping.items():
                     try:
-                        channel = self.bot.get_channel(int(cid)) if cid else None
+                        channel = self.bot.get_channel(cid) if cid else None
                         if channel:
                             await self.post_updates(channel, kind="manga")
                             await self.post_updates(channel, kind="anime")
@@ -754,6 +721,7 @@ class Finisher(commands.Cog):
 
     # === Slash Command for Mods Only ===
     @mod_only()
+    @app_commands.default_permissions(manage_guild=True)
     @app_commands.command(name="forceupdate", description="Force a manga completion update (Mod Only)")
     async def forceupdate(self, interaction: discord.Interaction):
         # Use defer to acknowledge interaction and update progress via edit_original_response
