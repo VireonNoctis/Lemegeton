@@ -1574,6 +1574,252 @@ async def init_guild_manga_channels_table():
         logger.info("✅ Guild manga channels table ready.")
 
 
+async def init_guild_bot_update_channels_table():
+    """Initialize the guild bot update channels table."""
+    logger.info("🔧 Initializing guild bot update channels table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_bot_update_channels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL UNIQUE,
+                channel_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.commit()
+        
+        logger.info("✅ Guild bot update channels table ready.")
+
+
+async def init_guild_mod_roles_table():
+    """Initialize the guild mod roles table."""
+    logger.info("🔧 Initializing guild mod roles table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_mod_roles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL UNIQUE,
+                role_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.commit()
+        
+        logger.info("✅ Guild mod roles table ready.")
+
+
+async def init_bot_moderators_table():
+    """Initialize the bot moderators table for bot-wide moderation."""
+    logger.info("🔧 Initializing bot moderators table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS bot_moderators (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                discord_id INTEGER NOT NULL UNIQUE,
+                username TEXT NOT NULL,
+                added_by INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        await db.commit()
+        
+        logger.info("✅ Bot moderators table ready.")
+
+
+async def add_bot_moderator(discord_id: int, username: str, added_by: int):
+    """Add a bot moderator."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            await db.execute("""
+                INSERT OR REPLACE INTO bot_moderators (discord_id, username, added_by, updated_at)
+                VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            """, (discord_id, username, added_by))
+            await db.commit()
+            
+        logger.info(f"Added bot moderator: {username} (Discord ID: {discord_id})")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error adding bot moderator {discord_id}: {e}")
+        return False
+
+
+async def remove_bot_moderator(discord_id: int):
+    """Remove a bot moderator."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            await db.execute("""
+                DELETE FROM bot_moderators WHERE discord_id = ?
+            """, (discord_id,))
+            await db.commit()
+            
+        logger.info(f"Removed bot moderator: Discord ID {discord_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error removing bot moderator {discord_id}: {e}")
+        return False
+
+
+async def is_bot_moderator(discord_id: int):
+    """Check if a user is a bot moderator."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            async with db.execute("""
+                SELECT discord_id FROM bot_moderators WHERE discord_id = ?
+            """, (discord_id,)) as cursor:
+                result = await cursor.fetchone()
+                return result is not None
+                
+    except Exception as e:
+        logger.error(f"Error checking if user {discord_id} is bot moderator: {e}")
+        return False
+
+
+async def get_all_bot_moderators():
+    """Get all bot moderators."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            async with db.execute("""
+                SELECT discord_id, username, added_by, created_at FROM bot_moderators ORDER BY username
+            """) as cursor:
+                return await cursor.fetchall()
+                
+    except Exception as e:
+        logger.error(f"Error getting all bot moderators: {e}")
+        return []
+
+
+async def is_user_bot_moderator(user):
+    """
+    Check if a user is a bot moderator or admin.
+    Bot moderators can perform bot-wide actions like publishing changelogs.
+    """
+    try:
+        import config
+        
+        # Check if user is the admin
+        if hasattr(user, 'id') and user.id == config.ADMIN_DISCORD_ID:
+            return True
+            
+        # Check if user is in bot moderators table
+        if hasattr(user, 'id'):
+            return await is_bot_moderator(user.id)
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error checking if user is bot moderator: {e}")
+        return False
+
+
+async def set_guild_mod_role(guild_id: int, role_id: int):
+    """Set the moderator role for a guild."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            await db.execute("""
+                INSERT OR REPLACE INTO guild_mod_roles (guild_id, role_id, updated_at)
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+            """, (guild_id, role_id))
+            await db.commit()
+            
+        logger.info(f"Set mod role {role_id} for guild {guild_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error setting mod role for guild {guild_id}: {e}")
+        return False
+
+
+async def get_guild_mod_role(guild_id: int):
+    """Get the moderator role for a guild."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            async with db.execute("""
+                SELECT role_id FROM guild_mod_roles WHERE guild_id = ?
+            """, (guild_id,)) as cursor:
+                result = await cursor.fetchone()
+                return result[0] if result else None
+                
+    except Exception as e:
+        logger.error(f"Error getting mod role for guild {guild_id}: {e}")
+        return None
+
+
+async def remove_guild_mod_role(guild_id: int):
+    """Remove the moderator role configuration for a guild."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            await db.execute("""
+                DELETE FROM guild_mod_roles WHERE guild_id = ?
+            """, (guild_id,))
+            await db.commit()
+            
+        logger.info(f"Removed mod role configuration for guild {guild_id}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error removing mod role for guild {guild_id}: {e}")
+        return False
+
+
+async def get_all_guild_mod_roles():
+    """Get all guild mod role configurations."""
+    try:
+        async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+            async with db.execute("""
+                SELECT guild_id, role_id FROM guild_mod_roles ORDER BY guild_id
+            """) as cursor:
+                return await cursor.fetchall()
+                
+    except Exception as e:
+        logger.error(f"Error getting all mod roles: {e}")
+        return []
+
+
+async def is_user_moderator(user, guild_id: int):
+    """
+    Check if a user is a moderator based on guild mod role configuration.
+    Falls back to config.MOD_ROLE_ID if no guild-specific role is set.
+    """
+    try:
+        # First check guild-specific mod role
+        guild_mod_role_id = await get_guild_mod_role(guild_id)
+        
+        if guild_mod_role_id:
+            # Check if user has the guild-specific mod role
+            if hasattr(user, 'roles'):
+                for role in user.roles:
+                    if getattr(role, 'id', None) == guild_mod_role_id:
+                        return True
+        else:
+            # Fall back to global config MOD_ROLE_ID if no guild-specific role
+            import config
+            if config.MOD_ROLE_ID and hasattr(user, 'roles'):
+                for role in user.roles:
+                    if getattr(role, 'id', None) == config.MOD_ROLE_ID:
+                        return True
+        
+        # Final fallback to permission checks
+        if hasattr(user, 'guild_permissions'):
+            return user.guild_permissions.manage_messages or user.guild_permissions.administrator
+        
+        return False
+        
+    except Exception as e:
+        logger.error(f"Error checking if user is moderator: {e}")
+        # Fallback to permission check on error
+        if hasattr(user, 'guild_permissions'):
+            return user.guild_permissions.manage_messages or user.guild_permissions.administrator
+        return False
+
+
 async def migrate_default_challenge_roles():
     """Migrate default challenge roles from config.py to the database for the primary guild."""
     try:
@@ -1622,6 +1868,9 @@ async def init_db():
         ("Global Challenges", init_global_challenges_table),
         ("Guild Challenge Roles", init_guild_challenge_roles_table),
         ("Guild Manga Channels", init_guild_manga_channels_table),
+        ("Guild Bot Update Channels", init_guild_bot_update_channels_table),
+        ("Guild Mod Roles", init_guild_mod_roles_table),
+        ("Bot Moderators", init_bot_moderators_table),
         ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
@@ -2495,6 +2744,119 @@ async def get_all_guild_manga_channels() -> Dict[int, int]:
     except Exception as e:
         logger.error(f"❌ Error getting all guild manga channels: {e}", exc_info=True)
         raise
+
+
+# ============================================================
+# Guild Bot Update Channels Functions
+# ============================================================
+
+async def set_guild_bot_update_channel(guild_id: int, channel_id: int):
+    """Set or update the bot update channel for a guild."""
+    try:
+        logger.info(f"Setting bot update channel for guild {guild_id} to channel {channel_id}")
+        
+        query = """
+            INSERT OR REPLACE INTO guild_bot_update_channels 
+            (guild_id, channel_id, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+        """
+        
+        result = await execute_db_operation(
+            "set guild bot update channel",
+            query,
+            params=(guild_id, channel_id)
+        )
+        
+        logger.info(f"✅ Successfully set bot update channel for guild {guild_id}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Error setting bot update channel for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def get_guild_bot_update_channel(guild_id: int) -> Optional[int]:
+    """Get the bot update channel ID for a specific guild."""
+    try:
+        logger.info(f"Getting bot update channel for guild {guild_id}")
+        
+        query = """
+            SELECT channel_id 
+            FROM guild_bot_update_channels 
+            WHERE guild_id = ?
+        """
+        
+        result = await execute_db_operation(
+            "get guild bot update channel",
+            query,
+            params=(guild_id,),
+            fetch_type='one'
+        )
+        
+        channel_id = result[0] if result else None
+        
+        if channel_id:
+            logger.info(f"✅ Found bot update channel {channel_id} for guild {guild_id}")
+        else:
+            logger.info(f"ℹ️ No bot update channel configured for guild {guild_id}")
+            
+        return channel_id
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting bot update channel for guild {guild_id}: {e}", exc_info=True)
+        raise
+
+
+async def get_all_guild_bot_update_channels() -> Dict[int, int]:
+    """Get all guild bot update channel configurations."""
+    try:
+        logger.info("Getting all guild bot update channel configurations")
+        
+        query = """
+            SELECT guild_id, channel_id 
+            FROM guild_bot_update_channels 
+            ORDER BY guild_id
+        """
+        
+        result = await execute_db_operation(
+            "get all guild bot update channels",
+            query,
+            fetch_type='all'
+        )
+        
+        channels = {row[0]: row[1] for row in result} if result else {}
+        
+        logger.info(f"✅ Retrieved {len(channels)} guild bot update channel configurations")
+        return channels
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting all guild bot update channels: {e}", exc_info=True)
+        raise
+
+
+async def remove_guild_bot_update_channel(guild_id: int):
+    """Remove the bot update channel configuration for a guild."""
+    try:
+        logger.info(f"Removing bot update channel for guild {guild_id}")
+        
+        query = """
+            DELETE FROM guild_bot_update_channels 
+            WHERE guild_id = ?
+        """
+        
+        result = await execute_db_operation(
+            "remove guild bot update channel",
+            query,
+            params=(guild_id,)
+        )
+        
+        logger.info(f"✅ Successfully removed bot update channel for guild {guild_id}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"❌ Error removing bot update channel for guild {guild_id}: {e}", exc_info=True)
+        raise
+
 
 async def get_challenge_role_ids_for_guild(guild_id: int) -> Dict[int, Dict[float, int]]:
     """
