@@ -9,7 +9,8 @@ import asyncio
 import logging
 import aiohttp
 
-from config import CHANNEL_ID, MOD_ROLE_ID
+from config import CHANNEL_ID
+from database import is_user_moderator
 from database import set_guild_manga_channel, get_guild_manga_channel, get_all_guild_manga_channels
 ANILIST_URL = "https://graphql.anilist.co"
 SAVE_FILE = "data/manga_scan.json"
@@ -85,7 +86,7 @@ query {
 
 
 def mod_only():
-    """App command check that allows only users with the configured MOD_ROLE_ID
+    """App command check that allows only users with the configured guild mod role
     or users with administrative/manage permissions as a fallback.
     Use as: @mod_only() on an app command.
     """
@@ -94,22 +95,9 @@ def mod_only():
             return False
         try:
             member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
-            
-            # Check configured role id if present
-            if MOD_ROLE_ID:
-                for r in getattr(member, 'roles', []):
-                    if getattr(r, 'id', None) == MOD_ROLE_ID:
-                        return True
-                # If MOD_ROLE_ID is configured but user doesn't have it, still check permissions as fallback
-            
-            # Fallback to permission checks (or primary check if no MOD_ROLE_ID configured)
-            perms = getattr(member, 'guild_permissions', None)
-            if perms:
-                return perms.manage_roles or perms.manage_guild or perms.administrator
-                
+            return await is_user_moderator(member, interaction.guild.id)
         except Exception:
             return False
-        return False
 
     return app_commands.check(predicate)
 
@@ -420,27 +408,14 @@ class Finisher(commands.Cog):
     async def _user_is_mod(self, interaction: discord.Interaction) -> bool:
         """Return True if the invoking user should be considered a moderator.
 
-        Priority:
-        - If MOD_ROLE_ID configured: user must have that role (with permission fallback).
-        - Else: fall back to guild permissions (manage_roles/manage_guild/administrator).
+        Uses the guild-specific mod role from database with permission fallback.
         """
         try:
             if interaction.guild is None:
                 return False
 
             member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
-
-            # Check configured role id if present
-            if MOD_ROLE_ID:
-                for r in getattr(member, 'roles', []):
-                    if getattr(r, 'id', None) == MOD_ROLE_ID:
-                        return True
-                # If MOD_ROLE_ID is configured but user doesn't have it, still check permissions as fallback
-
-            # Fallback to permission checks (or primary check if no MOD_ROLE_ID configured)
-            perms = getattr(member, 'guild_permissions', None)
-            if perms:
-                return perms.manage_roles or perms.manage_guild or perms.administrator
+            return await is_user_moderator(member, interaction.guild.id)
 
         except Exception:
             self.logger.exception("Failed to determine mod permissions")
