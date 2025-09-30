@@ -4,13 +4,14 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import aiosqlite
-from config import CHALLENGE_ROLE_IDS, DB_PATH
+from config import DB_PATH
 from database import (
     get_challenge_rules,
     # Guild-aware functions
     set_user_manga_progress_guild_aware, 
     upsert_user_manga_progress_guild_aware,
-    get_user_manga_progress_guild_aware
+    get_user_manga_progress_guild_aware,
+    get_challenge_role_ids_for_guild
 )
 import aiohttp
 import os
@@ -21,10 +22,10 @@ from helpers.challenge_helper import assign_challenge_role, get_manga_difficulty
 
 logger = logging.getLogger("ChallengeProgress")
 logger.setLevel(logging.INFO)
-if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == os.path.abspath("logs/challenge_update.log")
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == os.path.abspath("logs/challenge_progress.log")
            for h in logger.handlers):
     try:
-        file_handler = logging.FileHandler("logs/challenge_update.log")
+        file_handler = logging.FileHandler("logs/challenge_progress.log")
         file_handler.setFormatter(logging.Formatter("%(asctime)s | %(levelname)s | %(message)s"))
         logger.addHandler(file_handler)
     except Exception:
@@ -145,11 +146,11 @@ async def fetch_user_manga_progress(anilist_username: str, manga_id: int, db=Non
                 else:
                     medium_type = "Manga"
 
-                # ✅ Pull title from local DB instead of AniList
+                # ✅ Pull title from local guild-specific DB instead of AniList
                 title_to_use = None
                 if db:
                     cursor = await db.execute(
-                        "SELECT title FROM challenge_manga WHERE manga_id = ?",
+                        "SELECT title FROM guild_challenge_manga WHERE manga_id = ? LIMIT 1",
                         (manga_id,)
                     )
                     row = await cursor.fetchone()
@@ -173,10 +174,12 @@ class MangaChallenges(commands.Cog):
 
     @app_commands.command(
         name="challenge-progress",
-        description="📚 View your progress in all global manga challenges (optionally for another user)"
+        description="📚 View your progress in all guild manga challenges (optionally for another user) - Server Moderator only"
     )
     @app_commands.describe(member="Discord member to view progress for (optional)")
+    @app_commands.default_permissions(manage_guild=True)
     async def manga_challenges(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
+        logger.info(f"Challenge-progress command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {interaction.guild.id} ({interaction.guild.name})")
         await interaction.response.defer(ephemeral=True)
 
         # Allow viewing another user's progress by passing a member; defaults to the invoking user
@@ -200,13 +203,17 @@ class MangaChallenges(commands.Cog):
         anilist_username = anilist_info.get("username")
         anilist_id = anilist_info.get("id")
 
-        # Fetch challenges
+        # Fetch guild-specific challenges
+        guild_id = interaction.guild.id
+        logger.info(f"Fetching challenge progress for guild {guild_id}, user {target.display_name} ({target_id})")
+        
         async with aiosqlite.connect(DB_PATH) as db:
             challenges = await db.execute_fetchall(
-                "SELECT challenge_id, title FROM global_challenges"
+                "SELECT challenge_id, title FROM guild_challenges WHERE guild_id = ?",
+                (guild_id,)
             )
         if not challenges:
-            await interaction.followup.send("⚠️ No global challenges found.", ephemeral=True)
+            await interaction.followup.send(f"⚠️ No challenges found for this server. Use `/challenge-manage` to create challenges.", ephemeral=True)
             return
 
         # Sort challenges alphabetically by title
@@ -221,19 +228,20 @@ class MangaChallenges(commands.Cog):
             for challenge_id, title in challenges:
 
                 manga_rows = await db.execute_fetchall(
-                    "SELECT manga_id, title, total_chapters, medium_type FROM challenge_manga WHERE challenge_id = ?",
-                    (challenge_id,)
+                    "SELECT manga_id, title, total_chapters FROM guild_challenge_manga WHERE guild_id = ? AND challenge_id = ?",
+                    (guild_id, challenge_id)
                 )
                 manga_rows.sort(key=lambda x: x[1].lower())
                 
-                # Store manga data for updates
-                all_manga_data[challenge_id] = manga_rows
+                # Store manga data for updates (add default medium_type since guild table doesn't have it)
+                manga_rows_with_type = [(mid, title, chapters, "manga") for mid, title, chapters in manga_rows]
+                all_manga_data[challenge_id] = manga_rows_with_type
 
                 chunk_size = 10
                 chunk_index = 0
-                for i in range(0, len(manga_rows), chunk_size):
+                for i in range(0, len(manga_rows_with_type), chunk_size):
                     description_lines = []
-                    for manga_id, manga_title, total_chapters, medium_type in manga_rows[i:i + chunk_size]:
+                    for manga_id, manga_title, total_chapters, medium_type in manga_rows_with_type[i:i + chunk_size]:
                         cache_key = (target_id, manga_id)
                         if cache_key in user_progress_cache:
                             cache = user_progress_cache.get(cache_key)
@@ -267,12 +275,12 @@ class MangaChallenges(commands.Cog):
 
                     description = "\n\n".join(description_lines) if description_lines else "_No manga added to this challenge yet._"
                     embed = discord.Embed(
-                        title=f"📖 Challenge: {title}",
+                        title=f"� Guild Challenge: {title}",
                         description=description,
                         color=discord.Color.random()
                     )
-                    # Indicate whose progress is being shown
-                    embed.set_author(name=f"Progress for {target.display_name} ({anilist_username})")
+                    # Indicate whose progress is being shown and which guild
+                    embed.set_author(name=f"Progress for {target.display_name} ({anilist_username}) | {interaction.guild.name}")
                     embeds.append(embed)
                     embed_index = len(embeds) - 1
                     embed_page_map[embed_index] = (challenge_id, i, i + chunk_size)
@@ -366,6 +374,7 @@ class MangaChallenges(commands.Cog):
 
             async def update_current_page(self, interaction: discord.Interaction):
                 """Update only the manga on the current page"""
+                logger.info(f"Updating challenge progress page for user {self.target_id} in guild {interaction.guild.id}")
                 await interaction.response.defer()
 
                 if self.current_page not in self.page_to_challenge_id:
@@ -374,9 +383,9 @@ class MangaChallenges(commands.Cog):
 
                 challenge_id, start_idx, end_idx = self.page_to_challenge_id[self.current_page]
                 
-                # Get challenge info
+                # Get guild-specific challenge info
                 async with aiosqlite.connect(DB_PATH) as db:
-                    cursor = await db.execute("SELECT start_date FROM global_challenges WHERE challenge_id = ?", (challenge_id,))
+                    cursor = await db.execute("SELECT start_date FROM guild_challenges WHERE guild_id = ? AND challenge_id = ?", (interaction.guild.id, challenge_id))
                     challenge_row = await cursor.fetchone()
                     await cursor.close()
                     challenge_start_date = challenge_row[0] if challenge_row else None
@@ -442,22 +451,22 @@ class MangaChallenges(commands.Cog):
                     # Update embed
                     description = "\n\n".join(description_lines) if description_lines else "_No manga added to this challenge yet._"
                     
-                    cursor = await db.execute("SELECT title FROM global_challenges WHERE challenge_id = ?", (challenge_id,))
+                    cursor = await db.execute("SELECT title FROM guild_challenges WHERE guild_id = ? AND challenge_id = ?", (interaction.guild.id, challenge_id))
                     challenge_title_row = await cursor.fetchone()
                     await cursor.close()
                     challenge_title = challenge_title_row[0] if challenge_title_row else f"Challenge {challenge_id}"
 
                     # Update the embed in our list
                     updated_embed = discord.Embed(
-                        title=f"📖 Challenge: {challenge_title}",
+                        title=f"� Guild Challenge: {challenge_title}",
                         description=description,
                         color=discord.Color.green()
                     )
                     target = self.bot.get_user(self.target_id) or f"User {self.target_id}"
-                    updated_embed.set_author(name=f"Progress for {target.display_name if hasattr(target, 'display_name') else target} ({self.anilist_username})")
+                    updated_embed.set_author(name=f"Progress for {target.display_name if hasattr(target, 'display_name') else target} ({self.anilist_username}) | {interaction.guild.name}")
                     updated_embed.set_footer(
                         text=f"Page {self.current_page + 1} of {len(self.embeds)} | "
-                            f"ChallengeID: {challenge_id} | Updated {updated_count} manga"
+                            f"Guild Challenge ID: {challenge_id} | Updated {updated_count} manga | Guild: {interaction.guild.name}"
                     )
                     
                     self.embeds[self.current_page] = updated_embed
@@ -473,7 +482,7 @@ class MangaChallenges(commands.Cog):
                 embed = self.embeds[self.current_page]
                 embed.set_footer(
                     text=f"Page {self.current_page + 1} of {len(self.embeds)} | "
-                        f"ChallengeID: {self.page_to_challenge_id[self.current_page][0]}"
+                        f"Guild Challenge ID: {self.page_to_challenge_id[self.current_page][0]} | Guild: {interaction.guild.name}"
                 )
                 try:
                     await interaction.response.edit_message(embed=embed, view=self)
@@ -516,6 +525,8 @@ class MangaChallenges(commands.Cog):
         )
         msg = await interaction.followup.send(embed=embeds[0], view=view)
         view.message = msg
+        
+        logger.info(f"Challenge-progress displayed successfully for {target.display_name} in guild {guild_id} with {len(challenges)} challenges")
 
 
 async def setup(bot: commands.Bot):
