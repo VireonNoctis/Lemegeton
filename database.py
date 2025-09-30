@@ -476,8 +476,6 @@ async def get_user_guild_aware(discord_id: int, guild_id: int):
     except Exception as e:
         logger.error(f"❌ Unexpected error getting user {discord_id} from guild {guild_id}: {e}", exc_info=True)
         raise
-        
-    except ValueError as validation_error:
         logger.error(f"Validation error getting user: {validation_error}")
         raise
     except Exception as e:
@@ -2049,6 +2047,7 @@ async def init_db():
         ("Invite Tracker", init_invite_tracker_tables),
         ("Steam Users", init_steam_users_table),
         ("Challenge Manga", init_challenge_manga_table),
+        ("News Tables", init_news_tables),
     ]
     
     start_time = time.time()
@@ -3060,3 +3059,197 @@ async def get_challenge_role_ids_for_guild(guild_id: int) -> Dict[int, Dict[floa
         logger.error(f"Error getting challenge role IDs for guild {guild_id}: {e}", exc_info=True)
         # Return config as ultimate fallback
         return config.CHALLENGE_ROLE_IDS
+
+
+# =====================================================
+# NEWS COG DATABASE FUNCTIONS
+# =====================================================
+
+async def init_news_tables():
+    """Initialize news-related tables in the main database."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            # Create news_accounts table
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS news_accounts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    handle TEXT NOT NULL UNIQUE,
+                    channel_id INTEGER NOT NULL,
+                    last_tweet_id TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create news_filters table
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS news_filters (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    word TEXT NOT NULL UNIQUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            await db.commit()
+            logger.info("✅ News tables initialized successfully")
+            
+            # Migrate data from old news database if it exists
+            await migrate_news_data()
+            
+    except Exception as e:
+        logger.error(f"Failed to initialize news tables: {e}", exc_info=True)
+
+
+async def migrate_news_data():
+    """Migrate data from the separate news_cog.db to main database."""
+    news_db_path = Path("data/news_cog.db")
+    if not news_db_path.exists():
+        logger.debug("No separate news database found - skipping migration")
+        return
+    
+    try:
+        # Check if migration already happened
+        async with aiosqlite.connect(DB_PATH) as main_db:
+            async with main_db.execute("SELECT COUNT(*) FROM news_accounts") as cursor:
+                account_count = (await cursor.fetchone())[0]
+                
+            async with main_db.execute("SELECT COUNT(*) FROM news_filters") as cursor:
+                filter_count = (await cursor.fetchone())[0]
+                
+            if account_count > 0 or filter_count > 0:
+                logger.debug("News data already exists in main database - skipping migration")
+                return
+        
+        # Migrate from separate database
+        async with aiosqlite.connect(news_db_path) as news_db:
+            async with aiosqlite.connect(DB_PATH) as main_db:
+                # Migrate accounts
+                async with news_db.execute("SELECT handle, channel_id, last_tweet_id FROM accounts") as cursor:
+                    accounts = await cursor.fetchall()
+                    
+                for handle, channel_id, last_tweet_id in accounts:
+                    await main_db.execute(
+                        "INSERT OR IGNORE INTO news_accounts (handle, channel_id, last_tweet_id) VALUES (?, ?, ?)",
+                        (handle, channel_id, last_tweet_id)
+                    )
+                
+                # Migrate filters
+                async with news_db.execute("SELECT word FROM filters") as cursor:
+                    filters = await cursor.fetchall()
+                    
+                for (word,) in filters:
+                    await main_db.execute(
+                        "INSERT OR IGNORE INTO news_filters (word) VALUES (?)",
+                        (word,)
+                    )
+                
+                await main_db.commit()
+                
+                logger.info(f"✅ Migrated {len(accounts)} news accounts and {len(filters)} filters to main database")
+                
+    except Exception as e:
+        logger.error(f"Error migrating news data: {e}", exc_info=True)
+
+
+async def get_news_accounts():
+    """Get all monitored news accounts."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT handle, channel_id, last_tweet_id FROM news_accounts") as cursor:
+                rows = await cursor.fetchall()
+                return [{"handle": row[0], "channel_id": row[1], "last_tweet_id": row[2]} for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting news accounts: {e}", exc_info=True)
+        return []
+
+
+async def add_news_account(handle: str, channel_id: int) -> bool:
+    """Add a new monitored news account."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO news_accounts (handle, channel_id) VALUES (?, ?)",
+                (handle, channel_id)
+            )
+            await db.commit()
+            logger.info(f"Added news account: {handle} -> channel {channel_id}")
+            return True
+    except Exception as e:
+        logger.error(f"Error adding news account {handle}: {e}", exc_info=True)
+        return False
+
+
+async def remove_news_account(handle: str) -> bool:
+    """Remove a monitored news account."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute("DELETE FROM news_accounts WHERE handle = ?", (handle,))
+            await db.commit()
+            if cursor.rowcount > 0:
+                logger.info(f"Removed news account: {handle}")
+                return True
+            else:
+                logger.warning(f"News account not found: {handle}")
+                return False
+    except Exception as e:
+        logger.error(f"Error removing news account {handle}: {e}", exc_info=True)
+        return False
+
+
+async def update_last_tweet_id(handle: str, tweet_id: str) -> bool:
+    """Update the last tweet ID for a monitored account."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "UPDATE news_accounts SET last_tweet_id = ? WHERE handle = ?",
+                (tweet_id, handle)
+            )
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error updating last tweet ID for {handle}: {e}", exc_info=True)
+        return False
+
+
+async def get_news_filters():
+    """Get all news filters."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT word FROM news_filters") as cursor:
+                rows = await cursor.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting news filters: {e}", exc_info=True)
+        return []
+
+
+async def add_news_filter(word: str) -> bool:
+    """Add a new news filter word."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO news_filters (word) VALUES (?)",
+                (word.lower(),)
+            )
+            await db.commit()
+            logger.info(f"Added news filter: {word}")
+            return True
+    except Exception as e:
+        logger.error(f"Error adding news filter {word}: {e}", exc_info=True)
+        return False
+
+
+async def remove_news_filter(word: str) -> bool:
+    """Remove a news filter word."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute("DELETE FROM news_filters WHERE word = ?", (word.lower(),))
+            await db.commit()
+            if cursor.rowcount > 0:
+                logger.info(f"Removed news filter: {word}")
+                return True
+            else:
+                logger.warning(f"News filter not found: {word}")
+                return False
+    except Exception as e:
+        logger.error(f"Error removing news filter {word}: {e}", exc_info=True)
+        return False
