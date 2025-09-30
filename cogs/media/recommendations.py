@@ -601,37 +601,13 @@ class Recommendations(commands.Cog):
 
     @app_commands.command(name="recommendations", description="Get personalized recommendations based on your manga preferences")
     @app_commands.describe(
-        member="Discord member (defaults to you)",
-        rec_type="Type of recommendations to get (required)"
+        member="Discord member (defaults to you)"
     )
-    @app_commands.choices(rec_type=[
-        app_commands.Choice(name="Personal (from your 7.0+ rated manga)", value="personal")
-    ])
-    async def recommendations(self, interaction: discord.Interaction, member: Optional[discord.Member] = None, rec_type: app_commands.Choice[str] = None):
+    async def recommendations(self, interaction: discord.Interaction, member: Optional[discord.Member] = None):
         target_user = member or interaction.user
         logger.info(f"Recommendations command started by {interaction.user.id} ({interaction.user.display_name}) for target {target_user.id} ({target_user.display_name}) in guild {interaction.guild_id}")
         
-        if not rec_type:
-            logger.warning(f"No recommendation type selected by user {interaction.user.id}")
-            await interaction.response.send_message(
-                "⚠️ **Please select a recommendation type:**\n\n"
-                "• **Personal** - Based on your highly-rated manga\n\n"
-                "Use the command again and select a type from the dropdown.",
-                ephemeral=True
-            )
-            return
-            
-        chosen_type = rec_type.value
-        logger.info(f"Recommendation type selected: {chosen_type} for user {target_user.id}")
-        
-        # Only personal recommendations are now supported
-        if chosen_type != "personal":
-            await interaction.response.send_message(
-                "❌ **Unsupported recommendation type.**\n\n"
-                "Only personal recommendations are currently available.",
-                ephemeral=True
-            )
-            return
+        logger.info(f"Using personal recommendation type for user {target_user.id}")
         
         # Set up loading message
         loading_message = (
@@ -665,7 +641,7 @@ class Recommendations(commands.Cog):
             await interaction.followup.send(f"⚠️ No AniList username set for {target.mention}.")
             return
 
-        logger.info(f"Recommendations command invoked for Discord user {target} -> AniList '{anilist_username}' (type: {chosen_type})")
+        logger.info(f"Recommendations command invoked for Discord user {target} -> AniList '{anilist_username}' (type: personal)")
 
         # Get user's own entries for personal recommendations
         logger.info(f"Fetching personal entries for AniList user: {anilist_username}")
@@ -715,7 +691,7 @@ class Recommendations(commands.Cog):
             await interaction.followup.send(embed=embed)
             return
 
-        logger.info(f"Total entries received for recommendation type '{chosen_type}': {len(entries)}")
+        logger.info(f"Total entries received for personal recommendations: {len(entries)}")
 
         # Build quick map of user's current media ids/status for exclusion checks
         user_media_ids = set()
