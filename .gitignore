@@ -43,3 +43,4 @@ env/
 
 # Local Netlify folder
 .netlify
+structured_changelog.txt
