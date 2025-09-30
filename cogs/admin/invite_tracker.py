@@ -474,12 +474,12 @@ class InviteTracker(commands.Cog):
     
     @app_commands.command(
         name="set_invite_channel",
-        description="🔧 Set the channel for invite tracking messages (Admin only)"
+        description="🔧 Set the channel for invite tracking messages (Server Moderator only)"
     )
     @app_commands.describe(
         channel="The channel where invite join/leave messages will be sent"
     )
-    @app_commands.default_permissions(administrator=True)
+    @app_commands.default_permissions(manage_guild=True)
     async def set_invite_channel(
         self,
         interaction: discord.Interaction,
@@ -569,7 +569,7 @@ class InviteTracker(commands.Cog):
     
     @app_commands.command(
         name="invite_channel_info",
-        description="ℹ️ View current invite tracking channel settings"
+        description="ℹ️ View current invite tracking channel settings (Server Moderator only)"
     )
     @app_commands.default_permissions(manage_guild=True)
     async def invite_channel_info(self, interaction: discord.Interaction):
@@ -637,139 +637,7 @@ class InviteTracker(commands.Cog):
         embed.set_footer(text="Invite data is always tracked regardless of channel configuration")
         await interaction.response.send_message(embed=embed, ephemeral=True)
     
-    @app_commands.command(
-        name="recruitment_stats",
-        description="🏮 Check recruitment statistics for the sect"
-    )
-    @app_commands.describe(
-        user="Check specific user's recruitment stats (leave empty for top recruiters)"
-    )
-    @app_commands.default_permissions(administrator=True)
-    async def recruitment_stats(
-        self,
-        interaction: discord.Interaction,
-        user: discord.Member = None
-    ):
-        """Check recruitment statistics"""
-        # Defer immediately to prevent timeout
-        try:
-            await interaction.response.defer()
-        except discord.errors.NotFound:
-            logger.error(f"Interaction token expired for recruitment_stats command")
-            return
-        except Exception as e:
-            logger.error(f"Failed to defer interaction for recruitment_stats: {e}")
-            return
-            
-        guild_id = interaction.guild.id
 
-        # Only allow recruitment stats in configured guilds
-        if guild_id not in self.announcement_channels:
-            await interaction.response.send_message(
-                "❌ Invite tracking is not configured for this guild. Use /set_invite_channel to enable it.",
-                ephemeral=True
-            )
-            return
-        
-        try:
-            if user:
-                # Get specific user stats
-                result = await execute_db_operation(
-                    "get user recruitment stats",
-                    """
-                    SELECT total_recruits FROM recruitment_stats 
-                    WHERE user_id = ? AND guild_id = ?
-                    """,
-                    (user.id, guild_id),
-                    fetch_type='one'
-                )
-                
-                recruit_count = result[0] if result else 0
-                
-                embed = discord.Embed(
-                    title="🏮 Individual Recruitment Stats",
-                    description=f"**{user.display_name}** has recruited **{recruit_count}** disciples to the sect.",
-                    color=0xFFD700
-                )
-                
-                # Get recent recruits
-                recent_recruits = await execute_db_operation(
-                    "get recent recruits",
-                    """
-                    SELECT joiner_name, joined_at FROM invite_uses 
-                    WHERE inviter_id = ? AND guild_id = ? 
-                    ORDER BY joined_at DESC LIMIT 5
-                    """,
-                    (user.id, guild_id),
-                    fetch_type='all'
-                )
-                
-                if recent_recruits:
-                    recent_list = []
-                    for name, joined_at in recent_recruits:
-                        # Convert timestamp to relative time
-                        joined_date = datetime.fromisoformat(joined_at)
-                        days_ago = (datetime.now() - joined_date).days
-                        time_str = f"{days_ago} days ago" if days_ago > 0 else "Today"
-                        recent_list.append(f"• {name} ({time_str})")
-                    
-                    embed.add_field(
-                        name="Recent Recruits",
-                        value="\n".join(recent_list),
-                        inline=False
-                    )
-            
-            else:
-                # Get top recruiters
-                top_recruiters = await execute_db_operation(
-                    "get top recruiters",
-                    """
-                    SELECT username, total_recruits FROM recruitment_stats 
-                    WHERE guild_id = ? 
-                    ORDER BY total_recruits DESC LIMIT 10
-                    """,
-                    (guild_id,),
-                    fetch_type='all'
-                )
-                
-                embed = discord.Embed(
-                    title="🏮 Sect Recruitment Leaderboard",
-                    description="*Top disciples who have brought others to the sect*",
-                    color=0xFFD700
-                )
-                
-                if top_recruiters:
-                    leaderboard = []
-                    for i, (username, count) in enumerate(top_recruiters, 1):
-                        if i == 1:
-                            emoji = "🥇"
-                        elif i == 2:
-                            emoji = "🥈"
-                        elif i == 3:
-                            emoji = "🥉"
-                        else:
-                            emoji = f"{i}."
-                        
-                        leaderboard.append(f"{emoji} **{username}** - {count} disciples")
-                    
-                    embed.add_field(
-                        name="Top Recruiters",
-                        value="\n".join(leaderboard),
-                        inline=False
-                    )
-                else:
-                    embed.description = "No recruitment data available yet."
-            
-            await interaction.followup.send(embed=embed)
-            
-        except Exception as e:
-            logger.error(f"Error in recruitment_stats command: {e}")
-            try:
-                await interaction.followup.send("An error occurred while retrieving recruitment statistics.", ephemeral=True)
-            except:
-                logger.error("Failed to send error message - interaction may have expired")
-    
-    # /sect_analytics command removed
     
     async def cog_unload(self):
         """Clean up when cog is unloaded"""
