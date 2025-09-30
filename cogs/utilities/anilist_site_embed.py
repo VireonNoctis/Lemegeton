@@ -257,18 +257,26 @@ class AniListCog(commands.Cog):
             score = user_data["score"]
             status = user_data["status"] or "UNKNOWN"
             
-            # Format score display
+            # Format score display - normalize all to /10 scale
             score_format = user_data["score_format"]
             if score == 0:
                 score_display = "-"
             elif score_format == "POINT_100":
-                score_display = f"{score}%"
+                # Convert 100-point to 10-point scale
+                normalized_score = score / 10.0
+                score_display = f"{normalized_score:.1f}/10"
             elif score_format == "POINT_10_DECIMAL":
-                score_display = f"{score:.1f}"
+                score_display = f"{score:.1f}/10"
             elif score_format == "POINT_5":
-                score_display = "⭐" * int(score)
+                # Convert 5-star to 10-point scale
+                normalized_score = (score / 5.0) * 10.0
+                score_display = f"{normalized_score:.1f}/10"
+            elif score_format == "POINT_3":
+                # Convert 3-point to 10-point scale  
+                normalized_score = (score / 3.0) * 10.0
+                score_display = f"{normalized_score:.1f}/10"
             else:  # POINT_10 or others
-                score_display = str(int(score))
+                score_display = f"{score:.1f}/10"
             
             # Format status display
             status_display = status[:9] if status else "-"
