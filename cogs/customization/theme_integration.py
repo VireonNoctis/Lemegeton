@@ -4,6 +4,7 @@ Monkey-patches existing cogs to add theme support without breaking existing func
 """
 
 import discord
+from discord.ext import commands
 from typing import Optional
 import logging
 import asyncio
@@ -94,18 +95,30 @@ def patch_cog_embeds(cog, theme_function):
     except Exception as e:
         logger.error(f"Error patching {cog.__class__.__name__}: {e}")
 
-async def setup_theme_integration(bot):
-    """Setup theme integration after all cogs are loaded"""
-    # Wait a bit for all cogs to load
-    await bot.wait_until_ready()
+class ThemeIntegrationHandler(commands.Cog):
+    """Handler cog for theme integration setup"""
     
-    # Integrate themes
-    integrate_theme_system(bot)
+    def __init__(self, bot):
+        self.bot = bot
+        self.integration_done = False
     
-    logger.info("Theme integration setup completed")
+    @commands.Cog.listener()
+    async def on_ready(self):
+        """Setup theme integration when bot is ready"""
+        if not self.integration_done:
+            try:
+                # Small delay to ensure all cogs are fully loaded
+                await asyncio.sleep(1)
+                
+                # Integrate themes
+                integrate_theme_system(self.bot)
+                
+                self.integration_done = True
+                logger.info("Theme integration setup completed")
+            except Exception as e:
+                logger.error(f"Error during theme integration setup: {e}")
 
 async def setup(bot):
     """Setup function for the cog (required by Discord.py)"""
-    # This cog doesn't add commands, it just integrates themes
-    asyncio.create_task(setup_theme_integration(bot))
+    await bot.add_cog(ThemeIntegrationHandler(bot))
     logger.info("Theme integration module loaded")
