@@ -20,20 +20,9 @@ class AnalyticsDashboardView(discord.ui.View):
         self.user_data = user_data
         self.analytics = analytics
         self.anilist_username = anilist_username
-        self.current_page = "wrap"
+        self.current_page = "genres"
         
-    @discord.ui.button(label="📊 Yearly Wrap", style=discord.ButtonStyle.primary, custom_id="yearly_wrap")
-    async def yearly_wrap_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Show yearly wrap dashboard"""
-        try:
-            self.current_page = "wrap"
-            embed = await self.build_yearly_wrap_embed()
-            await interaction.response.edit_message(embed=embed, view=self)
-        except Exception as e:
-            logger.error(f"Error in yearly wrap button: {e}")
-            await interaction.response.send_message("❌ Error loading yearly wrap", ephemeral=True)
-    
-    @discord.ui.button(label="🎭 Genres", style=discord.ButtonStyle.secondary, custom_id="genres")
+    @discord.ui.button(label="🎭 Genres", style=discord.ButtonStyle.primary, custom_id="genres")
     async def genres_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show genre analysis dashboard"""
         try:
@@ -105,73 +94,6 @@ class AnalyticsDashboardView(discord.ui.View):
             item.disabled = True
         
     # ===== EMBED BUILDERS =====
-    
-    async def build_yearly_wrap_embed(self) -> discord.Embed:
-        """Build yearly wrap embed"""
-        try:
-            username = self.user_data.get("name", "Unknown User")
-            current_year = datetime.now().year
-            
-            velocity = self.analytics.get("velocity", {})
-            genres = self.analytics.get("genres", {})
-            patterns = self.analytics.get("patterns", {})
-            
-            embed = discord.Embed(
-                title=f"📊 {username}'s {current_year} Wrap",
-                description=f"Your year in manga & anime reading",
-                color=discord.Color.purple()
-            )
-            
-            # Key metrics
-            chapters = velocity.get("total_chapters", 0)
-            hours = velocity.get("estimated_hours", 0)
-            completion_rate = patterns.get("completion_rate", 0)
-            
-            embed.add_field(
-                name="📚 Reading Volume",
-                value=f"**{chapters:,}** chapters\n**{hours}** hours\n**{velocity.get('chapters_per_month', 0)}**/month",
-                inline=True
-            )
-            
-            # Top genres
-            top_genres = genres.get("top_genres", [])[:3]
-            genre_text = "\n".join([f"**{g[0]}** ({g[1]['percentage']}%)" for g in top_genres])
-            embed.add_field(
-                name="🎭 Top Genres",
-                value=genre_text or "No data",
-                inline=True
-            )
-            
-            # Personality & achievements
-            personality = patterns.get("reading_personality", "Unknown")
-            embed.add_field(
-                name="🧬 Reading DNA",
-                value=f"**{personality}**\n{completion_rate}% completion",
-                inline=True
-            )
-            
-            # Year highlights
-            highlights = []
-            if chapters >= 5000:
-                highlights.append("🌟 Heavy Reader (5K+ chapters)")
-            if completion_rate >= 75:
-                highlights.append("💯 Completion Master")
-            if genres.get("diversity_score", 0) >= 60:
-                highlights.append("🌈 Genre Explorer")
-            
-            if highlights:
-                embed.add_field(
-                    name="✨ Year Highlights",
-                    value="\n".join(highlights),
-                    inline=False
-                )
-            
-            embed.set_footer(text=f"Dashboard • Use buttons to explore more analytics")
-            return embed
-            
-        except Exception as e:
-            logger.error(f"Error building yearly wrap: {e}")
-            return discord.Embed(title="Error", description="Failed to build yearly wrap", color=discord.Color.red())
     
     async def build_genre_analysis_embed(self) -> discord.Embed:
         """Build genre analysis embed"""
