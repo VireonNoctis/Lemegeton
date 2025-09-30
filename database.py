@@ -362,8 +362,8 @@ async def add_user(discord_id: int, username: str, anilist_username: str = None,
 
 
 async def add_user_guild_aware(discord_id: int, guild_id: int, username: str, anilist_username: str = None, anilist_id: int = None):
-    """Add new user with guild context for multi-server support."""
-    logger.info(f"Adding new user: {username} (Discord ID: {discord_id}) to guild {guild_id}")
+    """Add new user or update existing user with guild context for multi-server support."""
+    logger.info(f"Upserting user: {username} (Discord ID: {discord_id}) to guild {guild_id}")
     
     try:
         # Validate input
@@ -379,22 +379,27 @@ async def add_user_guild_aware(discord_id: int, guild_id: int, username: str, an
             logger.debug(f"AniList data - Username: {anilist_username}, ID: {anilist_id}")
         
         query = """
-            INSERT OR REPLACE INTO users (discord_id, guild_id, username, anilist_username, anilist_id, updated_at)
+            INSERT INTO users (discord_id, guild_id, username, anilist_username, anilist_id, updated_at)
             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(discord_id, guild_id) DO UPDATE SET 
+                username=excluded.username,
+                anilist_username=excluded.anilist_username,
+                anilist_id=excluded.anilist_id,
+                updated_at=CURRENT_TIMESTAMP
         """
         
         await execute_db_operation(
-            f"add user {username} to guild {guild_id}",
+            f"upsert user {username} to guild {guild_id}",
             query,
             (discord_id, guild_id, username.strip(), anilist_username, anilist_id)
         )
         
-        logger.info(f"✅ Successfully added user {username} (Discord ID: {discord_id}) to guild {guild_id}")
+        logger.info(f"✅ Successfully upserted user {username} (Discord ID: {discord_id}) to guild {guild_id}")
         
     except aiosqlite.IntegrityError as integrity_error:
         if "UNIQUE constraint failed" in str(integrity_error):
-            logger.warning(f"User {discord_id} already exists in guild {guild_id}, updating instead")
-            # The INSERT OR REPLACE should handle this, but log it anyway
+            logger.warning(f"User {discord_id} already exists in guild {guild_id}, but ON CONFLICT should handle this")
+            # This shouldn't happen with ON CONFLICT DO UPDATE, but log it for debugging
         else:
             logger.error(f"Database integrity error adding user {discord_id} to guild {guild_id}: {integrity_error}")
         raise
