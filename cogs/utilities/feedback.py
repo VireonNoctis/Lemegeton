@@ -421,15 +421,25 @@ class ConfirmCloseView(View):
                 feedback_cog = self.bot.get_cog("Feedback")
                 if feedback_cog and self.user:
                     # Remove user->thread and thread->user in-memory mappings
-                    feedback_cog.feedback_threads.pop(self.thread.id, None)
+                    if self.thread:
+                        feedback_cog.feedback_threads.pop(self.thread.id, None)
                     feedback_cog.user_threads.pop(self.user.id, None)
 
                     # Remove any DB row that refers to this thread
-                    await database.execute_db_operation(
-                        "delete feedback mapping by thread",
-                        "DELETE FROM feedback_messages WHERE thread_id = ? OR user_id = ?",
-                        (self.thread.id, self.user.id)
-                    )
+                    if self.thread:
+                        await database.execute_db_operation(
+                            "delete feedback mapping by thread",
+                            "DELETE FROM feedback_messages WHERE thread_id = ? OR user_id = ?",
+                            (self.thread.id, self.user.id)
+                        )
+                    else:
+                        # If no thread, just clean up by user_id
+                        await database.execute_db_operation(
+                            "delete feedback mapping by user",
+                            "DELETE FROM feedback_messages WHERE user_id = ?",
+                            (self.user.id,)
+                        )
+                    
                     # Remove message->user entries in-memory too
                     keys_to_remove = [mid for mid, uid in list(feedback_cog.message_user_map.items()) if uid == self.user.id]
                     for k in keys_to_remove:
