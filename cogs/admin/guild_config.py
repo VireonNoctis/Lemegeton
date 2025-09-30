@@ -8,7 +8,8 @@ from pathlib import Path
 from database import (
     set_guild_challenge_role, get_guild_challenge_roles, remove_guild_challenge_role,
     set_guild_mod_role, get_guild_mod_role, remove_guild_mod_role,
-    add_bot_moderator, remove_bot_moderator, get_all_bot_moderators, is_user_bot_moderator
+    add_bot_moderator, remove_bot_moderator, get_all_bot_moderators, is_user_bot_moderator,
+    is_user_moderator
 )
 
 # ------------------------------------------------------
@@ -51,7 +52,7 @@ class GuildConfig(commands.Cog):
         self.bot = bot
         logger.info("GuildConfig cog initialized")
     
-    @app_commands.command(name="setup_challenge_role", description="Set up a challenge role for this guild")
+    @app_commands.command(name="setup_challenge_role", description="Set up a challenge role for this guild (Server Moderator only)")
     @app_commands.describe(
         challenge_id="The challenge ID (1-13)",
         role="The role to assign when threshold is met", 
@@ -60,13 +61,14 @@ class GuildConfig(commands.Cog):
     async def setup_challenge_role(self, interaction: discord.Interaction, challenge_id: int, role: discord.Role, threshold: float = 1.0):
         """Set up a challenge role for the guild."""
         
-        # Check permissions
-        if not interaction.user.guild_permissions.manage_roles:
-            await interaction.response.send_message("❌ You need 'Manage Roles' permission to use this command.", ephemeral=True)
-            return
-            
+        # Check server moderator permissions
         if not interaction.guild:
             await interaction.response.send_message("❌ This command can only be used in a server.", ephemeral=True)
+            return
+            
+        member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
+        if not await is_user_moderator(member, interaction.guild.id):
+            await interaction.response.send_message("❌ You need to be a server moderator to use this command.", ephemeral=True)
             return
         
         try:
@@ -104,12 +106,18 @@ class GuildConfig(commands.Cog):
             logger.error(f"Error setting up challenge role: {e}", exc_info=True)
             await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
     
-    @app_commands.command(name="list_challenge_roles", description="List all configured challenge roles for this guild")
+    @app_commands.command(name="list_challenge_roles", description="List all configured challenge roles for this guild (Server Moderator only)")
     async def list_challenge_roles(self, interaction: discord.Interaction):
         """List all challenge roles configured for the guild."""
         
         if not interaction.guild:
             await interaction.response.send_message("❌ This command can only be used in a server.", ephemeral=True)
+            return
+            
+        # Check server moderator permissions
+        member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
+        if not await is_user_moderator(member, interaction.guild.id):
+            await interaction.response.send_message("❌ You need to be a server moderator to use this command.", ephemeral=True)
             return
         
         try:
@@ -154,7 +162,7 @@ class GuildConfig(commands.Cog):
             logger.error(f"Error listing challenge roles: {e}", exc_info=True)
             await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
     
-    @app_commands.command(name="remove_challenge_role", description="Remove a challenge role configuration")
+    @app_commands.command(name="remove_challenge_role", description="Remove a challenge role configuration (Server Moderator only)")
     @app_commands.describe(
         challenge_id="The challenge ID to remove role for",
         threshold="The specific threshold to remove (leave empty to remove all thresholds)"
@@ -162,13 +170,14 @@ class GuildConfig(commands.Cog):
     async def remove_challenge_role(self, interaction: discord.Interaction, challenge_id: int, threshold: float = None):
         """Remove a challenge role configuration."""
         
-        # Check permissions
-        if not interaction.user.guild_permissions.manage_roles:
-            await interaction.response.send_message("❌ You need 'Manage Roles' permission to use this command.", ephemeral=True)
-            return
-            
         if not interaction.guild:
             await interaction.response.send_message("❌ This command can only be used in a server.", ephemeral=True)
+            return
+            
+        # Check server moderator permissions
+        member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
+        if not await is_user_moderator(member, interaction.guild.id):
+            await interaction.response.send_message("❌ You need to be a server moderator to use this command.", ephemeral=True)
             return
         
         try:
