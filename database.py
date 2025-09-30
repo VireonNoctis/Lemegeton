@@ -925,37 +925,67 @@ async def init_recommendation_votes_table():
 # ------------------------------------------------------
 async def init_user_stats_table():
     async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("""
-            CREATE TABLE IF NOT EXISTS user_stats (
-                discord_id INTEGER PRIMARY KEY,
-                username TEXT,
-                total_manga INTEGER DEFAULT 0,
-                total_anime INTEGER DEFAULT 0,
-                avg_manga_score REAL DEFAULT 0,
-                avg_anime_score REAL DEFAULT 0
-            )
-        """)
+        # Check if table exists and get its schema
+        cursor = await db.execute("PRAGMA table_info(user_stats)")
+        schema = await cursor.fetchall()
+        await cursor.close()
+        
+        if not schema:
+            # Create new table with proper guild-aware schema
+            await db.execute("""
+                CREATE TABLE user_stats (
+                    discord_id INTEGER NOT NULL,
+                    guild_id INTEGER NOT NULL,
+                    username TEXT,
+                    total_manga INTEGER DEFAULT 0,
+                    total_anime INTEGER DEFAULT 0,
+                    avg_manga_score REAL DEFAULT 0,
+                    avg_anime_score REAL DEFAULT 0,
+                    total_chapters INTEGER DEFAULT 0,
+                    total_episodes INTEGER DEFAULT 0,
+                    manga_completed INTEGER DEFAULT 0,
+                    anime_completed INTEGER DEFAULT 0,
+                    PRIMARY KEY (discord_id, guild_id)
+                )
+            """)
+            logger.info("Created new guild-aware user_stats table")
+        else:
+            # Table exists, ensure all columns are present
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS user_stats (
+                    discord_id INTEGER PRIMARY KEY,
+                    username TEXT,
+                    total_manga INTEGER DEFAULT 0,
+                    total_anime INTEGER DEFAULT 0,
+                    avg_manga_score REAL DEFAULT 0,
+                    avg_anime_score REAL DEFAULT 0
+                )
+            """)
+            
+            # Add missing columns for compatibility
+            try:
+                await db.execute("ALTER TABLE user_stats ADD COLUMN total_chapters INTEGER DEFAULT 0")
+            except aiosqlite.OperationalError:
+                pass
+            try:
+                await db.execute("ALTER TABLE user_stats ADD COLUMN total_episodes INTEGER DEFAULT 0")
+            except aiosqlite.OperationalError:
+                pass
+            try:
+                await db.execute("ALTER TABLE user_stats ADD COLUMN manga_completed INTEGER DEFAULT 0")
+            except aiosqlite.OperationalError:
+                pass
+            try:
+                await db.execute("ALTER TABLE user_stats ADD COLUMN anime_completed INTEGER DEFAULT 0")
+            except aiosqlite.OperationalError:
+                pass
+            try:
+                await db.execute("ALTER TABLE user_stats ADD COLUMN guild_id INTEGER")
+            except aiosqlite.OperationalError:
+                pass
+                
         await db.commit()
         logger.info("User stats table ready.")
-        # Ensure additional columns exist for compatibility with newer leaderboards
-        # Add total_chapters, total_episodes, manga_completed, anime_completed if missing
-        try:
-            await db.execute("ALTER TABLE user_stats ADD COLUMN total_chapters INTEGER DEFAULT 0")
-        except aiosqlite.OperationalError:
-            pass
-        try:
-            await db.execute("ALTER TABLE user_stats ADD COLUMN total_episodes INTEGER DEFAULT 0")
-        except aiosqlite.OperationalError:
-            pass
-        try:
-            await db.execute("ALTER TABLE user_stats ADD COLUMN manga_completed INTEGER DEFAULT 0")
-        except aiosqlite.OperationalError:
-            pass
-        try:
-            await db.execute("ALTER TABLE user_stats ADD COLUMN anime_completed INTEGER DEFAULT 0")
-        except aiosqlite.OperationalError:
-            pass
-        await db.commit()
 
 # ------------------------------------------------------
 # ACHIEVEMENTS TABLE
@@ -1923,27 +1953,55 @@ async def upsert_user_stats_guild_aware(
     manga_completed: int = 0,
     anime_completed: int = 0
 ):
-    """Upsert user stats with guild context - note: user_stats table doesn't have guild_id yet, 
-    so this function currently acts as a wrapper for backward compatibility.
-    TODO: Add guild_id column to user_stats table for full guild isolation."""
+    """Upsert user stats with guild context using guild_id column for proper guild isolation."""
     logger.info(f"Upserting stats (guild-aware) for user {username} (Discord ID: {discord_id}, Guild ID: {guild_id})")
     
-    # For now, call the original function since user_stats doesn't have guild_id
-    # This maintains functionality while we transition
-    logger.warning(f"user_stats table doesn't have guild_id column yet - using global stats for user {discord_id}")
-    
-    return await upsert_user_stats(
-        discord_id=discord_id,
-        username=username,
-        total_manga=total_manga,
-        total_anime=total_anime,
-        avg_manga_score=avg_manga_score,
-        avg_anime_score=avg_anime_score,
-        total_chapters=total_chapters,
-        total_episodes=total_episodes,
-        manga_completed=manga_completed,
-        anime_completed=anime_completed
-    )
+    try:
+        async with aiosqlite.connect(DB_PATH, timeout=DB_TIMEOUT) as db:
+            # Try to insert or update with guild_id
+            await db.execute("""
+                INSERT INTO user_stats (
+                    discord_id, guild_id, username, total_manga, total_anime, 
+                    avg_manga_score, avg_anime_score, total_chapters, total_episodes,
+                    manga_completed, anime_completed
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (discord_id, guild_id) DO UPDATE SET
+                    username = excluded.username,
+                    total_manga = excluded.total_manga,
+                    total_anime = excluded.total_anime,
+                    avg_manga_score = excluded.avg_manga_score,
+                    avg_anime_score = excluded.avg_anime_score,
+                    total_chapters = excluded.total_chapters,
+                    total_episodes = excluded.total_episodes,
+                    manga_completed = excluded.manga_completed,
+                    anime_completed = excluded.anime_completed
+            """, (
+                discord_id, guild_id, username, total_manga, total_anime,
+                avg_manga_score, avg_anime_score, total_chapters, total_episodes,
+                manga_completed, anime_completed
+            ))
+            await db.commit()
+            logger.info(f"✅ Successfully upserted guild-aware stats for {username} in guild {guild_id}")
+            
+    except aiosqlite.OperationalError as e:
+        if "UNIQUE constraint failed" in str(e) or "no such column: guild_id" in str(e):
+            # Fall back to global stats if guild_id column doesn't exist yet
+            logger.warning(f"Guild-aware stats not available, falling back to global stats for user {discord_id}")
+            return await upsert_user_stats(
+                discord_id=discord_id,
+                username=username,
+                total_manga=total_manga,
+                total_anime=total_anime,
+                avg_manga_score=avg_manga_score,
+                avg_anime_score=avg_anime_score,
+                total_chapters=total_chapters,
+                total_episodes=total_episodes,
+                manga_completed=manga_completed,
+                anime_completed=anime_completed
+            )
+        else:
+            logger.error(f"Database error during guild-aware stats upsert: {e}")
+            raise
 
 
 async def get_guild_leaderboard_data(guild_id: int, leaderboard_type: str = "manga"):

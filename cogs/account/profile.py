@@ -4,6 +4,8 @@ from discord.ext import commands
 from discord import app_commands
 import aiohttp
 import logging
+import os
+from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 
 from database import (
@@ -15,12 +17,37 @@ from database import (
 
 ANILIST_API_URL = "https://graphql.anilist.co"
 
+# Configuration constants
+LOG_DIR = Path("logs")
+LOG_FILE = LOG_DIR / "profile.log"
+
+# Ensure logs directory exists
+LOG_DIR.mkdir(exist_ok=True)
+
+# Set up file-based logging
 logger = logging.getLogger("Profile")
 logger.setLevel(logging.INFO)
-if not logger.handlers:
-    h = logging.StreamHandler()
-    h.setFormatter(logging.Formatter("[%(levelname)s] %(name)s: %(message)s"))
-    logger.addHandler(h)
+
+# Clear existing handlers and add file handler
+logger.handlers.clear()
+if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(funcName)s:%(lineno)d - %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+        logger.info("Profile cog logging system initialized")
+    except Exception:
+        # Fallback to console if file logging fails
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(logging.Formatter("[%(levelname)s] %(name)s: %(message)s"))
+        logger.addHandler(stream_handler)
 
 
 # -----------------------------
@@ -619,6 +646,9 @@ class Profile(commands.Cog):
         banner_url = user_data.get("bannerImage")
         profile_url = f"https://anilist.co/user/{user_data['name']}/"
 
+        # Achievements data - calculate this first before building embeds
+        achievements_data = build_achievements(stats_anime, stats_manga)
+
         # Manga page
         manga_embed = discord.Embed(
             title=f"📖 {user_data['name']}'s Manga Profile",
@@ -673,9 +703,6 @@ class Profile(commands.Cog):
 
         anime_embed.set_footer(text="Data from AniList • Page 2/2")
 
-        # Achievements data
-        achievements_data = build_achievements(stats_anime, stats_manga)
-        
         # Create achievements and favorites button views
         achievements_view = AchievementsView(achievements_data, user_data, avatar_url, profile_url)
         favorites_view = FavoritesView(user_data, avatar_url, profile_url)
