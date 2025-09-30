@@ -5,7 +5,11 @@ import logging
 import os
 from pathlib import Path
 
-from database import set_guild_challenge_role, get_guild_challenge_roles, remove_guild_challenge_role
+from database import (
+    set_guild_challenge_role, get_guild_challenge_roles, remove_guild_challenge_role,
+    set_guild_mod_role, get_guild_mod_role, remove_guild_mod_role,
+    add_bot_moderator, remove_bot_moderator, get_all_bot_moderators, is_user_bot_moderator
+)
 
 # ------------------------------------------------------
 # Logging Setup - Clears on each bot run
@@ -193,6 +197,256 @@ class GuildConfig(commands.Cog):
             
         except Exception as e:
             logger.error(f"Error removing challenge role: {e}", exc_info=True)
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="set_mod_role", description="Set the moderator role for this server")
+    @app_commands.describe(role="The role to designate as moderator role")
+    @app_commands.default_permissions(manage_guild=True)
+    async def set_mod_role(self, interaction: discord.Interaction, role: discord.Role):
+        """Set the moderator role for the guild."""
+        
+        # Check permissions
+        if not interaction.user.guild_permissions.manage_guild:
+            await interaction.response.send_message("❌ You need 'Manage Server' permission to use this command.", ephemeral=True)
+            return
+            
+        if not interaction.guild:
+            await interaction.response.send_message("❌ This command can only be used in a server.", ephemeral=True)
+            return
+        
+        try:
+            # Check if bot can see and manage the role if needed
+            if role >= interaction.guild.me.top_role:
+                await interaction.response.send_message(
+                    f"⚠️ **Role Set with Warning**\n"
+                    f"🛡️ **Moderator Role:** {role.mention}\n"
+                    f"⚠️ This role is higher than my highest role, so I may not be able to check it properly in some cases.",
+                    ephemeral=True
+                )
+            
+            # Set the mod role in the database
+            success = await set_guild_mod_role(interaction.guild.id, role.id)
+            
+            if success:
+                await interaction.response.send_message(
+                    f"✅ **Moderator Role Set!**\n"
+                    f"🛡️ **Moderator Role:** {role.mention}\n"
+                    f"👥 Users with this role will have access to moderator commands.",
+                    ephemeral=True
+                )
+                logger.info(f"Set mod role for guild {interaction.guild.id}: {role.name} ({role.id})")
+            else:
+                await interaction.response.send_message("❌ Failed to set moderator role. Please try again.", ephemeral=True)
+            
+        except Exception as e:
+            logger.error(f"Error setting mod role: {e}", exc_info=True)
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="show_mod_role", description="Show the current moderator role for this server")
+    @app_commands.default_permissions(manage_guild=True)
+    async def show_mod_role(self, interaction: discord.Interaction):
+        """Show the current moderator role for the guild."""
+        
+        if not interaction.guild:
+            await interaction.response.send_message("❌ This command can only be used in a server.", ephemeral=True)
+            return
+        
+        try:
+            role_id = await get_guild_mod_role(interaction.guild.id)
+            
+            if not role_id:
+                await interaction.response.send_message(
+                    "📝 **No Moderator Role Set**\n"
+                    "Use `/set_mod_role` to configure the moderator role for this server.\n"
+                    "Without a mod role set, moderator commands will fall back to checking Discord permissions.",
+                    ephemeral=True
+                )
+                return
+            
+            role = interaction.guild.get_role(role_id)
+            
+            if role:
+                await interaction.response.send_message(
+                    f"🛡️ **Current Moderator Role**\n"
+                    f"**Role:** {role.mention}\n"
+                    f"**Members:** {len(role.members)} users\n"
+                    f"**Created:** <t:{int(role.created_at.timestamp())}:R>",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    f"⚠️ **Moderator Role Configuration Issue**\n"
+                    f"The configured moderator role (ID: {role_id}) no longer exists.\n"
+                    f"Use `/remove_mod_role` to clear the configuration or `/set_mod_role` to set a new one.",
+                    ephemeral=True
+                )
+            
+            logger.info(f"Showed mod role for guild {interaction.guild.id}: {role_id}")
+            
+        except Exception as e:
+            logger.error(f"Error showing mod role: {e}", exc_info=True)
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="remove_mod_role", description="Remove the moderator role configuration for this server")
+    @app_commands.default_permissions(manage_guild=True)
+    async def remove_mod_role(self, interaction: discord.Interaction):
+        """Remove the moderator role configuration for the guild."""
+        
+        # Check permissions
+        if not interaction.user.guild_permissions.manage_guild:
+            await interaction.response.send_message("❌ You need 'Manage Server' permission to use this command.", ephemeral=True)
+            return
+            
+        if not interaction.guild:
+            await interaction.response.send_message("❌ This command can only be used in a server.", ephemeral=True)
+            return
+        
+        try:
+            # Check if there's a mod role configured
+            current_role_id = await get_guild_mod_role(interaction.guild.id)
+            
+            if not current_role_id:
+                await interaction.response.send_message(
+                    "📝 **No Moderator Role Configuration**\n"
+                    "There is no moderator role currently set for this server.",
+                    ephemeral=True
+                )
+                return
+            
+            # Remove the mod role configuration
+            success = await remove_guild_mod_role(interaction.guild.id)
+            
+            if success:
+                current_role = interaction.guild.get_role(current_role_id)
+                role_mention = current_role.mention if current_role else f"<@&{current_role_id}>"
+                
+                await interaction.response.send_message(
+                    f"✅ **Moderator Role Configuration Removed!**\n"
+                    f"🗑️ Removed: {role_mention}\n"
+                    f"🔄 Moderator commands will now fall back to checking Discord permissions.",
+                    ephemeral=True
+                )
+                logger.info(f"Removed mod role configuration for guild {interaction.guild.id}")
+            else:
+                await interaction.response.send_message("❌ Failed to remove moderator role configuration. Please try again.", ephemeral=True)
+            
+        except Exception as e:
+            logger.error(f"Error removing mod role: {e}", exc_info=True)
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="add_bot_moderator", description="Add a bot moderator (bot-wide actions)")
+    @app_commands.describe(user="The user to add as a bot moderator")
+    async def add_bot_moderator_cmd(self, interaction: discord.Interaction, user: discord.User):
+        """Add a bot moderator who can perform bot-wide actions."""
+        
+        # Check if user is admin or existing bot moderator
+        if not await is_user_bot_moderator(interaction.user):
+            await interaction.response.send_message("❌ Only bot administrators and moderators can manage bot moderators.", ephemeral=True)
+            return
+        
+        try:
+            # Add the bot moderator
+            success = await add_bot_moderator(user.id, user.display_name, interaction.user.id)
+            
+            if success:
+                await interaction.response.send_message(
+                    f"✅ **Bot Moderator Added!**\n"
+                    f"👑 **User:** {user.mention}\n"
+                    f"🌐 This user can now perform bot-wide actions like publishing changelogs to all servers.",
+                    ephemeral=True
+                )
+                logger.info(f"Added bot moderator: {user.display_name} ({user.id}) by {interaction.user.display_name} ({interaction.user.id})")
+            else:
+                await interaction.response.send_message("❌ Failed to add bot moderator. Please try again.", ephemeral=True)
+            
+        except Exception as e:
+            logger.error(f"Error adding bot moderator: {e}", exc_info=True)
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="remove_bot_moderator", description="Remove a bot moderator")
+    @app_commands.describe(user="The user to remove as a bot moderator")
+    async def remove_bot_moderator_cmd(self, interaction: discord.Interaction, user: discord.User):
+        """Remove a bot moderator."""
+        
+        # Check if user is admin or existing bot moderator
+        if not await is_user_bot_moderator(interaction.user):
+            await interaction.response.send_message("❌ Only bot administrators and moderators can manage bot moderators.", ephemeral=True)
+            return
+        
+        try:
+            # Remove the bot moderator
+            success = await remove_bot_moderator(user.id)
+            
+            if success:
+                await interaction.response.send_message(
+                    f"✅ **Bot Moderator Removed!**\n"
+                    f"👤 **User:** {user.mention}\n"
+                    f"🚫 This user can no longer perform bot-wide actions.",
+                    ephemeral=True
+                )
+                logger.info(f"Removed bot moderator: {user.display_name} ({user.id}) by {interaction.user.display_name} ({interaction.user.id})")
+            else:
+                await interaction.response.send_message("❌ Failed to remove bot moderator. Please try again.", ephemeral=True)
+            
+        except Exception as e:
+            logger.error(f"Error removing bot moderator: {e}", exc_info=True)
+            await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
+
+    @app_commands.command(name="list_bot_moderators", description="List all bot moderators")
+    async def list_bot_moderators_cmd(self, interaction: discord.Interaction):
+        """List all bot moderators."""
+        
+        # Check if user is admin or existing bot moderator
+        if not await is_user_bot_moderator(interaction.user):
+            await interaction.response.send_message("❌ Only bot administrators and moderators can view bot moderators.", ephemeral=True)
+            return
+        
+        try:
+            moderators = await get_all_bot_moderators()
+            
+            if not moderators:
+                await interaction.response.send_message(
+                    "📝 **No Bot Moderators**\n"
+                    "There are currently no bot moderators configured.\n"
+                    "Use `/add_bot_moderator` to add bot moderators.",
+                    ephemeral=True
+                )
+                return
+            
+            embed = discord.Embed(
+                title="👑 Bot Moderators",
+                description="Users who can perform bot-wide actions",
+                color=0x9932cc
+            )
+            
+            moderator_list = []
+            for discord_id, username, added_by, created_at in moderators:
+                user = self.bot.get_user(discord_id)
+                user_mention = user.mention if user else f"<@{discord_id}>"
+                
+                # Get who added them
+                added_by_user = self.bot.get_user(added_by)
+                added_by_mention = added_by_user.display_name if added_by_user else f"ID: {added_by}"
+                
+                moderator_list.append(
+                    f"👑 {user_mention} (`{username}`)\n"
+                    f"   Added by: {added_by_mention}\n"
+                    f"   Date: <t:{int(created_at.timestamp()) if hasattr(created_at, 'timestamp') else int(created_at)}:R>"
+                )
+            
+            embed.add_field(
+                name=f"Bot Moderators ({len(moderators)})",
+                value="\n\n".join(moderator_list),
+                inline=False
+            )
+            
+            embed.set_footer(text="Bot moderators can publish changelogs and manage bot-wide settings")
+            
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            logger.info(f"Listed bot moderators for {interaction.user.display_name} ({interaction.user.id})")
+            
+        except Exception as e:
+            logger.error(f"Error listing bot moderators: {e}", exc_info=True)
             await interaction.response.send_message(f"❌ An error occurred: {str(e)}", ephemeral=True)
 
 
