@@ -14,10 +14,35 @@ import logging
 import asyncio
 from dataclasses import dataclass, asdict
 import random
+from pathlib import Path
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Set up dedicated logging for theme system
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOG_DIR / "themes.log"
+
+logger = logging.getLogger("ThemeSystem")
+logger.setLevel(logging.DEBUG)
+
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                      datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(stream_handler)
+
+logger.info("Theme system logging initialized")
 
 class ThemeCategory(Enum):
     """Categories for theme organization"""
@@ -496,6 +521,9 @@ class CustomThemeSystem(commands.Cog):
     ):
         """Main theme management command"""
         try:
+            guild_id = interaction.guild.id if interaction.guild else None
+            logger.info(f"Theme command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {guild_id}: action={action}, theme={theme}, category={category}")
+            
             await interaction.response.defer()
             
             if action == "browse":
@@ -519,13 +547,21 @@ class CustomThemeSystem(commands.Cog):
                 await interaction.followup.send(embed=embed)
         
         except Exception as e:
-            logger.error(f"Error in theme command: {e}")
+            guild_id = interaction.guild.id if interaction.guild else None
+            logger.error(f"Error in theme command for user {interaction.user.id} in guild {guild_id}: {e}", exc_info=True)
             embed = discord.Embed(
                 title="❌ Error",
-                description="An error occurred while processing your theme request.",
+                description="An error occurred while processing your theme request. Please try again.",
                 color=0xFF0000
             )
-            await interaction.followup.send(embed=embed)
+            
+            try:
+                if interaction.response.is_done():
+                    await interaction.followup.send(embed=embed)
+                else:
+                    await interaction.response.send_message(embed=embed)
+            except Exception as follow_e:
+                logger.error(f"Failed to send error message: {follow_e}")
     
     async def _handle_browse_themes(self, interaction: discord.Interaction, category: str):
         """Handle browsing available themes"""
@@ -789,7 +825,7 @@ class CustomThemeSystem(commands.Cog):
         
         await interaction.followup.send(embed=embed)
     
-    @app_commands.command(name="guild_theme", description="Manage guild-wide theme settings (Admin only)")
+    @app_commands.command(name="guild_theme", description="Manage guild-wide theme settings (Server Moderator only)")
     @app_commands.describe(
         action="What would you like to do?",
         theme="Theme to set as guild default"
@@ -799,16 +835,21 @@ class CustomThemeSystem(commands.Cog):
         app_commands.Choice(name="View Current", value="current"),
         app_commands.Choice(name="Reset to Default", value="reset")
     ])
+    @app_commands.default_permissions(manage_guild=True)
     async def guild_theme_command(
         self,
         interaction: discord.Interaction,
         action: str,
         theme: Optional[str] = None
     ):
-        """Guild theme management (admin only)"""
+        """Guild theme management (server moderator only)"""
         try:
-            # Check permissions
+            guild_id = interaction.guild.id if interaction.guild else None
+            logger.info(f"Guild theme command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {guild_id} ({interaction.guild.name if interaction.guild else 'DM'}): action={action}, theme={theme}")
+            
+            # Check permissions (double check for security)
             if not interaction.user.guild_permissions.manage_guild:
+                logger.warning(f"Permission denied for guild theme command: user {interaction.user.id} in guild {guild_id}")
                 embed = discord.Embed(
                     title="❌ Permission Denied",
                     description="You need 'Manage Server' permission to change guild themes.",

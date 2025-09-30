@@ -9,8 +9,35 @@ from discord import app_commands
 from typing import List, Optional, Dict, Any
 import asyncio
 import logging
+from pathlib import Path
 
-logger = logging.getLogger(__name__)
+# Set up dedicated logging for theme showcase
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOG_DIR / "theme_showcase.log"
+
+logger = logging.getLogger("ThemeShowcase")
+logger.setLevel(logging.DEBUG)
+
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                      datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(stream_handler)
+
+logger.info("Theme showcase logging initialized")
 
 class ThemePreviewView(discord.ui.View):
     """Interactive view for previewing themes"""
@@ -125,6 +152,9 @@ class ThemePreviewView(discord.ui.View):
             return
         
         theme = self.themes[self.current_index]
+        guild_id = interaction.guild.id if interaction.guild else None
+        logger.info(f"User {interaction.user.id} applying theme '{theme.name}' from preview in guild {guild_id}")
+        
         success = self.theme_manager.set_user_theme(self.user_id, theme.id)
         
         if success:
@@ -134,14 +164,21 @@ class ThemePreviewView(discord.ui.View):
                            f"All your embeds will now use this beautiful theme.",
                 color=theme.colors.primary
             )
-            embed.set_footer(text=f"Theme: {theme.name} {theme.emoji}")
+            
+            # Add guild context to footer
+            if interaction.guild:
+                embed.set_footer(text=f"Theme: {theme.name} {theme.emoji} | Applied in {interaction.guild.name}")
+            else:
+                embed.set_footer(text=f"Theme: {theme.name} {theme.emoji} | Applied globally")
             
             # Disable all buttons
             for child in self.children:
                 child.disabled = True
             
             await interaction.response.edit_message(embed=embed, view=self)
+            logger.info(f"Successfully applied theme '{theme.name}' for user {interaction.user.id}")
         else:
+            logger.error(f"Failed to apply theme '{theme.name}' for user {interaction.user.id}")
             await interaction.response.send_message("❌ Failed to apply theme.", ephemeral=True)
     
     @discord.ui.button(label="🎲 Random", style=discord.ButtonStyle.secondary)
@@ -282,8 +319,12 @@ class AdvancedThemeCommands(commands.Cog):
     async def theme_preview(self, interaction: discord.Interaction):
         """Open interactive theme preview"""
         try:
+            guild_id = interaction.guild.id if interaction.guild else None
+            logger.info(f"Theme preview command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {guild_id} ({interaction.guild.name if interaction.guild else 'DM'})")
+            
             theme_cog = self.bot.get_cog('CustomThemeSystem')
             if not theme_cog:
+                logger.error("Theme system not available for preview command")
                 embed = discord.Embed(
                     title="❌ Theme System Not Available",
                     description="The theme system is not currently loaded.",
@@ -315,8 +356,15 @@ class AdvancedThemeCommands(commands.Cog):
                 inline=True
             )
             
+            # Add guild context to embed
+            if interaction.guild:
+                embed.set_footer(text=f"Guild: {interaction.guild.name} | Interactive theme system")
+            else:
+                embed.set_footer(text="DM | Interactive theme system")
+            
             view = ThemeCategoryView(theme_cog.theme_manager)
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            logger.info(f"Theme preview interface sent successfully to user {interaction.user.id} in guild {guild_id}")
         
         except Exception as e:
             logger.error(f"Error in theme_preview command: {e}")
@@ -341,6 +389,9 @@ class AdvancedThemeCommands(commands.Cog):
     async def theme_showcase(self, interaction: discord.Interaction, category: str = "all"):
         """Show a comprehensive showcase of available themes"""
         try:
+            guild_id = interaction.guild.id if interaction.guild else None
+            logger.info(f"Theme showcase command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {guild_id} ({interaction.guild.name if interaction.guild else 'DM'}), category={category}")
+            
             await interaction.response.defer()
             
             theme_cog = self.bot.get_cog('CustomThemeSystem')
@@ -409,18 +460,23 @@ class AdvancedThemeCommands(commands.Cog):
                 inline=False
             )
             
-            embed.set_footer(text=f"Total themes available: {len(theme_cog.theme_manager.themes)} 🎨")
+            embed.set_footer(text=f"Total themes available: {len(theme_cog.theme_manager.themes)} 🎨 | Guild: {interaction.guild.name if interaction.guild else 'DM'}")
             
             await interaction.followup.send(embed=embed)
+            logger.info(f"Theme showcase sent successfully to user {interaction.user.id} in guild {guild_id}, showing {len(themes)} themes")
         
         except Exception as e:
-            logger.error(f"Error in theme_showcase command: {e}")
+            guild_id = interaction.guild.id if interaction.guild else None
+            logger.error(f"Error in theme_showcase command for user {interaction.user.id} in guild {guild_id}: {e}", exc_info=True)
             embed = discord.Embed(
                 title="❌ Error",
                 description="An error occurred while loading theme showcase.",
                 color=0xFF0000
             )
-            await interaction.followup.send(embed=embed)
+            try:
+                await interaction.followup.send(embed=embed)
+            except Exception as follow_e:
+                logger.error(f"Failed to send showcase error message: {follow_e}")
 
 async def setup(bot):
     """Setup function for the cog"""

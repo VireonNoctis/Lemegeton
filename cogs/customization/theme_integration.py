@@ -8,8 +8,35 @@ from discord.ext import commands
 from typing import Optional
 import logging
 import asyncio
+from pathlib import Path
 
-logger = logging.getLogger(__name__)
+# Set up dedicated logging for theme integration
+LOG_DIR = Path("logs")
+LOG_DIR.mkdir(exist_ok=True)
+LOG_FILE = LOG_DIR / "theme_integration.log"
+
+logger = logging.getLogger("ThemeIntegration")
+logger.setLevel(logging.DEBUG)
+
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(LOG_FILE)
+           for h in logger.handlers):
+    try:
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
+    except Exception:
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                      datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(stream_handler)
+
+logger.info("Theme integration logging initialized")
 
 def integrate_theme_system(bot):
     """
@@ -17,12 +44,15 @@ def integrate_theme_system(bot):
     This function patches existing methods to add theme support
     """
     try:
+        logger.info("Starting theme system integration...")
+        
         # Get the theme system cog
         theme_cog = bot.get_cog('CustomThemeSystem')
         if not theme_cog:
             logger.warning("Theme system not found, skipping integration")
             return
         
+        logger.info("Theme system found, proceeding with integration")
         theme_manager = theme_cog.theme_manager
         
         def apply_theme_to_embed(embed: discord.Embed, user_id: int, guild_id: Optional[int] = None) -> discord.Embed:
@@ -48,6 +78,7 @@ def integrate_theme_system(bot):
         # Patch analytics embeds
         analytics_cog = bot.get_cog('AnalyticsDashboard')
         if analytics_cog:
+            logger.info("Patching AnalyticsDashboard cog with theme support")
             logger.info("Integrating themes with Analytics Dashboard")
             
             # Store original method
@@ -104,19 +135,11 @@ class ThemeIntegrationHandler(commands.Cog):
     
     @commands.Cog.listener()
     async def on_ready(self):
-        """Setup theme integration when bot is ready"""
-        if not self.integration_done:
-            try:
-                # Small delay to ensure all cogs are fully loaded
-                await asyncio.sleep(1)
-                
-                # Integrate themes
-                integrate_theme_system(self.bot)
-                
-                self.integration_done = True
-                logger.info("Theme integration setup completed")
-            except Exception as e:
-                logger.error(f"Error during theme integration setup: {e}")
+        """Initialize theme integration when bot is ready"""
+        logger.info("Bot ready - initializing theme integration system")
+        await asyncio.sleep(1)  # Wait for other cogs to load
+        integrate_theme_system(self.bot)
+        logger.info("Theme integration system initialized")
 
 async def setup(bot):
     """Setup function for the cog (required by Discord.py)"""
