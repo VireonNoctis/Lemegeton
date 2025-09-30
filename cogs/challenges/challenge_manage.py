@@ -1,13 +1,12 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-import aiosqlite
 import aiohttp
 import logging
-import os
 from pathlib import Path
 from typing import Optional, List, Tuple
-from database import DB_PATH
+
+from database import execute_db_operation
 
 # Configuration constants
 LOG_DIR = Path("logs")
@@ -47,31 +46,32 @@ logger.info("Challenge Change cog logging system initialized (file or stream fal
 class ChallengeManagementView(discord.ui.View):
     """Interactive view for challenge management actions."""
     
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: int, guild_id: int):
         super().__init__(timeout=VIEW_TIMEOUT)
         self.user_id = user_id
-        logger.debug(f"Created ChallengeManagementView for user ID: {user_id}")
+        self.guild_id = guild_id
+        logger.debug(f"Created ChallengeManagementView for user ID: {user_id} in guild {guild_id}")
 
     @discord.ui.button(label="➕ Add Manga", style=discord.ButtonStyle.success, emoji="➕")
     async def add_manga_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show modal for adding manga to challenge."""
-        logger.info(f"Add manga button clicked by {interaction.user.display_name} (ID: {self.user_id})")
+        logger.info(f"Add manga button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
         
-        modal = AddMangaModal()
+        modal = AddMangaModal(self.guild_id)
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="🗑️ Remove Manga", style=discord.ButtonStyle.danger, emoji="🗑️")
     async def remove_manga_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show modal for removing manga from challenge."""
-        logger.info(f"Remove manga button clicked by {interaction.user.display_name} (ID: {self.user_id})")
+        logger.info(f"Remove manga button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
         
-        modal = RemoveMangaModal()
+        modal = RemoveMangaModal(self.guild_id)
         await interaction.response.send_modal(modal)
 
     @discord.ui.button(label="📋 List Challenges", style=discord.ButtonStyle.secondary, emoji="📋", row=1)
     async def list_challenges_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        """Show all active challenges."""
-        logger.info(f"List challenges button clicked by {interaction.user.display_name} (ID: {self.user_id})")
+        """Show all active challenges for this guild."""
+        logger.info(f"List challenges button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
         
         await interaction.response.defer(ephemeral=True)
         try:
@@ -80,12 +80,12 @@ class ChallengeManagementView(discord.ui.View):
                 await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
                 return
 
-            # Get all challenges and their manga lists
-            challenges_info = await challenge_cog.get_all_challenges()
+            # Get all challenges for this guild and their manga lists
+            challenges_info = await challenge_cog.get_all_guild_challenges(self.guild_id)
             if not challenges_info:
                 embed = discord.Embed(
-                    title="📋 Challenge List",
-                    description="No active challenges found.",
+                    title="📋 Guild Challenge List",
+                    description="No active challenges found for this server.",
                     color=discord.Color.orange()
                 )
                 await interaction.followup.send(embed=embed, ephemeral=True)
@@ -94,7 +94,7 @@ class ChallengeManagementView(discord.ui.View):
             # Build a list of (challenge_id, title, manga_list)
             challenges_with_manga = []
             for challenge_id, title, _mcount in challenges_info:
-                manga_rows = await challenge_cog.get_challenge_manga(challenge_id)
+                manga_rows = await challenge_cog.get_guild_challenge_manga(self.guild_id, challenge_id)
                 # manga_rows is list of tuples (manga_id, title, total_chapters)
                 challenges_with_manga.append((challenge_id, title, manga_rows))
 
@@ -102,9 +102,10 @@ class ChallengeManagementView(discord.ui.View):
             class ChallengeListView(discord.ui.View):
                 PER_PAGE = 8
 
-                def __init__(self, challenges):
+                def __init__(self, challenges, guild_id):
                     super().__init__(timeout=VIEW_TIMEOUT)
                     self.challenges = challenges
+                    self.guild_id = guild_id
                     self.index = 0
                     # per-challenge manga page (resets when switching challenges)
                     self.manga_page = 0
@@ -118,7 +119,7 @@ class ChallengeManagementView(discord.ui.View):
 
                     embed = discord.Embed(
                         title=f"📋 {ctitle}",
-                        description=f"Challenge ID: `{cid}` • {total} manga",
+                        description=f"Guild Challenge ID: `{cid}` • {total} manga • Guild: {interaction.guild.name}",
                         color=discord.Color.blue()
                     )
 
@@ -179,42 +180,43 @@ class ChallengeManagementView(discord.ui.View):
                     for item in self.children:
                         item.disabled = True
 
-            view = ChallengeListView(challenges_with_manga)
+            view = ChallengeListView(challenges_with_manga, self.guild_id)
             await interaction.followup.send(embed=view.make_embed(), view=view, ephemeral=True)
 
         except Exception as e:
-            logger.error(f"Error listing challenges: {e}", exc_info=True)
+            logger.error(f"Error listing challenges for guild {self.guild_id}: {e}", exc_info=True)
             await interaction.followup.send("❌ Error retrieving challenge list.", ephemeral=True)
 
     @discord.ui.button(label="🔍 Search Manga", style=discord.ButtonStyle.primary, emoji="🔍")
     async def search_manga_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show information about a specific manga."""
-        logger.info(f"Search manga button clicked by {interaction.user.display_name} (ID: {self.user_id})")
+        logger.info(f"Search manga button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
         
-        modal = SearchMangaModal()
+        modal = SearchMangaModal(self.guild_id)
         await interaction.response.send_modal(modal)
 
     async def on_timeout(self):
         """Handle view timeout by disabling buttons."""
         try:
             self.clear_items()
-            logger.debug(f"ChallengeManagementView timed out for user ID: {self.user_id}")
+            logger.debug(f"ChallengeManagementView timed out for user ID: {self.user_id} in guild {self.guild_id}")
         except Exception as e:
             logger.error(f"Error handling ChallengeManagementView timeout: {e}", exc_info=True)
 
     @discord.ui.button(label="🗑️ Delete Challenge", style=discord.ButtonStyle.danger, emoji="🗑️", row=1)
     async def delete_challenge_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show modal to delete a challenge by ID."""
-        logger.info(f"Delete challenge button clicked by {interaction.user.display_name} (ID: {self.user_id})")
-        modal = DeleteChallengeModal()
+        logger.info(f"Delete challenge button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
+        modal = DeleteChallengeModal(self.guild_id)
         await interaction.response.send_modal(modal)
 
 
 class AddMangaModal(discord.ui.Modal):
     """Modal for adding manga to challenges."""
     
-    def __init__(self):
+    def __init__(self, guild_id: int):
         super().__init__(title="➕ Add Manga to Challenge")
+        self.guild_id = guild_id
         
         self.challenge_title = discord.ui.TextInput(
             label="Challenge Title",
@@ -240,11 +242,11 @@ class AddMangaModal(discord.ui.Modal):
         )
         self.add_item(self.total_chapters)
         
-        logger.debug("Created AddMangaModal")
+        logger.debug(f"Created AddMangaModal for guild {guild_id}")
 
     async def on_submit(self, interaction: discord.Interaction):
         """Handle modal submission for adding manga."""
-        logger.info(f"Add manga modal submitted by {interaction.user.display_name} (ID: {interaction.user.id})")
+        logger.info(f"Add manga modal submitted by {interaction.user.display_name} (ID: {interaction.user.id}) in guild {self.guild_id}")
         logger.debug(f"Parameters: title='{self.challenge_title.value}', manga_id='{self.manga_id.value}', chapters='{self.total_chapters.value}'")
         
         await interaction.response.defer(ephemeral=True)
@@ -276,6 +278,7 @@ class AddMangaModal(discord.ui.Modal):
             challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
                 result = await challenge_cog.handle_add_manga(
+                    self.guild_id,
                     self.challenge_title.value.strip(),
                     manga_id_int,
                     chapters_override
@@ -285,15 +288,16 @@ class AddMangaModal(discord.ui.Modal):
                 await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
                 
         except Exception as e:
-            logger.error(f"Error in add manga modal: {e}", exc_info=True)
+            logger.error(f"Error in add manga modal for guild {self.guild_id}: {e}", exc_info=True)
             await interaction.followup.send("❌ An error occurred while adding manga.", ephemeral=True)
 
 
 class RemoveMangaModal(discord.ui.Modal):
     """Modal for removing manga from challenges."""
     
-    def __init__(self):
+    def __init__(self, guild_id: int):
         super().__init__(title="🗑️ Remove Manga from Challenge")
+        self.guild_id = guild_id
         
         self.manga_id = discord.ui.TextInput(
             label="AniList Manga ID",
@@ -303,11 +307,11 @@ class RemoveMangaModal(discord.ui.Modal):
         )
         self.add_item(self.manga_id)
         
-        logger.debug("Created RemoveMangaModal")
+        logger.debug(f"Created RemoveMangaModal for guild {guild_id}")
 
     async def on_submit(self, interaction: discord.Interaction):
         """Handle modal submission for removing manga."""
-        logger.info(f"Remove manga modal submitted by {interaction.user.display_name} (ID: {interaction.user.id})")
+        logger.info(f"Remove manga modal submitted by {interaction.user.display_name} (ID: {interaction.user.id}) in guild {self.guild_id}")
         logger.debug(f"Parameters: manga_id='{self.manga_id.value}'")
         
         await interaction.response.defer(ephemeral=True)
@@ -326,21 +330,22 @@ class RemoveMangaModal(discord.ui.Modal):
             # Process the request
             challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
-                result = await challenge_cog.handle_remove_manga(manga_id_int)
+                result = await challenge_cog.handle_remove_manga(self.guild_id, manga_id_int)
                 await interaction.followup.send(result, ephemeral=True)
             else:
                 await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
                 
         except Exception as e:
-            logger.error(f"Error in remove manga modal: {e}", exc_info=True)
+            logger.error(f"Error in remove manga modal for guild {self.guild_id}: {e}", exc_info=True)
             await interaction.followup.send("❌ An error occurred while removing manga.", ephemeral=True)
 
 
 class DeleteChallengeModal(discord.ui.Modal):
     """Modal for deleting a challenge by ID."""
 
-    def __init__(self):
+    def __init__(self, guild_id: int):
         super().__init__(title="🗑️ Delete Challenge")
+        self.guild_id = guild_id
 
         self.challenge_id = discord.ui.TextInput(
             label="Challenge ID",
@@ -350,10 +355,10 @@ class DeleteChallengeModal(discord.ui.Modal):
         )
         self.add_item(self.challenge_id)
 
-        logger.debug("Created DeleteChallengeModal")
+        logger.debug(f"Created DeleteChallengeModal for guild {guild_id}")
 
     async def on_submit(self, interaction: discord.Interaction):
-        logger.info(f"Delete challenge modal submitted by {interaction.user.display_name} (ID: {interaction.user.id})")
+        logger.info(f"Delete challenge modal submitted by {interaction.user.display_name} (ID: {interaction.user.id}) in guild {self.guild_id}")
         await interaction.response.defer(ephemeral=True)
 
         try:
@@ -365,21 +370,22 @@ class DeleteChallengeModal(discord.ui.Modal):
 
             challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
-                result = await challenge_cog.handle_delete_challenge(cid)
+                result = await challenge_cog.handle_delete_challenge(self.guild_id, cid)
                 await interaction.followup.send(result, ephemeral=True)
             else:
                 await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
 
         except Exception as e:
-            logger.error(f"Error in delete challenge modal: {e}", exc_info=True)
+            logger.error(f"Error in delete challenge modal for guild {self.guild_id}: {e}", exc_info=True)
             await interaction.followup.send("❌ An error occurred while deleting the challenge.", ephemeral=True)
 
 
 class SearchMangaModal(discord.ui.Modal):
     """Modal for searching manga information."""
     
-    def __init__(self):
+    def __init__(self, guild_id: int):
         super().__init__(title="🔍 Search Manga Information")
+        self.guild_id = guild_id
         
         self.manga_id = discord.ui.TextInput(
             label="AniList Manga ID",
@@ -389,11 +395,11 @@ class SearchMangaModal(discord.ui.Modal):
         )
         self.add_item(self.manga_id)
         
-        logger.debug("Created SearchMangaModal")
+        logger.debug(f"Created SearchMangaModal for guild {guild_id}")
 
     async def on_submit(self, interaction: discord.Interaction):
         """Handle modal submission for searching manga."""
-        logger.info(f"Search manga modal submitted by {interaction.user.display_name} (ID: {interaction.user.id})")
+        logger.info(f"Search manga modal submitted by {interaction.user.display_name} (ID: {interaction.user.id}) in guild {self.guild_id}")
         logger.debug(f"Parameters: manga_id='{self.manga_id.value}'")
         
         await interaction.response.defer(ephemeral=True)
@@ -412,195 +418,223 @@ class SearchMangaModal(discord.ui.Modal):
             # Process the request
             challenge_cog = interaction.client.get_cog("ChallengeManage")
             if challenge_cog:
-                result = await challenge_cog.handle_search_manga(manga_id_int)
+                result = await challenge_cog.handle_search_manga(self.guild_id, manga_id_int)
                 await interaction.followup.send(embed=result, ephemeral=True)
             else:
                 await interaction.followup.send("❌ System error: Challenge management not available.", ephemeral=True)
                 
         except Exception as e:
-            logger.error(f"Error in search manga modal: {e}", exc_info=True)
+            logger.error(f"Error in search manga modal for guild {self.guild_id}: {e}", exc_info=True)
             await interaction.followup.send("❌ An error occurred while searching for manga.", ephemeral=True)
 
 class ChallengeManage(commands.Cog):
-    """Discord cog for interactive challenge management."""
+    """Discord cog for interactive challenge management with guild-specific support."""
     
     def __init__(self, bot: commands.Bot):
         self.bot = bot
-        logger.info("Challenge Management cog initialized")
+        logger.info("Challenge Management cog initialized with guild-specific support")
 
-    async def get_all_challenges(self) -> List[Tuple[int, str, int]]:
-        """Get all challenges with manga counts. Returns list of (challenge_id, title, manga_count)."""
+    async def get_all_guild_challenges(self, guild_id: int) -> List[Tuple[int, str, int]]:
+        """Get all challenges for a specific guild with manga counts. Returns list of (challenge_id, title, manga_count)."""
         try:
-            async with aiosqlite.connect(DB_PATH) as db:
-                cursor = await db.execute(
-                    """
-                    SELECT gc.challenge_id, gc.title, COUNT(cm.manga_id) as manga_count
-                    FROM global_challenges gc
-                    LEFT JOIN challenge_manga cm ON gc.challenge_id = cm.challenge_id
-                    GROUP BY gc.challenge_id, gc.title
-                    ORDER BY gc.title
-                    """
-                )
-                results = await cursor.fetchall()
-                await cursor.close()
-                
-                logger.debug(f"Retrieved {len(results)} challenges from database")
-                return results
+            logger.debug(f"Retrieving all challenges for guild {guild_id}")
+            
+            challenges = await execute_db_operation(
+                f"get all challenges for guild {guild_id}",
+                """
+                SELECT gc.challenge_id, gc.title, COUNT(cm.manga_id) as manga_count
+                FROM guild_challenges gc
+                LEFT JOIN guild_challenge_manga cm ON gc.challenge_id = cm.challenge_id AND gc.guild_id = cm.guild_id
+                WHERE gc.guild_id = ?
+                GROUP BY gc.challenge_id, gc.title
+                ORDER BY gc.title
+                """,
+                (guild_id,),
+                fetch_type='all'
+            )
+            
+            logger.info(f"Retrieved {len(challenges) if challenges else 0} challenges for guild {guild_id}")
+            return challenges or []
                 
         except Exception as e:
-            logger.error(f"Error retrieving challenges: {e}", exc_info=True)
+            logger.error(f"Error retrieving challenges for guild {guild_id}: {e}", exc_info=True)
             return []
 
-    async def handle_add_manga(self, title: str, manga_id: int, total_chapters: Optional[int] = None) -> str:
-        """Handle adding manga to challenge with validation and logging."""
-        logger.info(f"Processing add manga request: title='{title}', manga_id={manga_id}, chapters={total_chapters}")
+    async def get_guild_challenge_manga(self, guild_id: int, challenge_id: int) -> List[Tuple[int, str, int]]:
+        """Return list of manga for a given guild challenge as (manga_id, title, total_chapters)."""
+        try:
+            logger.debug(f"Retrieving manga for challenge {challenge_id} in guild {guild_id}")
+            
+            manga_list = await execute_db_operation(
+                f"get manga for challenge {challenge_id} in guild {guild_id}",
+                """
+                SELECT manga_id, title, total_chapters 
+                FROM guild_challenge_manga 
+                WHERE guild_id = ? AND challenge_id = ? 
+                ORDER BY title
+                """,
+                (guild_id, challenge_id),
+                fetch_type='all'
+            )
+            
+            logger.debug(f"Retrieved {len(manga_list) if manga_list else 0} manga entries for challenge {challenge_id} in guild {guild_id}")
+            return manga_list or []
+            
+        except Exception as e:
+            logger.error(f"Error fetching manga for challenge {challenge_id} in guild {guild_id}: {e}", exc_info=True)
+            return []
+
+    async def handle_add_manga(self, guild_id: int, title: str, manga_id: int, total_chapters: Optional[int] = None) -> str:
+        """Handle adding manga to guild-specific challenge with validation and logging."""
+        logger.info(f"Processing add manga request for guild {guild_id}: title='{title}', manga_id={manga_id}, chapters={total_chapters}")
         
         try:
-            async with aiosqlite.connect(DB_PATH) as db:
-                # Check if manga already exists
-                existing_info = await self._check_manga_exists(db, manga_id)
-                if existing_info:
-                    existing_challenge_id, existing_manga_title = existing_info
-                    existing_challenge_title = await self._get_challenge_info(db, existing_challenge_id)
-                    return (f"⚠️ Manga **{existing_manga_title}** (ID: `{manga_id}`) already exists in challenge "
-                           f"**{existing_challenge_title or 'Unknown'}** (ID: {existing_challenge_id}).")
+            # Check if manga already exists in any challenge for this guild
+            existing_info = await self._check_guild_manga_exists(guild_id, manga_id)
+            if existing_info:
+                existing_challenge_id, existing_manga_title = existing_info
+                existing_challenge_title = await self._get_guild_challenge_info(guild_id, existing_challenge_id)
+                return (f"⚠️ Manga **{existing_manga_title}** (ID: `{manga_id}`) already exists in challenge "
+                       f"**{existing_challenge_title or 'Unknown'}** (ID: {existing_challenge_id}) for this server.")
 
-                # Get or create challenge
-                challenge_id = await self._get_or_create_challenge(db, title)
+            # Get or create guild-specific challenge
+            challenge_id = await self._get_or_create_guild_challenge(guild_id, title)
 
-                # Get manga information
-                if total_chapters is not None:
-                    manga_title = f"Manga {manga_id}"
-                    logger.debug(f"Using provided chapter count: {total_chapters}")
-                else:
-                    anilist_info = await self._fetch_anilist_manga_info(manga_id)
-                    if not anilist_info:
-                        return (f"⚠️ Manga ID `{manga_id}` not found on AniList or API error occurred. "
-                               f"Please try again or specify total chapters manually.")
-                    
-                    manga_title, total_chapters = anilist_info
+            # Get manga information
+            if total_chapters is not None:
+                manga_title = f"Manga {manga_id}"
+                logger.debug(f"Using provided chapter count: {total_chapters}")
+            else:
+                anilist_info = await self._fetch_anilist_manga_info(manga_id)
+                if not anilist_info:
+                    return (f"⚠️ Manga ID `{manga_id}` not found on AniList or API error occurred. "
+                           f"Please try again or specify total chapters manually.")
+                
+                manga_title, total_chapters = anilist_info
 
-                # Add manga to challenge
-                await self._add_manga_to_challenge(db, challenge_id, manga_id, manga_title, total_chapters)
+            # Add manga to guild challenge
+            await self._add_manga_to_guild_challenge(guild_id, challenge_id, manga_id, manga_title, total_chapters)
 
-                logger.info(f"Successfully added manga '{manga_title}' (ID: {manga_id}) to challenge '{title}' (ID: {challenge_id})")
-                return f"✅ Manga **{manga_title}** ({total_chapters} chapters) added to challenge **{title}**!"
+            logger.info(f"Successfully added manga '{manga_title}' (ID: {manga_id}) to challenge '{title}' (ID: {challenge_id}) in guild {guild_id}")
+            return f"✅ Manga **{manga_title}** ({total_chapters} chapters) added to challenge **{title}** for this server!"
                 
         except Exception as e:
-            logger.error(f"Error in handle_add_manga: {e}", exc_info=True)
+            logger.error(f"Error in handle_add_manga for guild {guild_id}: {e}", exc_info=True)
             return "❌ An error occurred while adding manga to the challenge. Please try again later."
 
-    async def handle_remove_manga(self, manga_id: int) -> str:
-        """Handle removing manga from challenge with validation and logging."""
-        logger.info(f"Processing remove manga request: manga_id={manga_id}")
+    async def handle_remove_manga(self, guild_id: int, manga_id: int) -> str:
+        """Handle removing manga from guild-specific challenge with validation and logging."""
+        logger.info(f"Processing remove manga request for guild {guild_id}: manga_id={manga_id}")
         
         try:
-            async with aiosqlite.connect(DB_PATH) as db:
-                # Check if manga exists
-                existing_info = await self._check_manga_exists(db, manga_id)
-                if not existing_info:
-                    return f"⚠️ Manga ID `{manga_id}` is not currently in any challenge."
+            # Check if manga exists in any challenge for this guild
+            existing_info = await self._check_guild_manga_exists(guild_id, manga_id)
+            if not existing_info:
+                return f"⚠️ Manga ID `{manga_id}` is not currently in any challenge for this server."
 
-                existing_challenge_id, existing_manga_title = existing_info
-                existing_challenge_title = await self._get_challenge_info(db, existing_challenge_id)
+            existing_challenge_id, existing_manga_title = existing_info
+            existing_challenge_title = await self._get_guild_challenge_info(guild_id, existing_challenge_id)
 
-                # Remove manga from challenge
-                removal_success = await self._remove_manga_from_challenge(db, manga_id)
-                
-                if removal_success:
-                    logger.info(f"Successfully removed manga '{existing_manga_title}' (ID: {manga_id}) from challenge '{existing_challenge_title}' (ID: {existing_challenge_id})")
-                    return (f"✅ Manga **{existing_manga_title}** (ID: `{manga_id}`) "
-                           f"removed from challenge **{existing_challenge_title or 'Unknown'}**!")
-                else:
-                    return f"⚠️ Failed to remove manga ID `{manga_id}` from challenge. It may have been removed already."
+            # Remove manga from guild challenge
+            removal_success = await self._remove_manga_from_guild_challenge(guild_id, manga_id)
+            
+            if removal_success:
+                logger.info(f"Successfully removed manga '{existing_manga_title}' (ID: {manga_id}) from challenge '{existing_challenge_title}' (ID: {existing_challenge_id}) in guild {guild_id}")
+                return (f"✅ Manga **{existing_manga_title}** (ID: `{manga_id}`) "
+                       f"removed from challenge **{existing_challenge_title or 'Unknown'}** for this server!")
+            else:
+                return f"⚠️ Failed to remove manga ID `{manga_id}` from challenge. It may have been removed already."
                     
         except Exception as e:
-            logger.error(f"Error in handle_remove_manga: {e}", exc_info=True)
+            logger.error(f"Error in handle_remove_manga for guild {guild_id}: {e}", exc_info=True)
             return "❌ An error occurred while removing manga from the challenge. Please try again later."
 
-    async def handle_delete_challenge(self, challenge_id: int) -> str:
-        """Delete a challenge and all its manga entries. Returns a user-facing status string."""
-        logger.info(f"Processing delete challenge request: challenge_id={challenge_id}")
+    async def handle_delete_challenge(self, guild_id: int, challenge_id: int) -> str:
+        """Delete a guild-specific challenge and all its manga entries. Returns a user-facing status string."""
+        logger.info(f"Processing delete challenge request for guild {guild_id}: challenge_id={challenge_id}")
+        
         try:
-            async with aiosqlite.connect(DB_PATH) as db:
-                # Check exists
-                cursor = await db.execute("SELECT title FROM global_challenges WHERE challenge_id = ?", (challenge_id,))
-                row = await cursor.fetchone()
-                await cursor.close()
-                if not row:
-                    return f"⚠️ Challenge ID `{challenge_id}` does not exist."
+            # Check if challenge exists for this guild
+            challenge_title = await self._get_guild_challenge_info(guild_id, challenge_id)
+            if not challenge_title:
+                return f"⚠️ Challenge ID `{challenge_id}` does not exist for this server."
 
-                title = row[0]
+            # Delete related manga entries for this guild challenge
+            await execute_db_operation(
+                f"delete manga entries for challenge {challenge_id} in guild {guild_id}",
+                "DELETE FROM guild_challenge_manga WHERE guild_id = ? AND challenge_id = ?",
+                (guild_id, challenge_id)
+            )
+            
+            # Delete guild challenge
+            await execute_db_operation(
+                f"delete challenge {challenge_id} in guild {guild_id}",
+                "DELETE FROM guild_challenges WHERE guild_id = ? AND challenge_id = ?",
+                (guild_id, challenge_id)
+            )
 
-                # Delete related manga entries
-                await db.execute("DELETE FROM challenge_manga WHERE challenge_id = ?", (challenge_id,))
-                # Delete challenge
-                await db.execute("DELETE FROM global_challenges WHERE challenge_id = ?", (challenge_id,))
-                await db.commit()
-
-                logger.info(f"Successfully deleted challenge '{title}' (ID: {challenge_id}) and its manga entries")
-                return f"✅ Challenge **{title}** (ID: {challenge_id}) and its manga entries have been deleted."
+            logger.info(f"Successfully deleted challenge '{challenge_title}' (ID: {challenge_id}) and its manga entries from guild {guild_id}")
+            return f"✅ Challenge **{challenge_title}** (ID: {challenge_id}) and its manga entries have been deleted from this server."
 
         except Exception as e:
-            logger.error(f"Error deleting challenge {challenge_id}: {e}", exc_info=True)
+            logger.error(f"Error deleting challenge {challenge_id} from guild {guild_id}: {e}", exc_info=True)
             return "❌ An error occurred while deleting the challenge. Please try again later."
 
-    async def handle_search_manga(self, manga_id: int) -> discord.Embed:
-        """Handle searching for manga information and return an embed."""
-        logger.info(f"Processing search manga request: manga_id={manga_id}")
+    async def handle_search_manga(self, guild_id: int, manga_id: int) -> discord.Embed:
+        """Handle searching for manga information and return a guild-specific embed."""
+        logger.info(f"Processing search manga request for guild {guild_id}: manga_id={manga_id}")
         
         try:
             # Get AniList information
             anilist_info = await self._fetch_anilist_manga_info(manga_id)
             
-            async with aiosqlite.connect(DB_PATH) as db:
-                # Check if manga is in any challenge
-                challenge_info = await self._check_manga_exists(db, manga_id)
-                
-                if not anilist_info:
-                    embed = discord.Embed(
-                        title="🔍 Manga Search Results",
-                        description=f"❌ Manga ID `{manga_id}` not found on AniList.",
-                        color=discord.Color.red()
-                    )
-                    return embed
-                
-                manga_title, total_chapters = anilist_info
-                
+            # Check if manga is in any challenge for this guild
+            challenge_info = await self._check_guild_manga_exists(guild_id, manga_id)
+            
+            if not anilist_info:
                 embed = discord.Embed(
-                    title="🔍 Manga Information",
-                    description=f"**{manga_title}**",
-                    color=discord.Color.blue()
+                    title="🔍 Manga Search Results",
+                    description=f"❌ Manga ID `{manga_id}` not found on AniList.",
+                    color=discord.Color.red()
                 )
-                
+                return embed
+            
+            manga_title, total_chapters = anilist_info
+            
+            embed = discord.Embed(
+                title="🔍 Manga Information",
+                description=f"**{manga_title}**",
+                color=discord.Color.blue()
+            )
+            
+            embed.add_field(
+                name="📊 Details",
+                value=f"**ID:** `{manga_id}`\n**Chapters:** {total_chapters or 'Unknown'}",
+                inline=True
+            )
+            
+            if challenge_info:
+                challenge_id, _ = challenge_info
+                challenge_title = await self._get_guild_challenge_info(guild_id, challenge_id)
                 embed.add_field(
-                    name="📊 Details",
-                    value=f"**ID:** `{manga_id}`\n**Chapters:** {total_chapters or 'Unknown'}",
+                    name="🎯 Challenge Status (This Server)",
+                    value=f"✅ In challenge: **{challenge_title or 'Unknown'}**\n(ID: {challenge_id})",
                     inline=True
                 )
-                
-                if challenge_info:
-                    challenge_id, _ = challenge_info
-                    challenge_title = await self._get_challenge_info(db, challenge_id)
-                    embed.add_field(
-                        name="🎯 Challenge Status",
-                        value=f"✅ In challenge: **{challenge_title or 'Unknown'}**\n(ID: {challenge_id})",
-                        inline=True
-                    )
-                else:
-                    embed.add_field(
-                        name="🎯 Challenge Status",
-                        value="❌ Not in any challenge",
-                        inline=True
-                    )
-                
-                embed.set_footer(text=f"AniList ID: {manga_id}")
-                
-                logger.info(f"Successfully retrieved information for manga '{manga_title}' (ID: {manga_id})")
-                return embed
+            else:
+                embed.add_field(
+                    name="🎯 Challenge Status (This Server)",
+                    value="❌ Not in any challenge",
+                    inline=True
+                )
+            
+            embed.set_footer(text=f"AniList ID: {manga_id} • Guild-specific results")
+            
+            logger.info(f"Successfully retrieved information for manga '{manga_title}' (ID: {manga_id}) in guild {guild_id}")
+            return embed
                 
         except Exception as e:
-            logger.error(f"Error in handle_search_manga: {e}", exc_info=True)
+            logger.error(f"Error in handle_search_manga for guild {guild_id}: {e}", exc_info=True)
             embed = discord.Embed(
                 title="🔍 Manga Search Results",
                 description="❌ An error occurred while searching for manga information.",
@@ -608,91 +642,85 @@ class ChallengeManage(commands.Cog):
             )
             return embed
 
-    async def _check_manga_exists(self, db: aiosqlite.Connection, manga_id: int) -> tuple[int, str] | None:
-        """Check if manga already exists in any challenge. Returns (challenge_id, manga_title) if exists."""
+    async def _check_guild_manga_exists(self, guild_id: int, manga_id: int) -> tuple[int, str] | None:
+        """Check if manga already exists in any challenge for a specific guild. Returns (challenge_id, manga_title) if exists."""
         try:
-            logger.debug(f"Checking if manga ID {manga_id} exists in any challenge")
-            cursor = await db.execute(
-                "SELECT challenge_id, title FROM challenge_manga WHERE manga_id = ?", (manga_id,)
-            )
-            row = await cursor.fetchone()
-            await cursor.close()
+            logger.debug(f"Checking if manga ID {manga_id} exists in any challenge for guild {guild_id}")
             
-            if row:
-                logger.debug(f"Manga ID {manga_id} found in challenge ID {row[0]}: '{row[1]}'")
-                return (row[0], row[1])
+            result = await execute_db_operation(
+                f"check manga {manga_id} exists in guild {guild_id}",
+                "SELECT challenge_id, title FROM guild_challenge_manga WHERE guild_id = ? AND manga_id = ?",
+                (guild_id, manga_id),
+                fetch_type='one'
+            )
+            
+            if result:
+                logger.debug(f"Manga ID {manga_id} found in challenge ID {result[0]}: '{result[1]}' for guild {guild_id}")
+                return (result[0], result[1])
             else:
-                logger.debug(f"Manga ID {manga_id} not found in any challenge")
+                logger.debug(f"Manga ID {manga_id} not found in any challenge for guild {guild_id}")
                 return None
                 
         except Exception as e:
-            logger.error(f"Database error checking manga existence: {e}", exc_info=True)
+            logger.error(f"Error checking manga existence for guild {guild_id}: {e}", exc_info=True)
             raise
 
-    async def _get_or_create_challenge(self, db: aiosqlite.Connection, title: str) -> int:
-        """Get existing challenge or create new one. Returns challenge_id."""
+    async def _get_or_create_guild_challenge(self, guild_id: int, title: str) -> int:
+        """Get existing guild challenge or create new one. Returns challenge_id."""
         try:
-            logger.debug(f"Checking if challenge '{title}' exists")
-            cursor = await db.execute(
-                "SELECT challenge_id FROM global_challenges WHERE title = ?", (title,)
-            )
-            row = await cursor.fetchone()
-            await cursor.close()
+            logger.debug(f"Checking if challenge '{title}' exists for guild {guild_id}")
             
-            if row:
-                challenge_id = row[0]
-                logger.info(f"Challenge '{title}' exists (ID: {challenge_id})")
+            result = await execute_db_operation(
+                f"get challenge '{title}' for guild {guild_id}",
+                "SELECT challenge_id FROM guild_challenges WHERE guild_id = ? AND title = ?",
+                (guild_id, title),
+                fetch_type='one'
+            )
+            
+            if result:
+                challenge_id = result[0]
+                logger.info(f"Challenge '{title}' exists (ID: {challenge_id}) for guild {guild_id}")
                 return challenge_id
             else:
-                logger.debug(f"Creating new challenge '{title}'")
-                cursor = await db.execute(
-                    "INSERT INTO global_challenges (title) VALUES (?)", (title,)
+                logger.debug(f"Creating new challenge '{title}' for guild {guild_id}")
+                
+                result = await execute_db_operation(
+                    f"create challenge '{title}' for guild {guild_id}",
+                    "INSERT INTO guild_challenges (guild_id, title) VALUES (?, ?)",
+                    (guild_id, title),
+                    fetch_type='lastrowid'
                 )
-                challenge_id = cursor.lastrowid
-                await cursor.close()
-                logger.info(f"Created new challenge '{title}' (ID: {challenge_id})")
+                
+                challenge_id = result
+                logger.info(f"Created new challenge '{title}' (ID: {challenge_id}) for guild {guild_id}")
                 return challenge_id
                 
         except Exception as e:
-            logger.error(f"Database error managing challenge: {e}", exc_info=True)
+            logger.error(f"Error managing guild challenge for guild {guild_id}: {e}", exc_info=True)
             raise
 
-    async def _get_challenge_info(self, db: aiosqlite.Connection, challenge_id: int) -> str | None:
-        """Get challenge title by ID. Returns title or None if not found."""
+    async def _get_guild_challenge_info(self, guild_id: int, challenge_id: int) -> str | None:
+        """Get guild challenge title by ID. Returns title or None if not found."""
         try:
-            logger.debug(f"Getting challenge info for ID {challenge_id}")
-            cursor = await db.execute(
-                "SELECT title FROM global_challenges WHERE challenge_id = ?", (challenge_id,)
-            )
-            row = await cursor.fetchone()
-            await cursor.close()
+            logger.debug(f"Getting challenge info for ID {challenge_id} in guild {guild_id}")
             
-            if row:
-                logger.debug(f"Challenge ID {challenge_id} found: '{row[0]}'")
-                return row[0]
+            result = await execute_db_operation(
+                f"get challenge info for ID {challenge_id} in guild {guild_id}",
+                "SELECT title FROM guild_challenges WHERE guild_id = ? AND challenge_id = ?",
+                (guild_id, challenge_id),
+                fetch_type='one'
+            )
+            
+            if result:
+                logger.debug(f"Challenge ID {challenge_id} found: '{result[0]}' for guild {guild_id}")
+                return result[0]
             else:
-                logger.warning(f"Challenge ID {challenge_id} not found")
+                logger.warning(f"Challenge ID {challenge_id} not found for guild {guild_id}")
                 return None
                 
         except Exception as e:
-            logger.error(f"Database error getting challenge info: {e}", exc_info=True)
+            logger.error(f"Error getting guild challenge info for guild {guild_id}: {e}", exc_info=True)
             raise
-
-    async def get_challenge_manga(self, challenge_id: int) -> List[Tuple[int, str, int]]:
-        """Return list of manga for a given challenge_id as (manga_id, title, total_chapters)."""
-        try:
-            async with aiosqlite.connect(DB_PATH) as db:
-                cursor = await db.execute(
-                    "SELECT manga_id, title, total_chapters FROM challenge_manga WHERE challenge_id = ? ORDER BY title",
-                    (challenge_id,)
-                )
-                rows = await cursor.fetchall()
-                await cursor.close()
-                logger.debug(f"Retrieved {len(rows)} manga entries for challenge ID {challenge_id}")
-                return rows
-        except Exception as e:
-            logger.error(f"Error fetching manga for challenge {challenge_id}: {e}", exc_info=True)
-            return []
 
     async def _fetch_anilist_manga_info(self, manga_id: int) -> tuple[str, int] | None:
         """Fetch manga information from AniList API. Returns (title, chapters) or None."""
@@ -742,67 +770,68 @@ class ChallengeManage(commands.Cog):
             logger.error(f"Unexpected error fetching AniList data: {e}", exc_info=True)
             return None
 
-    async def _add_manga_to_challenge(
-        self, db: aiosqlite.Connection, challenge_id: int, manga_id: int, 
+    async def _add_manga_to_guild_challenge(
+        self, guild_id: int, challenge_id: int, manga_id: int, 
         manga_title: str, total_chapters: int
     ):
-        """Add manga to challenge in database."""
+        """Add manga to guild challenge in database."""
         try:
-            logger.debug(f"Adding manga '{manga_title}' (ID: {manga_id}) to challenge {challenge_id}")
+            logger.debug(f"Adding manga '{manga_title}' (ID: {manga_id}) to challenge {challenge_id} in guild {guild_id}")
             
-            await db.execute(
+            await execute_db_operation(
+                f"add manga {manga_id} to challenge {challenge_id} in guild {guild_id}",
                 """
-                INSERT INTO challenge_manga (challenge_id, manga_id, title, total_chapters)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO guild_challenge_manga (guild_id, challenge_id, manga_id, title, total_chapters)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (challenge_id, manga_id, manga_title, total_chapters)
+                (guild_id, challenge_id, manga_id, manga_title, total_chapters)
             )
-            await db.commit()
             
-            logger.info(f"Successfully added manga '{manga_title}' (ID: {manga_id}) to challenge {challenge_id}")
+            logger.info(f"Successfully added manga '{manga_title}' (ID: {manga_id}) to challenge {challenge_id} in guild {guild_id}")
             
         except Exception as e:
-            logger.error(f"Database error adding manga to challenge: {e}", exc_info=True)
+            logger.error(f"Error adding manga to guild challenge for guild {guild_id}: {e}", exc_info=True)
             raise
 
-    async def _remove_manga_from_challenge(self, db: aiosqlite.Connection, manga_id: int) -> bool:
-        """Remove manga from challenge in database. Returns True if removed, False if not found."""
+    async def _remove_manga_from_guild_challenge(self, guild_id: int, manga_id: int) -> bool:
+        """Remove manga from guild challenge in database. Returns True if removed, False if not found."""
         try:
-            logger.debug(f"Removing manga ID {manga_id} from challenge")
+            logger.debug(f"Removing manga ID {manga_id} from challenge in guild {guild_id}")
             
-            cursor = await db.execute(
-                "DELETE FROM challenge_manga WHERE manga_id = ?", (manga_id,)
+            result = await execute_db_operation(
+                f"remove manga {manga_id} from challenge in guild {guild_id}",
+                "DELETE FROM guild_challenge_manga WHERE guild_id = ? AND manga_id = ?",
+                (guild_id, manga_id),
+                fetch_type='rowcount'
             )
-            rows_affected = cursor.rowcount
-            await cursor.close()
-            await db.commit()
             
-            if rows_affected > 0:
-                logger.info(f"Successfully removed manga ID {manga_id} from challenge")
+            if result > 0:
+                logger.info(f"Successfully removed manga ID {manga_id} from challenge in guild {guild_id}")
                 return True
             else:
-                logger.warning(f"Manga ID {manga_id} not found in any challenge for removal")
+                logger.warning(f"Manga ID {manga_id} not found in any challenge for removal in guild {guild_id}")
                 return False
                 
         except Exception as e:
-            logger.error(f"Database error removing manga from challenge: {e}", exc_info=True)
+            logger.error(f"Error removing manga from guild challenge for guild {guild_id}: {e}", exc_info=True)
             raise
 
-    @app_commands.checks.has_permissions(administrator=True)
     @app_commands.command(
         name="challenge-manage",
-        description="🎯 Interactive challenge management - add, remove, and manage manga in challenges"
+        description="🎯 Interactive challenge management - add, remove, and manage manga in challenges (Server Moderator only)"
     )
+    @app_commands.default_permissions(manage_guild=True)
     async def challenge_manage(self, interaction: discord.Interaction):
-        """Interactive challenge management interface."""
+        """Interactive guild-specific challenge management interface."""
         try:
+            guild_id = interaction.guild.id
             logger.info(f"Challenge-manage command invoked by {interaction.user.display_name} "
-                       f"({interaction.user.id}) in {interaction.guild.name}")
+                       f"({interaction.user.id}) in guild {guild_id} ({interaction.guild.name})")
             
             embed = discord.Embed(
-                title="🎯 Challenge Management",
+                title="🎯 Guild Challenge Management",
                 description=f"Welcome **{interaction.user.display_name}**!\n\n"
-                           f"Use the buttons below to manage global challenges:\n\n"
+                           f"Use the buttons below to manage challenges for **{interaction.guild.name}**:\n\n"
                            f"➕ **Add Manga** - Add manga to a challenge\n"
                            f"🗑️ **Remove Manga** - Remove manga from challenges\n"
                            f"📋 **List Challenges** - View all active challenges\n"
@@ -812,24 +841,25 @@ class ChallengeManage(commands.Cog):
             
             embed.add_field(
                 name="📝 Notes",
-                value="• Challenges are created automatically when adding manga\n"
+                value="• Challenges are specific to this server\n"
+                      "• Challenges are created automatically when adding manga\n"
                       "• AniList manga information is fetched automatically\n"
                       "• All operations are logged for tracking",
                 inline=False
             )
             
-            embed.set_footer(text="Admin-only • Buttons expire after 2 minutes of inactivity")
+            embed.set_footer(text="Server Moderator only • Buttons expire after 2 minutes of inactivity")
             
-            # Create interactive view
-            view = ChallengeManagementView(interaction.user.id)
+            # Create interactive view with guild ID
+            view = ChallengeManagementView(interaction.user.id, guild_id)
             
             await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             
-            logger.info(f"Challenge management interface sent to {interaction.user.display_name}")
+            logger.info(f"Guild challenge management interface sent to {interaction.user.display_name} for guild {guild_id}")
             
         except Exception as e:
             logger.error(f"Unexpected error in challenge_manage command for {interaction.user.display_name} "
-                        f"(ID: {interaction.user.id}): {e}", exc_info=True)
+                        f"(ID: {interaction.user.id}) in guild {interaction.guild.id}: {e}", exc_info=True)
             try:
                 if not interaction.response.is_done():
                     await interaction.response.send_message(
@@ -849,7 +879,7 @@ async def setup(bot: commands.Bot):
     """Set up the ChallengeManage cog."""
     try:
         await bot.add_cog(ChallengeManage(bot))
-        logger.info("Challenge Management cog successfully loaded")
+        logger.info("Guild-specific Challenge Management cog successfully loaded")
     except Exception as e:
         logger.error(f"Failed to load Challenge Management cog: {e}", exc_info=True)
         raise

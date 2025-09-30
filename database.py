@@ -1553,7 +1553,53 @@ async def init_guild_challenge_roles_table():
         # Migrate default roles for primary guild if they don't exist
         await migrate_default_challenge_roles()
         
+        # Migrate global challenges to guild-specific tables for primary guild
+        await migrate_global_challenges_to_guild()
+        
         logger.info("✅ Guild challenge roles table ready.")
+
+async def init_guild_challenges_table():
+    """Initialize the guild challenges table for guild-specific challenge management."""
+    logger.info("🔧 Initializing guild challenges table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_challenges (
+                challenge_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT,
+                difficulty TEXT DEFAULT 'Medium',
+                start_date TEXT DEFAULT NULL,
+                end_date TEXT DEFAULT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, title)
+            )
+        """)
+        await db.commit()
+        logger.info("✅ Guild challenges table ready.")
+
+async def init_guild_challenge_manga_table():
+    """Initialize the guild challenge manga table for guild-specific challenge manga management."""
+    logger.info("🔧 Initializing guild challenge manga table...")
+    
+    async with aiosqlite.connect(config.DB_PATH, timeout=DB_TIMEOUT) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS guild_challenge_manga (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id INTEGER NOT NULL,
+                challenge_id INTEGER NOT NULL,
+                manga_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                total_chapters INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(guild_id, challenge_id, manga_id),
+                FOREIGN KEY(guild_id, challenge_id) REFERENCES guild_challenges(guild_id, challenge_id) ON DELETE CASCADE
+            )
+        """)
+        await db.commit()
+        logger.info("✅ Guild challenge manga table ready.")
 
 async def init_guild_manga_channels_table():
     """Initialize the guild manga channels table for multi-guild animanga completion support."""
@@ -1846,6 +1892,133 @@ async def migrate_default_challenge_roles():
         logger.error(f"Error migrating default challenge roles: {e}", exc_info=True)
 
 
+async def migrate_global_challenges_to_guild():
+    """Migrate existing global challenges and challenge_manga to guild-specific tables for the primary guild."""
+    try:
+        primary_guild_id = int(os.getenv("GUILD_ID"))
+        
+        logger.info("="*60)
+        logger.info("STARTING GLOBAL CHALLENGES MIGRATION")
+        logger.info("="*60)
+        
+        async with aiosqlite.connect(DB_PATH) as db:
+            # Check if guild-specific tables already have data
+            cursor = await db.execute("SELECT COUNT(*) FROM guild_challenges WHERE guild_id = ?", (primary_guild_id,))
+            existing_guild_challenges = (await cursor.fetchone())[0]
+            
+            if existing_guild_challenges > 0:
+                logger.info(f"Guild-specific challenges already exist for primary guild {primary_guild_id} ({existing_guild_challenges} challenges)")
+                return
+            
+            # Check the structure of global_challenges table to handle different schemas
+            cursor = await db.execute("PRAGMA table_info(global_challenges)")
+            columns = await cursor.fetchall()
+            column_names = [col[1] for col in columns]
+            
+            # Build SELECT query based on available columns
+            select_fields = ["challenge_id", "title"]
+            if "difficulty" in column_names:
+                select_fields.append("difficulty")
+            if "start_date" in column_names:
+                select_fields.append("start_date")
+            
+            # Get all global challenges for the primary guild (if guild_id exists) or all challenges (legacy)
+            if "guild_id" in column_names:
+                # Handle case where global_challenges already has guild_id column
+                query = f"SELECT {', '.join(select_fields)} FROM global_challenges WHERE guild_id = ? OR guild_id IS NULL"
+                cursor = await db.execute(query, (primary_guild_id,))
+            else:
+                # Handle legacy case where global_challenges has no guild_id
+                query = f"SELECT {', '.join(select_fields)} FROM global_challenges"
+                cursor = await db.execute(query)
+            
+            global_challenges = await cursor.fetchall()
+            
+            if not global_challenges:
+                logger.info("No global challenges found to migrate")
+                return
+            
+            logger.info(f"Found {len(global_challenges)} global challenges to migrate")
+            
+            # Migrate each challenge
+            challenge_id_mapping = {}  # old_id -> new_id
+            
+            for challenge_data in global_challenges:
+                old_challenge_id = challenge_data[0]
+                title = challenge_data[1]
+                
+                # Insert into guild_challenges (only guild_id and title are required)
+                cursor = await db.execute(
+                    "INSERT INTO guild_challenges (guild_id, title) VALUES (?, ?)",
+                    (primary_guild_id, title)
+                )
+                new_challenge_id = cursor.lastrowid
+                challenge_id_mapping[old_challenge_id] = new_challenge_id
+                
+                logger.info(f"Migrated challenge: '{title}' (old ID: {old_challenge_id} -> new ID: {new_challenge_id})")
+            
+            # Get all challenge manga entries
+            cursor = await db.execute("SELECT challenge_id, manga_id, title, total_chapters FROM challenge_manga")
+            challenge_manga_entries = await cursor.fetchall()
+            
+            if challenge_manga_entries:
+                logger.info(f"Found {len(challenge_manga_entries)} manga entries to migrate")
+                
+                # Migrate manga entries
+                migrated_manga = 0
+                for old_challenge_id, manga_id, manga_title, total_chapters in challenge_manga_entries:
+                    if old_challenge_id in challenge_id_mapping:
+                        new_challenge_id = challenge_id_mapping[old_challenge_id]
+                        
+                        # Insert into guild_challenge_manga
+                        await db.execute(
+                            "INSERT INTO guild_challenge_manga (guild_id, challenge_id, manga_id, title, total_chapters) VALUES (?, ?, ?, ?, ?)",
+                            (primary_guild_id, new_challenge_id, manga_id, manga_title, total_chapters)
+                        )
+                        migrated_manga += 1
+                        
+                        logger.debug(f"Migrated manga: '{manga_title}' (ID: {manga_id}) to challenge {new_challenge_id}")
+                    else:
+                        logger.warning(f"Could not find mapping for challenge ID {old_challenge_id} for manga '{manga_title}' (ID: {manga_id})")
+                
+                logger.info(f"✅ Successfully migrated {migrated_manga} manga entries")
+            
+            await db.commit()
+            
+            logger.info("="*60)
+            logger.info(f"✅ MIGRATION COMPLETED SUCCESSFULLY")
+            logger.info(f"✅ Migrated {len(global_challenges)} challenges")
+            logger.info(f"✅ Migrated {migrated_manga if challenge_manga_entries else 0} manga entries")
+            logger.info(f"✅ All data moved to guild {primary_guild_id}")
+            logger.info("="*60)
+            
+            # Optional: Create backup of global tables before cleanup
+            logger.info("Creating backup of global challenge tables...")
+            
+            # Backup global_challenges
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS global_challenges_backup AS 
+                SELECT * FROM global_challenges
+            """)
+            
+            # Backup challenge_manga  
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS challenge_manga_backup AS 
+                SELECT * FROM challenge_manga
+            """)
+            
+            await db.commit()
+            logger.info("✅ Backup tables created: global_challenges_backup, challenge_manga_backup")
+            
+            # Note: We don't automatically delete the old tables to be safe
+            logger.info("🔸 Original global tables preserved for safety (global_challenges, challenge_manga)")
+            logger.info("🔸 You can manually drop them after verifying the migration worked correctly")
+            
+    except Exception as e:
+        logger.error(f"❌ Error during global challenges migration: {e}", exc_info=True)
+        raise
+
+
 # ------------------------------------------------------
 # INITIALIZE ALL DATABASE TABLES with Enhanced Logging
 # ------------------------------------------------------
@@ -1866,6 +2039,8 @@ async def init_db():
         ("Manga Challenges", init_manga_challenges_table),
         ("User Progress", init_user_progress_table),
         ("Global Challenges", init_global_challenges_table),
+        ("Guild Challenges", init_guild_challenges_table),
+        ("Guild Challenge Manga", init_guild_challenge_manga_table),
         ("Guild Challenge Roles", init_guild_challenge_roles_table),
         ("Guild Manga Channels", init_guild_manga_channels_table),
         ("Guild Bot Update Channels", init_guild_bot_update_channels_table),
