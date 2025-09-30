@@ -174,7 +174,7 @@ class MangaChallenges(commands.Cog):
 
     @app_commands.command(
         name="challenge-progress",
-        description="📚 View your progress in all guild manga challenges (optionally for another user) - Server Moderator only"
+        description="📚 View your progress in all guild manga challenges (optionally for another user)"
     )
     @app_commands.describe(member="Discord member to view progress for (optional)")
     @app_commands.default_permissions(manage_guild=True)

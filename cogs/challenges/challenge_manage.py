@@ -818,7 +818,7 @@ class ChallengeManage(commands.Cog):
 
     @app_commands.command(
         name="challenge-manage",
-        description="🎯 Interactive challenge management - add, remove, and manage manga in challenges (Server Moderator only)"
+        description="🎯 Interactive challenge management - add, remove, and manage manga in challenges"
     )
     @app_commands.default_permissions(manage_guild=True)
     async def challenge_manage(self, interaction: discord.Interaction):
