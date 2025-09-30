@@ -15,28 +15,22 @@ from database import (
     is_bot_moderator
 )
 
-# IDs from your setup
-CHANGELOG_CHANNEL_ID = 1420500068678762537
-ALLOWED_ROLE_ID = 1420451296304959641
-
 
 def changelog_only():
-    """App command check that allows only users with ALLOWED_ROLE_ID
-    or users with administrative/manage permissions as a fallback.
+    """App command check that allows only bot moderators and users with administrative/manage permissions as a fallback.
+    Updated to use bot moderator system instead of hardcoded role IDs.
     """
     async def predicate(interaction: discord.Interaction) -> bool:
         if interaction.guild is None:
             return False
 
         try:
+            # First check if user is a bot moderator
+            if await is_user_bot_moderator(interaction.user):
+                return True
+            
+            # Fallback to permission checks for server admins
             member = interaction.user if isinstance(interaction.user, discord.Member) else await interaction.guild.fetch_member(interaction.user.id)
-
-            # Role check
-            for r in getattr(member, "roles", []):
-                if getattr(r, "id", None) == ALLOWED_ROLE_ID:
-                    return True
-
-            # Fallback to permission checks
             perms = getattr(member, "guild_permissions", None)
             if perms:
                 return perms.manage_roles or perms.manage_guild or perms.administrator
@@ -329,10 +323,21 @@ class Changelog(commands.Cog):
                 if image_file:
                     embed.set_image(url=f"attachment://{image_file.filename}")
             
-            # Send to changelog channel
-            channel = self.bot.get_channel(CHANGELOG_CHANNEL_ID)
+            # Send to server's configured bot updates channel
+            channel_id = await get_guild_bot_update_channel(interaction.guild.id)
+            if not channel_id:
+                await interaction.followup.send(
+                    "❌ No bot updates channel configured for this server. Use `/set_bot_updates_channel` to configure one.", 
+                    ephemeral=True
+                )
+                return
+                
+            channel = self.bot.get_channel(channel_id)
             if not channel:
-                await interaction.followup.send("❌ Could not find changelog channel.", ephemeral=True)
+                await interaction.followup.send(
+                    "❌ Configured bot updates channel not found. Please reconfigure with `/set_bot_updates_channel`.", 
+                    ephemeral=True
+                )
                 return
             
             content_msg = role.mention if role else None
