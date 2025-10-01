@@ -75,26 +75,6 @@ def integrate_theme_system(bot):
                 logger.error(f"Error applying theme: {e}")
                 return embed
         
-        # Patch analytics embeds
-        analytics_cog = bot.get_cog('AnalyticsDashboard')
-        if analytics_cog:
-            logger.info("Patching AnalyticsDashboard cog with theme support")
-            logger.info("Integrating themes with Analytics Dashboard")
-            
-            # Store original method
-            original_analytics_command = analytics_cog.analytics_dashboard
-            
-            async def themed_analytics_command(interaction: discord.Interaction, period: Optional[str] = "year", metric: Optional[str] = "all"):
-                """Themed version of analytics dashboard"""
-                # Get user's theme
-                theme = theme_manager.get_effective_theme(interaction.user.id, interaction.guild.id if interaction.guild else None)
-                
-                # Call original method
-                await original_analytics_command(interaction, period, metric)
-            
-            # Replace the command (this is a simplified approach)
-            analytics_cog.analytics_dashboard = themed_analytics_command
-        
         # Patch other major cogs
         cogs_to_patch = ['AniList', 'Recommendations', 'Random', 'Profile', 'Leaderboard']
         
