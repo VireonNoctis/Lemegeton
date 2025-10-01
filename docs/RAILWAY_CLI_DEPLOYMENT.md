@@ -33,11 +33,11 @@ Choose:
 
 **For Multi-Guild (Public Bot)**:
 ```bash
-railway variables set DISCORD_TOKEN=your_discord_bot_token_here
-railway variables set STEAM_API_KEY=your_steam_api_key_here
-railway variables set BOT_ID=your_bot_user_id_here
-railway variables set DATABASE_PATH=/app/database.db
-railway variables set ENVIRONMENT=production
+railway variables --set "DISCORD_TOKEN=your_discord_bot_token_here"
+railway variables --set "STEAM_API_KEY=your_steam_api_key_here"
+railway variables --set "BOT_ID=your_bot_user_id_here"
+railway variables --set "DATABASE_PATH=/data/database.db"
+railway variables --set "ENVIRONMENT=production"
 ```
 
 **⚠️ IMPORTANT**: DO NOT set `GUILD_ID` for multi-guild deployment!
