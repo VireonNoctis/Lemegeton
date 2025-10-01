@@ -598,49 +598,50 @@ class Affinity(commands.Cog):
     # ---------------------------------------------------------
     @app_commands.command(
         name="affinity",
-        description="Compare your affinity with all registered AniList users"
+        description="Compare your affinity with all registered AniList users in this server"
     )
     async def affinity(self, interaction: discord.Interaction):
         """Calculate and display affinity rankings for the requesting user."""
         await interaction.response.defer()
         
         discord_id = interaction.user.id
+        guild_id = interaction.guild_id
         user_display = interaction.user.display_name
         
-        logger.info(f"Affinity command started by {user_display} (ID: {discord_id})")
+        logger.info(f"Affinity command started by {user_display} (ID: {discord_id}) in guild {guild_id}")
         
         try:
-            # Get user's AniList username
+            # Get user's AniList username (guild-aware)
             async with aiosqlite.connect(DB_PATH) as db:
                 cursor = await db.execute(
-                    "SELECT anilist_username FROM users WHERE discord_id = ?", 
-                    (discord_id,)
+                    "SELECT anilist_username FROM users WHERE discord_id = ? AND guild_id = ?", 
+                    (discord_id, guild_id)
                 )
                 row = await cursor.fetchone()
                 
                 if not row:
-                    logger.warning(f"User {user_display} (ID: {discord_id}) not registered")
+                    logger.warning(f"User {user_display} (ID: {discord_id}) not registered in guild {guild_id}")
                     await interaction.followup.send(
-                        "❌ You are not registered. Use `/register` to link your AniList account first.", 
+                        "❌ You are not registered. Use `/login` to link your AniList account first.", 
                         ephemeral=True
                     )
                     return
                     
                 anilist_username = row[0]
-                logger.info(f"Found AniList username: {anilist_username} for {user_display}")
+                logger.info(f"Found AniList username: {anilist_username} for {user_display} in guild {guild_id}")
 
-                # Get all other users
+                # Get all other users in the same guild (guild-aware)
                 cursor = await db.execute(
-                    "SELECT discord_id, anilist_username FROM users WHERE discord_id != ? AND anilist_username IS NOT NULL",
-                    (discord_id,)
+                    "SELECT discord_id, anilist_username FROM users WHERE discord_id != ? AND guild_id = ? AND anilist_username IS NOT NULL",
+                    (discord_id, guild_id)
                 )
                 all_users = await cursor.fetchall()
                 
-            logger.info(f"Found {len(all_users)} other users to compare with")
+            logger.info(f"Found {len(all_users)} other users to compare with in guild {guild_id}")
             
             if not all_users:
                 await interaction.followup.send(
-                    "❌ No other registered users found to compare with.", 
+                    "❌ No other registered users found in this server to compare with.", 
                     ephemeral=True
                 )
                 return
