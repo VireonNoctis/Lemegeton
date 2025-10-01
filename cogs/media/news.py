@@ -419,6 +419,15 @@ class NewsCog(commands.Cog):
                 status_lines.append("📅 Next check: <t:{int(time.time()) + 900}:R>")
         else:
             status_lines.append("⚠️ Background Task: Not running")
+            if hasattr(self, 'check_tweets'):
+                if self.check_tweets.failed():
+                    status_lines.append("❌ Task Status: Failed (use 'Restart Task' button)")
+                elif self.check_tweets.is_being_cancelled():
+                    status_lines.append("⏸️ Task Status: Being cancelled")
+                else:
+                    status_lines.append("⏹️ Task Status: Stopped (use 'Restart Task' button)")
+            else:
+                status_lines.append("❌ Task Status: Not initialized")
 
         status_lines.append(f"📊 Tracked Accounts: {len(accounts)}")
         status_lines.append(f"✅ Total Whitelist Keywords: {total_whitelist_keywords} across {len(all_account_whitelists)} accounts")
@@ -765,6 +774,42 @@ class NewsManagementView(discord.ui.View):
                 color=0xff0000
             )
             await interaction.edit_original_response(embed=error_embed)
+    
+    @discord.ui.button(label="Restart Task", style=discord.ButtonStyle.danger, emoji="🔄", row=2)
+    async def restart_task(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Restart the background tweet checking task."""
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            # Stop the task if it's running
+            if hasattr(self.cog, 'check_tweets') and self.cog.check_tweets.is_running():
+                self.cog.check_tweets.cancel()
+                await asyncio.sleep(1)  # Give it time to stop
+            
+            # Start the task
+            if not self.cog.check_tweets.is_running():
+                self.cog.check_tweets.start()
+                
+                embed = discord.Embed(
+                    title="✅ Task Restarted",
+                    description="Background tweet checking task has been restarted successfully.\n\nIt will check for new tweets every 15 minutes.",
+                    color=0x00ff00
+                )
+            else:
+                embed = discord.Embed(
+                    title="✅ Task Already Running",
+                    description="The background task is already running.",
+                    color=0x00ff00
+                )
+            
+        except Exception as e:
+            embed = discord.Embed(
+                title="❌ Restart Failed",
+                description=f"Failed to restart background task: {str(e)}",
+                color=0xff0000
+            )
+        
+        await interaction.followup.send(embed=embed, ephemeral=True)
 
 
 class AddAccountModal(discord.ui.Modal):
