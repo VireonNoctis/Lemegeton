@@ -461,6 +461,185 @@ class ThemeManager:
         # Default theme last
         return self.get_theme("default")
 
+
+class ThemeMainMenuView(discord.ui.View):
+    """Main menu view for unified theme system"""
+    
+    def __init__(self, theme_cog):
+        super().__init__(timeout=300.0)
+        self.theme_cog = theme_cog
+    
+    @discord.ui.button(label="🔍 Browse & Preview", style=discord.ButtonStyle.primary, row=0)
+    async def browse_preview(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Open interactive theme browser with live preview"""
+        try:
+            from .theme_showcase import ThemeCategoryView
+            
+            embed = discord.Embed(
+                title="🎨 Theme Preview & Browser",
+                description=(
+                    "Choose a category below to preview and test themes!\n\n"
+                    "🖱️ **How to use:**\n"
+                    "• Select a category from the dropdown\n"
+                    "• Navigate through themes with buttons\n"
+                    "• Preview how embeds look with each theme\n"
+                    "• Apply themes you like instantly"
+                ),
+                color=0x02A9FF
+            )
+            
+            embed.add_field(
+                name="🌟 Features",
+                value="• Live theme preview\n• Interactive navigation\n• Instant application\n• Random discovery",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="📊 Available",
+                value=f"• {len(self.theme_cog.theme_manager.themes)} total themes\n• 7 categories\n• Character themes\n• Seasonal themes",
+                inline=True
+            )
+            
+            view = ThemeCategoryView(self.theme_cog.theme_manager)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            logger.info(f"Theme browser opened for user {interaction.user.id}")
+        except Exception as e:
+            logger.error(f"Error opening theme browser: {e}")
+            await interaction.response.send_message("❌ Error opening theme browser.", ephemeral=True)
+    
+    @discord.ui.button(label="📋 View All Themes", style=discord.ButtonStyle.secondary, row=0)
+    async def showcase_all(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show comprehensive theme showcase"""
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            themes = list(self.theme_cog.theme_manager.themes.values())
+            
+            # Group themes by category
+            category_themes = {}
+            for theme in themes:
+                cat = theme.category.value
+                if cat not in category_themes:
+                    category_themes[cat] = []
+                category_themes[cat].append(theme)
+            
+            embed = discord.Embed(
+                title="🎨 Complete Theme Showcase",
+                description=f"Browse all **{len(themes)}** available themes organized by category:",
+                color=0x02A9FF
+            )
+            
+            for category_name, cat_themes in sorted(category_themes.items()):
+                theme_list = "\n".join([f"{t.emoji} **{t.name}** - {t.description[:50]}..." for t in cat_themes[:5]])
+                if len(cat_themes) > 5:
+                    theme_list += f"\n*... and {len(cat_themes) - 5} more*"
+                
+                embed.add_field(
+                    name=f"{category_name.replace('_', ' ').title()} ({len(cat_themes)} themes)",
+                    value=theme_list,
+                    inline=False
+                )
+            
+            embed.set_footer(text="Use 'Browse & Preview' to see themes in action!")
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            logger.info(f"Theme showcase sent to user {interaction.user.id}")
+        except Exception as e:
+            logger.error(f"Error in theme showcase: {e}")
+            await interaction.followup.send("❌ Error loading theme showcase.", ephemeral=True)
+    
+    @discord.ui.button(label="⚙️ My Current Theme", style=discord.ButtonStyle.secondary, row=1)
+    async def current_theme(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show current theme details"""
+        guild_id = interaction.guild.id if interaction.guild else None
+        theme = self.theme_cog.theme_manager.get_effective_theme(interaction.user.id, guild_id)
+        
+        embed = discord.Embed(
+            title=f"{theme.emoji} {theme.name}",
+            description=theme.description,
+            color=theme.colors.primary
+        )
+        
+        embed.add_field(
+            name="📁 Category",
+            value=theme.category.value.replace('_', ' ').title(),
+            inline=True
+        )
+        
+        if theme.character_source:
+            embed.add_field(name="📺 Source", value=theme.character_source, inline=True)
+        
+        color_info = f"**Primary:** #{theme.colors.primary:06X}\n**Secondary:** #{theme.colors.secondary:06X}\n**Accent:** #{theme.colors.accent:06X}"
+        embed.add_field(name="🎨 Colors", value=color_info, inline=False)
+        
+        embed.add_field(
+            name="📖 Sample",
+            value="**Title:** Attack on Titan\n**Status:** Completed\n**Score:** 9/10\n**Progress:** 139/139",
+            inline=False
+        )
+        
+        embed.set_footer(text=f"Theme: {theme.name} {theme.emoji}")
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        logger.info(f"Current theme details sent to user {interaction.user.id}")
+    
+    @discord.ui.button(label="🎲 Random Theme", style=discord.ButtonStyle.secondary, row=1)
+    async def random_theme(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Apply a random theme"""
+        import random
+        themes = list(self.theme_cog.theme_manager.themes.values())
+        theme = random.choice(themes)
+        
+        guild_id = interaction.guild.id if interaction.guild else None
+        self.theme_cog.theme_manager.set_user_theme(interaction.user.id, theme.id)
+        
+        embed = discord.Embed(
+            title=f"🎲 Random Theme Applied: {theme.name}",
+            description=f"Your theme has been randomly set to **{theme.name}**!\n\n*{theme.description}*",
+            color=theme.colors.primary
+        )
+        embed.set_footer(text=f"Feeling lucky? Theme: {theme.name} {theme.emoji}")
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        logger.info(f"Random theme '{theme.name}' applied for user {interaction.user.id}")
+    
+    @discord.ui.button(label="🌸 Seasonal Theme", style=discord.ButtonStyle.secondary, row=2)
+    async def seasonal_theme(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Apply current seasonal theme"""
+        theme = self.theme_cog.theme_manager.get_seasonal_theme()
+        
+        if not theme:
+            await interaction.response.send_message("❌ No seasonal theme available for current month.", ephemeral=True)
+            return
+        
+        guild_id = interaction.guild.id if interaction.guild else None
+        self.theme_cog.theme_manager.set_user_theme(interaction.user.id, theme.id)
+        
+        embed = discord.Embed(
+            title=f"🌸 Seasonal Theme Applied: {theme.name}",
+            description=f"Your theme has been set to the current seasonal theme **{theme.name}**!\n\n*{theme.description}*",
+            color=theme.colors.primary
+        )
+        embed.set_footer(text=f"Perfect for the season! Theme: {theme.name} {theme.emoji}")
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        logger.info(f"Seasonal theme '{theme.name}' applied for user {interaction.user.id}")
+    
+    @discord.ui.button(label="🔄 Reset to Default", style=discord.ButtonStyle.danger, row=2)
+    async def reset_theme(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Reset to default theme"""
+        self.theme_cog.theme_manager.set_user_theme(interaction.user.id, "default")
+        theme = self.theme_cog.theme_manager.get_theme("default")
+        
+        embed = discord.Embed(
+            title="🔄 Theme Reset",
+            description=f"Your theme has been reset to the default **{theme.name}** theme.",
+            color=theme.colors.primary
+        )
+        embed.set_footer(text=f"Back to basics! Theme: {theme.name} {theme.emoji}")
+        
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        logger.info(f"Theme reset to default for user {interaction.user.id}")
+
+
 class CustomThemeSystem(commands.Cog):
     """Custom Theme System for the AniList bot"""
     
@@ -489,77 +668,61 @@ class CustomThemeSystem(commands.Cog):
         
         return embed
     
-    @app_commands.command(name="theme", description="Manage your personal theme settings")
-    @app_commands.describe(
-        action="What would you like to do with themes?",
-        theme="Theme to apply (for 'set' action)",
-        category="Filter themes by category (for 'browse' action)"
-    )
-    @app_commands.choices(action=[
-        app_commands.Choice(name="Browse Available Themes", value="browse"),
-        app_commands.Choice(name="Set Theme", value="set"),
-        app_commands.Choice(name="My Current Theme", value="current"),
-        app_commands.Choice(name="Random Theme", value="random"),
-        app_commands.Choice(name="Seasonal Theme", value="seasonal"),
-        app_commands.Choice(name="Reset to Default", value="reset")
-    ])
-    @app_commands.choices(category=[
-        app_commands.Choice(name="All Categories", value="all"),
-        app_commands.Choice(name="Classic", value="classic"),
-        app_commands.Choice(name="Anime Characters", value="anime_character"),
-        app_commands.Choice(name="Seasonal", value="seasonal"),
-        app_commands.Choice(name="Mood-based", value="mood"),
-        app_commands.Choice(name="Gradient", value="gradient"),
-        app_commands.Choice(name="Neon", value="neon")
-    ])
-    async def theme_command(
-        self, 
-        interaction: discord.Interaction, 
-        action: str,
-        theme: Optional[str] = None,
-        category: Optional[str] = "all"
-    ):
-        """Main theme management command"""
+    @app_commands.command(name="theme", description="🎨 Complete theme customization system - Browse, preview, and apply themes")
+    async def theme_command(self, interaction: discord.Interaction):
+        """Unified theme management command with interactive interface"""
         try:
             guild_id = interaction.guild.id if interaction.guild else None
-            logger.info(f"Theme command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {guild_id}: action={action}, theme={theme}, category={category}")
+            logger.info(f"Theme command invoked by {interaction.user.display_name} ({interaction.user.id}) in guild {guild_id}")
             
-            await interaction.response.defer()
+            # Get current theme info
+            current_theme = self.theme_manager.get_effective_theme(interaction.user.id, guild_id)
+            total_themes = len(self.theme_manager.themes)
             
-            if action == "browse":
-                await self._handle_browse_themes(interaction, category)
-            elif action == "set":
-                await self._handle_set_theme(interaction, theme)
-            elif action == "current":
-                await self._handle_current_theme(interaction)
-            elif action == "random":
-                await self._handle_random_theme(interaction)
-            elif action == "seasonal":
-                await self._handle_seasonal_theme(interaction)
-            elif action == "reset":
-                await self._handle_reset_theme(interaction)
+            embed = discord.Embed(
+                title="🎨 Theme Management System",
+                description=(
+                    "Welcome to the complete theme customization system!\n\n"
+                    "**Your Current Theme:**\n"
+                    f"{current_theme.emoji} **{current_theme.name}**\n"
+                    f"*{current_theme.description}*\n\n"
+                    "Choose an option below to get started:"
+                ),
+                color=current_theme.colors.primary
+            )
+            
+            embed.add_field(
+                name="📊 System Info",
+                value=f"• **{total_themes}** total themes\n• **7** categories\n• Character themes\n• Seasonal themes",
+                inline=True
+            )
+            
+            embed.add_field(
+                name="🌟 Features",
+                value="• Live preview\n• Interactive browser\n• Quick apply\n• Random selection",
+                inline=True
+            )
+            
+            if interaction.guild:
+                embed.set_footer(text=f"Guild: {interaction.guild.name} | Theme: {current_theme.name} {current_theme.emoji}")
             else:
-                embed = discord.Embed(
-                    title="❌ Invalid Action",
-                    description="Please select a valid theme action.",
-                    color=0xFF0000
-                )
-                await interaction.followup.send(embed=embed)
+                embed.set_footer(text=f"DM | Theme: {current_theme.name} {current_theme.emoji}")
+            
+            view = ThemeMainMenuView(self)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            logger.info(f"Theme main menu sent to user {interaction.user.id} in guild {guild_id}")
         
         except Exception as e:
             guild_id = interaction.guild.id if interaction.guild else None
             logger.error(f"Error in theme command for user {interaction.user.id} in guild {guild_id}: {e}", exc_info=True)
             embed = discord.Embed(
                 title="❌ Error",
-                description="An error occurred while processing your theme request. Please try again.",
+                description="An error occurred while opening theme system. Please try again.",
                 color=0xFF0000
             )
             
             try:
-                if interaction.response.is_done():
-                    await interaction.followup.send(embed=embed)
-                else:
-                    await interaction.response.send_message(embed=embed)
+                await interaction.response.send_message(embed=embed, ephemeral=True)
             except Exception as follow_e:
                 logger.error(f"Failed to send error message: {follow_e}")
     

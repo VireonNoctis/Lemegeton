@@ -586,6 +586,8 @@ class NewsCog(commands.Cog):
                     print(f"📤 Will attempt to post {len(tweets_to_post)} tweets")
                     
                     posted_count = 0
+                    last_posted_tweet_id = None  # Track the last successfully posted tweet
+                    
                     for i, t in enumerate(tweets_to_post):
                         print(f"\n📝 Processing tweet {i+1}/{len(tweets_to_post)}")
                         print(f"🆔 Tweet ID: {t['id']}")
@@ -615,16 +617,24 @@ class NewsCog(commands.Cog):
                         try:
                             await channel.send(f"🐦 [@{handle}](https://twitter.com/{handle}) has posted a new update:\n{t['url']}")
                             posted_count += 1
+                            last_posted_tweet_id = str(t['id'])  # Track last successfully posted tweet
                             print(f"🎉 Successfully posted tweet {t['id']}")
                         except Exception as post_error:
                             print(f"❌ Failed to post tweet {t['id']}: {str(post_error)}")
                     
                     print(f"📊 Posted {posted_count}/{len(tweets_to_post)} tweets for @{handle}")
                     
+                    # Update last_tweet_id to prevent duplicates
+                    # Use the newest tweet ID from the fetch (even if not posted) to mark all as "seen"
+                    # This prevents re-processing tweets that were filtered by whitelist
                     if new_tweets:
-                        new_last_id = str(tweets[0]["id"])
-                        await database.update_last_tweet_id(handle, new_last_id)
-                        print(f"💾 Updated last tweet ID to: {new_last_id}")
+                        new_last_id = str(tweets[0]["id"])  # Newest tweet from API
+                        update_success = await database.update_last_tweet_id(handle, new_last_id)
+                        if update_success:
+                            print(f"💾 Updated last tweet ID to: {new_last_id}")
+                        else:
+                            print(f"❌ WARNING: Failed to update last tweet ID! Duplicates may occur on next check.")
+                            # Still continue - better to risk duplicates than stop processing other accounts
                         
                 except Exception as e:
                     print(f"❌ Error checking tweets for {handle}: {e}")
