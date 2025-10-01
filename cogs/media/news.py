@@ -412,11 +412,11 @@ class NewsCog(commands.Cog):
                 # Convert to timestamp for Discord formatting
                 timestamp = int(last_check.timestamp())
                 status_lines.append(f"🕐 Last Check: <t:{timestamp}:R>")
-                # Calculate next check (5 minutes after last check)
-                next_check_timestamp = timestamp + 300
+                # Calculate next check (15 minutes after last check)
+                next_check_timestamp = timestamp + 900  # 15 minutes = 900 seconds
                 status_lines.append(f"📅 Next Check: <t:{next_check_timestamp}:R>")
             else:
-                status_lines.append("📅 Next check: <t:{int(time.time()) + 300}:R>")
+                status_lines.append("📅 Next check: <t:{int(time.time()) + 900}:R>")
         else:
             status_lines.append("⚠️ Background Task: Not running")
 
@@ -522,105 +522,131 @@ class NewsCog(commands.Cog):
         
         await interaction.followup.send(embed=embed)
 
-    @tasks.loop(minutes=5)
+    @tasks.loop(minutes=15)
     async def check_tweets(self):
-        # Save the current check time at the start
-        check_time = datetime.utcnow()
-        await database.set_news_last_check(check_time)
-        
-        accounts = await database.get_news_accounts()
-        if not accounts:
-            return
-        for account in accounts:
-            handle = account['handle']
-            channel_id = account['channel_id']
-            last_tweet_id = account['last_tweet_id']
-            print(f"\n🔍 Processing account: @{handle}")
-            print(f"📺 Channel ID: {channel_id}")
-            print(f"📝 Last tweet ID: {last_tweet_id}")
+        """Check for new tweets every 15 minutes. This task is designed to recover from errors."""
+        try:
+            print(f"\n🔄 Tweet check started at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
             
-            try:
-                channel = self.bot.get_channel(channel_id)
-                if not channel:
-                    print(f"❌ Channel {channel_id} not found or not accessible")
-                    continue
-                    
-                print(f"✅ Found channel: #{channel.name} in {channel.guild.name}")
+            accounts = await database.get_news_accounts()
+            if not accounts:
+                print("⚠️ No news accounts configured")
+                return
                 
-                tweets = await fetch_tweets(handle, 5)
-                if not tweets:
-                    print(f"⚠️ No tweets returned for @{handle}")
-                    continue
-                    
-                print(f"📋 Got {len(tweets)} tweets for @{handle}")
+            for account in accounts:
+                handle = account['handle']
+                channel_id = account['channel_id']
+                last_tweet_id = account['last_tweet_id']
+                print(f"\n🔍 Processing account: @{handle}")
+                print(f"📺 Channel ID: {channel_id}")
+                print(f"📝 Last tweet ID: {last_tweet_id}")
                 
-                new_tweets = []
-                for i, t in enumerate(tweets):
-                    tid = str(t["id"])
-                    print(f"🆔 Tweet {i+1}: ID={tid}")
-                    
-                    if last_tweet_id and tid == last_tweet_id:
-                        print(f"🛑 Found last known tweet ID {tid}, stopping here")
-                        break
-                    new_tweets.append(t)
-                    
-                print(f"🆕 Found {len(new_tweets)} new tweets")
-                
-                if not new_tweets:
-                    print(f"⚠️ No new tweets for @{handle}")
-                    continue
-                
-                new_tweets.reverse()
-                tweets_to_post = new_tweets[-3:]  # Get last 3
-                print(f"📤 Will attempt to post {len(tweets_to_post)} tweets")
-                
-                posted_count = 0
-                for i, t in enumerate(tweets_to_post):
-                    print(f"\n📝 Processing tweet {i+1}/{len(tweets_to_post)}")
-                    print(f"🆔 Tweet ID: {t['id']}")
-                    print(f"📄 Tweet text: {t['text'][:100]}...")
-                    
-                    should_post = True
-                    account_whitelist = await database.get_account_whitelist(handle)
-                    print(f"✅ Checking against {len(account_whitelist)} whitelist keywords for account @{handle}")
-                    
-                    if account_whitelist:  # If account-specific whitelist exists, tweet must contain at least one keyword
-                        should_post = False
-                        for keyword in account_whitelist:
-                            if keyword.lower() in t["text"].lower():
-                                print(f"✅ Tweet approved by whitelist keyword: '{keyword}' for @{handle}")
-                                should_post = True
-                                break
-                        if not should_post:
-                            print(f"🚫 Tweet blocked: no whitelist keywords found for @{handle}")
-                    else:
-                        print(f"✅ No whitelist configured for @{handle}, allowing all tweets")
-                            
-                    if not should_post:
-                        print(f"⏭️ Skipping tweet due to whitelist")
+                try:
+                    channel = self.bot.get_channel(channel_id)
+                    if not channel:
+                        print(f"❌ Channel {channel_id} not found or not accessible")
                         continue
                         
-                    print(f"✅ Tweet passed all filters, posting...")
-                    try:
-                        await channel.send(f"🐦 [@{handle}](https://twitter.com/{handle}) has posted a new update:\n{t['url']}")
-                        posted_count += 1
-                        print(f"🎉 Successfully posted tweet {t['id']}")
-                    except Exception as post_error:
-                        print(f"❌ Failed to post tweet {t['id']}: {str(post_error)}")
-                
-                print(f"📊 Posted {posted_count}/{len(tweets_to_post)} tweets for @{handle}")
-                
-                if new_tweets:
-                    new_last_id = str(tweets[0]["id"])
-                    await database.update_last_tweet_id(handle, new_last_id)
-                    print(f"💾 Updated last tweet ID to: {new_last_id}")
+                    print(f"✅ Found channel: #{channel.name} in {channel.guild.name}")
                     
-            except Exception as e:
-                print(f"❌ Error checking tweets for {handle}: {e}")
+                    tweets = await fetch_tweets(handle, 5)
+                    if not tweets:
+                        print(f"⚠️ No tweets returned for @{handle}")
+                        continue
+                        
+                    print(f"📋 Got {len(tweets)} tweets for @{handle}")
+                    
+                    new_tweets = []
+                    for i, t in enumerate(tweets):
+                        tid = str(t["id"])
+                        print(f"🆔 Tweet {i+1}: ID={tid}")
+                        
+                        if last_tweet_id and tid == last_tweet_id:
+                            print(f"🛑 Found last known tweet ID {tid}, stopping here")
+                            break
+                        new_tweets.append(t)
+                        
+                    print(f"🆕 Found {len(new_tweets)} new tweets")
+                    
+                    if not new_tweets:
+                        print(f"⚠️ No new tweets for @{handle}")
+                        continue
+                    
+                    new_tweets.reverse()
+                    tweets_to_post = new_tweets[-3:]  # Get last 3
+                    print(f"📤 Will attempt to post {len(tweets_to_post)} tweets")
+                    
+                    posted_count = 0
+                    for i, t in enumerate(tweets_to_post):
+                        print(f"\n📝 Processing tweet {i+1}/{len(tweets_to_post)}")
+                        print(f"🆔 Tweet ID: {t['id']}")
+                        print(f"📄 Tweet text: {t['text'][:100]}...")
+                        
+                        should_post = True
+                        account_whitelist = await database.get_account_whitelist(handle)
+                        print(f"✅ Checking against {len(account_whitelist)} whitelist keywords for account @{handle}")
+                        
+                        if account_whitelist:  # If account-specific whitelist exists, tweet must contain at least one keyword
+                            should_post = False
+                            for keyword in account_whitelist:
+                                if keyword.lower() in t["text"].lower():
+                                    print(f"✅ Tweet approved by whitelist keyword: '{keyword}' for @{handle}")
+                                    should_post = True
+                                    break
+                            if not should_post:
+                                print(f"🚫 Tweet blocked: no whitelist keywords found for @{handle}")
+                        else:
+                            print(f"✅ No whitelist configured for @{handle}, allowing all tweets")
+                                
+                        if not should_post:
+                            print(f"⏭️ Skipping tweet due to whitelist")
+                            continue
+                            
+                        print(f"✅ Tweet passed all filters, posting...")
+                        try:
+                            await channel.send(f"🐦 [@{handle}](https://twitter.com/{handle}) has posted a new update:\n{t['url']}")
+                            posted_count += 1
+                            print(f"🎉 Successfully posted tweet {t['id']}")
+                        except Exception as post_error:
+                            print(f"❌ Failed to post tweet {t['id']}: {str(post_error)}")
+                    
+                    print(f"📊 Posted {posted_count}/{len(tweets_to_post)} tweets for @{handle}")
+                    
+                    if new_tweets:
+                        new_last_id = str(tweets[0]["id"])
+                        await database.update_last_tweet_id(handle, new_last_id)
+                        print(f"💾 Updated last tweet ID to: {new_last_id}")
+                        
+                except Exception as e:
+                    print(f"❌ Error checking tweets for {handle}: {e}")
+                    import traceback
+                    traceback.print_exc()
+            
+            # Save the check time at the END after all work is done
+            check_time = datetime.utcnow()
+            await database.set_news_last_check(check_time)
+            print(f"✅ Tweet check completed at {check_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+        
+        except Exception as e:
+            # Catch any uncaught exceptions to prevent the task from stopping
+            print(f"💥 CRITICAL ERROR in check_tweets task: {e}")
+            import traceback
+            traceback.print_exc()
+            # Task will continue and retry in 15 minutes
 
     @check_tweets.before_loop
     async def before_check_tweets(self):
         await self.bot.wait_until_ready()
+        print("✅ Tweet checker task is ready to start")
+
+    @check_tweets.error
+    async def check_tweets_error(self, error):
+        """Handle errors in the check_tweets task to prevent it from stopping permanently."""
+        print(f"💥 ERROR in check_tweets task: {error}")
+        import traceback
+        traceback.print_exc()
+        print("⏰ Task will restart in 15 minutes...")
+        # The task will automatically restart after the interval
 
 
 class NewsManagementView(discord.ui.View):
