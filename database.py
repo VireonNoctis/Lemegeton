@@ -3089,6 +3089,27 @@ async def init_news_tables():
                 )
             """)
             
+            # Create news_metadata table for storing system metadata
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS news_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create account_whitelist table for account-specific keywords
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS account_whitelist (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    handle TEXT NOT NULL,
+                    keyword TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (handle) REFERENCES news_accounts (handle) ON DELETE CASCADE,
+                    UNIQUE (handle, keyword)
+                )
+            """)
+            
             await db.commit()
             logger.info("✅ News tables initialized successfully")
             
@@ -3210,20 +3231,20 @@ async def update_last_tweet_id(handle: str, tweet_id: str) -> bool:
         return False
 
 
-async def get_news_filters():
-    """Get all news filters."""
+async def get_news_whitelist():
+    """Get all news whitelist keywords."""
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             async with db.execute("SELECT word FROM news_filters") as cursor:
                 rows = await cursor.fetchall()
                 return [row[0] for row in rows]
     except Exception as e:
-        logger.error(f"Error getting news filters: {e}", exc_info=True)
+        logger.error(f"Error getting news whitelist: {e}", exc_info=True)
         return []
 
 
-async def add_news_filter(word: str) -> bool:
-    """Add a new news filter word."""
+async def add_news_whitelist(word: str) -> bool:
+    """Add a new news whitelist keyword."""
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
@@ -3231,25 +3252,152 @@ async def add_news_filter(word: str) -> bool:
                 (word.lower(),)
             )
             await db.commit()
-            logger.info(f"Added news filter: {word}")
+            logger.info(f"Added news whitelist keyword: {word}")
             return True
     except Exception as e:
-        logger.error(f"Error adding news filter {word}: {e}", exc_info=True)
+        logger.error(f"Error adding news whitelist keyword {word}: {e}", exc_info=True)
         return False
 
 
-async def remove_news_filter(word: str) -> bool:
-    """Remove a news filter word."""
+async def remove_news_whitelist(word: str) -> bool:
+    """Remove a news whitelist keyword."""
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute("DELETE FROM news_filters WHERE word = ?", (word.lower(),))
             await db.commit()
             if cursor.rowcount > 0:
-                logger.info(f"Removed news filter: {word}")
+                logger.info(f"Removed news whitelist keyword: {word}")
                 return True
             else:
-                logger.warning(f"News filter not found: {word}")
+                logger.warning(f"News whitelist keyword not found: {word}")
                 return False
     except Exception as e:
-        logger.error(f"Error removing news filter {word}: {e}", exc_info=True)
+        logger.error(f"Error removing news whitelist keyword {word}: {e}", exc_info=True)
         return False
+
+
+async def get_news_last_check() -> Optional[datetime]:
+    """Get the last news check timestamp."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT value FROM news_metadata WHERE key = 'last_check'") as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    # Parse the ISO format datetime
+                    return datetime.fromisoformat(row[0])
+                return None
+    except Exception as e:
+        logger.error(f"Error getting news last check time: {e}", exc_info=True)
+        return None
+
+
+async def set_news_last_check(check_time: datetime) -> bool:
+    """Set the last news check timestamp."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO news_metadata (key, value, updated_at) VALUES ('last_check', ?, CURRENT_TIMESTAMP)",
+                (check_time.isoformat(),)
+            )
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error setting news last check time: {e}", exc_info=True)
+        return False
+
+
+async def get_news_last_check() -> Optional[datetime]:
+    """Get the last news check timestamp."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT value FROM news_metadata WHERE key = 'last_check'") as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    # Parse the ISO format datetime
+                    return datetime.fromisoformat(row[0])
+                return None
+    except Exception as e:
+        logger.error(f"Error getting news last check time: {e}", exc_info=True)
+        return None
+
+
+async def set_news_last_check(check_time: datetime) -> bool:
+    """Set the last news check timestamp."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO news_metadata (key, value, updated_at) VALUES ('last_check', ?, CURRENT_TIMESTAMP)",
+                (check_time.isoformat(),)
+            )
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error setting news last check time: {e}", exc_info=True)
+        return False
+
+
+
+# Account-specific whitelist functions
+async def get_account_whitelist(handle: str) -> List[str]:
+    """Get whitelist keywords for a specific account."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT keyword FROM account_whitelist WHERE handle = ?", (handle,)) as cursor:
+                rows = await cursor.fetchall()
+                return [row[0] for row in rows]
+    except Exception as e:
+        logger.error(f"Error getting account whitelist for {handle}: {e}", exc_info=True)
+        return []
+
+
+async def add_account_whitelist(handle: str, keyword: str) -> bool:
+    """Add a whitelist keyword for a specific account."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO account_whitelist (handle, keyword) VALUES (?, ?)",
+                (handle, keyword.lower())
+            )
+            await db.commit()
+            logger.info(f"Added whitelist keyword '{keyword}' for account {handle}")
+            return True
+    except Exception as e:
+        logger.error(f"Error adding whitelist keyword '{keyword}' for {handle}: {e}", exc_info=True)
+        return False
+
+
+async def remove_account_whitelist(handle: str, keyword: str) -> bool:
+    """Remove a whitelist keyword for a specific account."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "DELETE FROM account_whitelist WHERE handle = ? AND keyword = ?",
+                (handle, keyword.lower())
+            )
+            await db.commit()
+            if cursor.rowcount > 0:
+                logger.info(f"Removed whitelist keyword '{keyword}' for account {handle}")
+                return True
+            else:
+                logger.warning(f"Whitelist keyword '{keyword}' not found for account {handle}")
+                return False
+    except Exception as e:
+        logger.error(f"Error removing whitelist keyword '{keyword}' for {handle}: {e}", exc_info=True)
+        return False
+
+
+async def get_all_account_whitelists() -> Dict[str, List[str]]:
+    """Get all account-specific whitelists as a dictionary."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT handle, keyword FROM account_whitelist ORDER BY handle, keyword") as cursor:
+                rows = await cursor.fetchall()
+                whitelists = {}
+                for handle, keyword in rows:
+                    if handle not in whitelists:
+                        whitelists[handle] = []
+                    whitelists[handle].append(keyword)
+                return whitelists
+    except Exception as e:
+        logger.error(f"Error getting all account whitelists: {e}", exc_info=True)
+        return {}
