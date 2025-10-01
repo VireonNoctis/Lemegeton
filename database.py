@@ -2026,6 +2026,15 @@ async def init_db():
     logger.info("STARTING DATABASE INITIALIZATION")
     logger.info("="*60)
     
+    # Ensure database directory exists (critical for Railway deployment)
+    db_dir = DB_PATH.parent
+    if not db_dir.exists():
+        logger.info(f"Creating database directory: {db_dir}")
+        db_dir.mkdir(parents=True, exist_ok=True)
+        logger.info("✅ Database directory created successfully")
+    else:
+        logger.info(f"Database directory already exists: {db_dir}")
+    
     # List of table initialization functions and their names
     table_init_functions = [
         ("Users", init_users_table),
