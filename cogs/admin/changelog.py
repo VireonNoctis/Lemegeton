@@ -397,7 +397,24 @@ class Changelog(commands.Cog):
                     )
                     return
                 
-                content_msg = role.mention if role else None
+                content_msg = None
+                if role:
+                    # Check if role is mentionable
+                    if role.mentionable:
+                        content_msg = role.mention
+                    else:
+                        # Try to temporarily make role mentionable if we have permissions
+                        try:
+                            if interaction.guild.me.guild_permissions.manage_roles:
+                                await role.edit(mentionable=True)
+                                content_msg = role.mention
+                                await role.edit(mentionable=False)  # Reset after use
+                            else:
+                                content_msg = f"@{role.name} (Role not mentionable)"
+                        except discord.Forbidden:
+                            content_msg = f"@{role.name} (No permission to mention)"
+                        except Exception:
+                            content_msg = f"@{role.name} (Could not mention)"
                 
                 if image_file:
                     await channel.send(content=content_msg, embed=embed, file=image_file)
