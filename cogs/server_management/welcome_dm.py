@@ -46,7 +46,7 @@ class WelcomeDM(commands.Cog):
                 "get welcome message",
                 query,
                 (guild_id,),
-                fetch_one=True
+                fetch_type='one'
             )
             return result[0] if result else None
         except Exception as e:
@@ -171,37 +171,25 @@ class WelcomeDM(commands.Cog):
             success = await self.set_welcome_message(interaction.guild_id, file_content.strip())
             
             if success:
-                # Create preview embed
-                preview_embed = discord.Embed(
-                    title="✅ Welcome DM Updated",
-                    description="The welcome DM message has been successfully updated!",
-                    color=discord.Color.green()
-                )
-                
                 # Show preview with placeholder replacements
                 preview_content = file_content.strip()
                 preview_content = preview_content.replace("{user}", "NewUser")
                 preview_content = preview_content.replace("{server}", interaction.guild.name)
                 preview_content = preview_content.replace("{mention}", "@NewUser")
                 
-                if len(preview_content) > 1024:
-                    preview_content = preview_content[:1021] + "..."
-                
-                preview_embed.add_field(
-                    name="📋 Message Preview",
-                    value=f"```\n{preview_content}\n```",
-                    inline=False
+                # Build the response message
+                response = (
+                    "✅ **Welcome DM Updated Successfully!**\n\n"
+                    "**Preview:**\n"
+                    f"{preview_content}\n\n"
+                    "**Available Placeholders:**\n"
+                    "• `{user}` - Member's display name\n"
+                    "• `{server}` - Server name\n"
+                    "• `{mention}` - Mention the user\n\n"
+                    "_New members will receive this message when they join the server._"
                 )
                 
-                preview_embed.add_field(
-                    name="🏷️ Available Placeholders",
-                    value="• `{user}` - Member's display name\n• `{server}` - Server name\n• `{mention}` - Mention the user",
-                    inline=False
-                )
-                
-                preview_embed.set_footer(text="New members will receive this message when they join the server.")
-                
-                await interaction.followup.send(embed=preview_embed, ephemeral=True)
+                await interaction.followup.send(response, ephemeral=True)
             else:
                 await interaction.followup.send(
                     "❌ **Database Error**\n\nFailed to save the welcome message. Please try again.",
@@ -238,44 +226,32 @@ class WelcomeDM(commands.Cog):
         welcome_message = await self.get_welcome_message(interaction.guild_id)
         
         if welcome_message:
-            # Create status embed
-            status_embed = discord.Embed(
-                title="📨 Welcome DM Configuration",
-                description="Welcome DM is currently **enabled** for this server.",
-                color=discord.Color.blue()
-            )
-            
             # Show preview with placeholder replacements
             preview_content = welcome_message
             preview_content = preview_content.replace("{user}", "NewUser")
             preview_content = preview_content.replace("{server}", interaction.guild.name)
             preview_content = preview_content.replace("{mention}", "@NewUser")
             
-            if len(preview_content) > 1024:
-                preview_content = preview_content[:1021] + "..."
-            
-            status_embed.add_field(
-                name="📋 Current Message",
-                value=f"```\n{preview_content}\n```",
-                inline=False
+            # Build the response message
+            response = (
+                "📨 **Welcome DM Configuration**\n\n"
+                "Welcome DM is currently **enabled** for this server.\n\n"
+                "**Current Message:**\n"
+                f"{preview_content}\n\n"
+                "**Available Placeholders:**\n"
+                "• `{user}` - Member's display name\n"
+                "• `{server}` - Server name\n"
+                "• `{mention}` - Mention the user\n\n"
+                "_Use /set-welcome-dm to update the message._"
             )
-            
-            status_embed.add_field(
-                name="🏷️ Available Placeholders",
-                value="• `{user}` - Member's display name\n• `{server}` - Server name\n• `{mention}` - Mention the user",
-                inline=False
-            )
-            
-            status_embed.set_footer(text="Use /set-welcome-dm to update the message.")
-            
         else:
-            status_embed = discord.Embed(
-                title="📨 Welcome DM Configuration",
-                description="Welcome DM is currently **disabled** for this server.\n\nUse `/set-welcome-dm` to configure a welcome message.",
-                color=discord.Color.orange()
+            response = (
+                "📨 **Welcome DM Configuration**\n\n"
+                "Welcome DM is currently **disabled** for this server.\n\n"
+                "Use `/set-welcome-dm` to configure a welcome message."
             )
         
-        await interaction.response.send_message(embed=status_embed, ephemeral=True)
+        await interaction.response.send_message(response, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
