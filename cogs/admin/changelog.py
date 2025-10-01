@@ -631,52 +631,40 @@ class Changelog(commands.Cog):
             await interaction.followup.send("❌ Failed to set bot updates channel.", ephemeral=True)
             raise e
 
-    @changelog_only()
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.command(name="show_bot_updates_channel", description="Show currently configured bot updates channel (Admin only)")
-    async def show_bot_updates_channel(self, interaction: discord.Interaction):
-        """Show the currently configured bot updates channel."""
-        if interaction.guild is None:
-            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
-            return
-            
-        try:
-            channel_id = await get_guild_bot_update_channel(interaction.guild.id)
-            if channel_id:
-                channel = self.bot.get_channel(channel_id)
-                if channel:
-                    await interaction.response.send_message(f"Current bot updates channel: {channel.mention}", ephemeral=True)
-                else:
-                    await interaction.response.send_message(f"Configured channel id {channel_id} is not visible to the bot.", ephemeral=True)
-            else:
-                await interaction.response.send_message("No bot updates channel configured for this server.", ephemeral=True)
-                
-        except Exception as e:
-            await interaction.response.send_message("❌ Failed to get bot updates channel information.", ephemeral=True)
-            raise e
-
-    @changelog_only()
-    @app_commands.default_permissions(manage_guild=True)
-    @app_commands.command(name="remove_bot_updates_channel", description="Remove bot updates channel configuration (Admin only)")
-    async def remove_bot_updates_channel(self, interaction: discord.Interaction):
-        """Remove the bot updates channel configuration for this server."""
-        if interaction.guild is None:
-            await interaction.response.send_message("This command must be used in a server.", ephemeral=True)
-            return
-            
-        await interaction.response.defer(ephemeral=True)
-        try:
-            channel_id = await get_guild_bot_update_channel(interaction.guild.id)
-            if not channel_id:
-                await interaction.followup.send("No bot updates channel is currently configured.", ephemeral=True)
-                return
-                
-            await remove_guild_bot_update_channel(interaction.guild.id)
-            await interaction.followup.send("✅ Bot updates channel configuration has been removed.", ephemeral=True)
-            
-        except Exception as e:
-            await interaction.followup.send("❌ Failed to remove bot updates channel configuration.", ephemeral=True)
-            raise e
+    # ============================================================================
+    # DEPRECATED COMMANDS - USE /server-config INSTEAD
+    # These commands have been consolidated into the unified /server-config interface
+    # Located in: cogs/server_management/server_config.py
+    # Kept here commented for reference only
+    # ============================================================================
+    
+    # @changelog_only()
+    # @app_commands.default_permissions(manage_guild=True)
+    # @app_commands.command(name="show_bot_updates_channel", description="⚠️ DEPRECATED - Use /server-config instead")
+    # async def show_bot_updates_channel(self, interaction: discord.Interaction):
+    #     """DEPRECATED: Show the currently configured bot updates channel. Use /server-config instead."""
+    #     await interaction.response.send_message(
+    #         "⚠️ **This command has been deprecated**\n\n"
+    #         "Please use `/server-config` for a unified configuration interface.\n"
+    #         "You can view bot updates channels and all server settings there.",
+    #         ephemeral=True
+    #     )
+    
+    # @changelog_only()
+    # @app_commands.default_permissions(manage_guild=True)
+    # @app_commands.command(name="remove_bot_updates_channel", description="⚠️ DEPRECATED - Use /server-config instead")
+    # async def remove_bot_updates_channel(self, interaction: discord.Interaction):
+    #     """DEPRECATED: Remove the bot updates channel configuration. Use /server-config instead."""
+    #     await interaction.response.send_message(
+    #         "⚠️ **This command has been deprecated**\n\n"
+    #         "Please use `/server-config` for a unified configuration interface.\n"
+    #         "You can manage bot updates channels and all server settings there.",
+    #         ephemeral=True
+    #     )
+    
+    # ============================================================================
+    # END DEPRECATED COMMANDS
+    # ============================================================================
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Changelog(bot))

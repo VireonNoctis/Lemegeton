@@ -472,100 +472,56 @@ class InviteTracker(commands.Cog):
         self.invite_cache[invite.guild.id] = [inv for inv in guild_invites if inv.code != invite.code]
         logger.info(f"Removed deleted invite {invite.code} from cache")
     
-    @app_commands.command(
-        name="set_invite_channel",
-        description="🔧 Set the channel for invite tracking messages (Server Moderator only)"
-    )
-    @app_commands.describe(
-        channel="The channel where invite join/leave messages will be sent"
-    )
-    @app_commands.default_permissions(manage_guild=True)
-    async def set_invite_channel(
-        self,
-        interaction: discord.Interaction,
-        channel: discord.TextChannel
-    ):
-        """Set the announcement channel for invite tracking"""
-        # Defer immediately to prevent timeout
-        try:
-            await interaction.response.defer()
-        except discord.errors.NotFound:
-            logger.error(f"Interaction token expired for set_invite_channel command")
-            return
-        except Exception as e:
-            logger.error(f"Failed to defer interaction for set_invite_channel: {e}")
-            return
-        
-        guild_id = interaction.guild.id
-        
-        # Check if bot has permission to send messages in the channel
-        permissions = channel.permissions_for(interaction.guild.me)
-        if not permissions.send_messages:
-            await interaction.followup.send(
-                f"❌ I don't have permission to send messages in {channel.mention}.",
-                ephemeral=True
-            )
-            return
-        
-        try:
-            # Update database
-            await execute_db_operation(
-                "set invite channel",
-                """
-                INSERT OR REPLACE INTO invite_tracker_settings 
-                (guild_id, announcement_channel_id, updated_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-                """,
-                (guild_id, channel.id)
-            )
-            
-            # Update cache
-            self.announcement_channels[guild_id] = channel.id
-            guild = interaction.guild
-            # Initialize invite cache for this guild immediately so future
-            # joins can be tracked without waiting for a global refresh.
-            try:
-                invites = await guild.invites()
-                self.invite_cache[guild_id] = invites
-                await self._update_invites_in_db(guild_id, invites)
-                logger.info(f"Initialized invite cache for {guild.name} with {len(invites)} invites")
-            except discord.Forbidden:
-                logger.warning(f"Missing permissions to initialize invites for {guild.name}")
-            except Exception as e:
-                logger.error(f"Failed to initialize invite cache for {guild.name}: {e}")
-
-            embed = discord.Embed(
-                title="🔧 Invite Channel Configuration",
-                description=f"✅ **Successfully configured invite tracking!**\n\nInvite tracking messages will now be sent to {channel.mention}",
-                color=0x00FF00
-            )
-            
-            embed.add_field(
-                name="Channel Settings",
-                value=f"```\nChannel: #{channel.name}\nChannel ID: {channel.id}\nPermissions: ✅ Send Messages\nStatus: ✅ Saved to Database```",
-                inline=False
-            )
-            
-            embed.add_field(
-                name="What happens next?",
-                value="• New members joining will trigger themed messages\n• Members leaving will trigger departure messages\n• All messages will only be sent to this channel",
-                inline=False
-            )
-            
-            embed.set_footer(text="Use /invite_channel_info to view current settings • Messages will only appear in the configured channel")
-            
-            await interaction.followup.send(embed=embed)
-            logger.info(f"Set invite channel to #{channel.name} for guild {interaction.guild.name}")
-            
-        except Exception as e:
-            logger.error(f"Error setting invite channel: {e}")
-            try:
-                await interaction.followup.send(
-                    "❌ An error occurred while setting the invite channel.",
-                    ephemeral=True
-                )
-            except:
-                logger.error("Failed to send error message - interaction may have expired")
+    # ============================================================================
+    # DEPRECATED COMMAND - USE /server-config INSTEAD
+    # This command has been consolidated into the unified /server-config interface
+    # Located in: cogs/server_management/server_config.py
+    # Kept here commented for reference only
+    # ============================================================================
+    
+    # @app_commands.command(
+    #     name="set_invite_channel",
+    #     description="⚠️ DEPRECATED - Use /server-config instead"
+    # )
+    # @app_commands.describe(
+    #     channel="The channel where invite join/leave messages will be sent"
+    # )
+    # @app_commands.default_permissions(manage_guild=True)
+    # async def set_invite_channel(
+    #     self,
+    #     interaction: discord.Interaction,
+    #     channel: discord.TextChannel
+    # ):
+    #     """DEPRECATED: Set the announcement channel for invite tracking. Use /server-config instead."""
+    #     await interaction.response.send_message(
+    #         "⚠️ **This command has been deprecated**\n\n"
+    #         "Please use `/server-config` for a unified configuration interface.\n"
+    #         "You can manage invite channels, moderator roles, and all server settings there.",
+    #         ephemeral=True
+    #     )
+    
+    # ============================================================================
+    # END DEPRECATED COMMAND
+    # Leftover code from deprecated command above - commented out
+    # ============================================================================
+    #         value="• New members joining will trigger themed messages\n• Members leaving will trigger departure messages\n• All messages will only be sent to this channel",
+    #         inline=False
+    #     )
+    #     
+    #     embed.set_footer(text="Use /invite_channel_info to view current settings • Messages will only appear in the configured channel")
+    #     
+    #     await interaction.followup.send(embed=embed)
+    #     logger.info(f"Set invite channel to #{channel.name} for guild {interaction.guild.name}")
+    #     
+    # except Exception as e:
+    #     logger.error(f"Error setting invite channel: {e}")
+    #     try:
+    #         await interaction.followup.send(
+    #             "❌ An error occurred while setting the invite channel.",
+    #             ephemeral=True
+    #         )
+    #     except:
+    #         logger.error("Failed to send error message - interaction may have expired")
     
     @app_commands.command(
         name="invite_channel_info",

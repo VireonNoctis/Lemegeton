@@ -187,6 +187,34 @@ class ChallengeManagementView(discord.ui.View):
             logger.error(f"Error listing challenges for guild {self.guild_id}: {e}", exc_info=True)
             await interaction.followup.send("❌ Error retrieving challenge list.", ephemeral=True)
 
+    @discord.ui.button(label="🎭 Manage Roles", style=discord.ButtonStyle.primary, emoji="🎭", row=1)
+    async def manage_roles_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show challenge role management submenu."""
+        logger.info(f"Manage roles button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
+        
+        # Show role management submenu
+        embed = discord.Embed(
+            title="🎭 Challenge Role Management",
+            description=f"Manage automatic role rewards for **{interaction.guild.name}** challenges.\n\n"
+                       "When users reach specific point thresholds in challenges, they can automatically receive roles!",
+            color=discord.Color.purple()
+        )
+        
+        embed.add_field(
+            name="⚙️ Available Actions",
+            value=(
+                "**➕ Setup Role** - Configure a role for a challenge threshold\n"
+                "**📋 View Roles** - See all configured challenge roles\n"
+                "**🗑️ Remove Role** - Remove a role configuration"
+            ),
+            inline=False
+        )
+        
+        embed.set_footer(text="Configure roles to automatically reward challenge participants")
+        
+        view = ChallengeRoleManagementView(self.user_id, self.guild_id)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
     @discord.ui.button(label="🔍 Search Manga", style=discord.ButtonStyle.primary, emoji="🔍")
     async def search_manga_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Show information about a specific manga."""
@@ -209,6 +237,252 @@ class ChallengeManagementView(discord.ui.View):
         logger.info(f"Delete challenge button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
         modal = DeleteChallengeModal(self.guild_id)
         await interaction.response.send_modal(modal)
+
+
+class ChallengeRoleManagementView(discord.ui.View):
+    """View for managing challenge roles - submenu of main challenge management."""
+    
+    def __init__(self, user_id: int, guild_id: int):
+        super().__init__(timeout=VIEW_TIMEOUT)
+        self.user_id = user_id
+        self.guild_id = guild_id
+        logger.debug(f"Created ChallengeRoleManagementView for user ID: {user_id} in guild {guild_id}")
+    
+    @discord.ui.button(label="➕ Setup Role", style=discord.ButtonStyle.success, emoji="➕")
+    async def setup_role_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show modal for setting up a challenge role."""
+        logger.info(f"Setup role button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
+        modal = SetupChallengeRoleModal(self.guild_id)
+        await interaction.response.send_modal(modal)
+    
+    @discord.ui.button(label="📋 View Roles", style=discord.ButtonStyle.primary, emoji="📋")
+    async def view_roles_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show all configured challenge roles."""
+        logger.info(f"View roles button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
+        
+        await interaction.response.defer(ephemeral=True)
+        try:
+            from database import get_guild_challenge_roles
+            
+            roles_config = await get_guild_challenge_roles(self.guild_id)
+            
+            if not roles_config:
+                embed = discord.Embed(
+                    title="📋 Challenge Roles Configuration",
+                    description="No challenge roles are currently configured.\n\nUse the **Setup Role** button to configure challenge roles for this server.",
+                    color=discord.Color.orange()
+                )
+                await interaction.followup.send(embed=embed, ephemeral=True)
+                return
+            
+            embed = discord.Embed(
+                title="🎯 Challenge Roles Configuration",
+                description=f"Challenge roles configured for **{interaction.guild.name}**",
+                color=discord.Color.purple()
+            )
+            
+            for challenge_id in sorted(roles_config.keys()):
+                thresholds = roles_config[challenge_id]
+                role_info = []
+                
+                for threshold in sorted(thresholds.keys()):
+                    role_id = thresholds[threshold]
+                    role = interaction.guild.get_role(role_id)
+                    role_mention = role.mention if role else f"<@&{role_id}> (deleted)"
+                    role_info.append(f"**{threshold} points** → {role_mention}")
+                
+                embed.add_field(
+                    name=f"Challenge {challenge_id}",
+                    value="\n".join(role_info),
+                    inline=True
+                )
+            
+            embed.set_footer(text="Users automatically receive roles when reaching these thresholds")
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            logger.info(f"Listed {len(roles_config)} challenge role configurations for guild {self.guild_id}")
+        
+        except Exception as e:
+            logger.error(f"Error viewing challenge roles for guild {self.guild_id}: {e}", exc_info=True)
+            await interaction.followup.send("❌ Error retrieving challenge roles.", ephemeral=True)
+    
+    @discord.ui.button(label="🗑️ Remove Role", style=discord.ButtonStyle.danger, emoji="🗑️")
+    async def remove_role_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        """Show modal for removing a challenge role configuration."""
+        logger.info(f"Remove role button clicked by {interaction.user.display_name} (ID: {self.user_id}) in guild {self.guild_id}")
+        modal = RemoveChallengeRoleModal(self.guild_id)
+        await interaction.response.send_modal(modal)
+    
+    async def on_timeout(self):
+        """Handle view timeout by disabling buttons."""
+        try:
+            self.clear_items()
+            logger.debug(f"ChallengeRoleManagementView timed out for user ID: {self.user_id} in guild {self.guild_id}")
+        except Exception as e:
+            logger.error(f"Error handling ChallengeRoleManagementView timeout: {e}", exc_info=True)
+
+
+class SetupChallengeRoleModal(discord.ui.Modal):
+    """Modal for setting up a challenge role."""
+    
+    def __init__(self, guild_id: int):
+        super().__init__(title="➕ Setup Challenge Role")
+        self.guild_id = guild_id
+    
+    challenge_id = discord.ui.TextInput(
+        label="Challenge ID (1-13)",
+        placeholder="Enter challenge ID",
+        required=True,
+        max_length=2
+    )
+    
+    role_id = discord.ui.TextInput(
+        label="Role ID or Mention",
+        placeholder="Enter role ID or @role mention",
+        required=True,
+        max_length=100
+    )
+    
+    threshold = discord.ui.TextInput(
+        label="Points Threshold",
+        placeholder="Enter points threshold (e.g., 1.0, 5.0, 10.0)",
+        required=True,
+        default="1.0",
+        max_length=10
+    )
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            from database import set_guild_challenge_role
+            
+            # Validate and parse challenge ID
+            challenge_id_value = int(self.challenge_id.value.strip())
+            if challenge_id_value < 1 or challenge_id_value > 13:
+                await interaction.followup.send("❌ Challenge ID must be between 1 and 13.", ephemeral=True)
+                return
+            
+            # Parse role ID
+            role_id_str = self.role_id.value.strip()
+            role_id_str = role_id_str.replace("<@&", "").replace(">", "")
+            role_id_value = int(role_id_str)
+            
+            # Get the role
+            role = interaction.guild.get_role(role_id_value)
+            if not role:
+                await interaction.followup.send("❌ Role not found. Please check the role ID.", ephemeral=True)
+                return
+            
+            # Validate threshold
+            threshold_value = float(self.threshold.value.strip())
+            if threshold_value <= 0:
+                await interaction.followup.send("❌ Threshold must be greater than 0.", ephemeral=True)
+                return
+            
+            # Check bot permissions
+            if not interaction.guild.me.guild_permissions.manage_roles:
+                await interaction.followup.send("❌ I don't have permission to manage roles in this server.", ephemeral=True)
+                return
+            
+            if role >= interaction.guild.me.top_role:
+                await interaction.followup.send("❌ I cannot manage that role because it's higher than or equal to my highest role.", ephemeral=True)
+                return
+            
+            # Set the challenge role
+            await set_guild_challenge_role(self.guild_id, challenge_id_value, threshold_value, role.id)
+            
+            embed = discord.Embed(
+                title="✅ Challenge Role Configured",
+                description=(
+                    f"**Challenge:** {challenge_id_value}\n"
+                    f"**Role:** {role.mention}\n"
+                    f"**Threshold:** {threshold_value} points\n\n"
+                    f"Users who reach this threshold will automatically receive the role!"
+                ),
+                color=discord.Color.green()
+            )
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            logger.info(f"Challenge role configured for guild {self.guild_id}: Challenge {challenge_id_value} -> {role.name} ({role.id}) at {threshold_value} points")
+        
+        except ValueError as e:
+            await interaction.followup.send(f"❌ Invalid input format: {str(e)}", ephemeral=True)
+        except Exception as e:
+            logger.error(f"Error setting up challenge role: {e}", exc_info=True)
+            await interaction.followup.send("❌ Error setting up challenge role.", ephemeral=True)
+
+
+class RemoveChallengeRoleModal(discord.ui.Modal):
+    """Modal for removing a challenge role configuration."""
+    
+    def __init__(self, guild_id: int):
+        super().__init__(title="🗑️ Remove Challenge Role")
+        self.guild_id = guild_id
+    
+    challenge_id = discord.ui.TextInput(
+        label="Challenge ID (1-13)",
+        placeholder="Enter challenge ID",
+        required=True,
+        max_length=2
+    )
+    
+    threshold = discord.ui.TextInput(
+        label="Threshold (optional)",
+        placeholder="Leave empty to remove all thresholds for this challenge",
+        required=False,
+        max_length=10
+    )
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
+        
+        try:
+            from database import remove_guild_challenge_role
+            
+            # Validate and parse challenge ID
+            challenge_id_value = int(self.challenge_id.value.strip())
+            if challenge_id_value < 1 or challenge_id_value > 13:
+                await interaction.followup.send("❌ Challenge ID must be between 1 and 13.", ephemeral=True)
+                return
+            
+            # Parse threshold if provided
+            threshold_value = None
+            if self.threshold.value.strip():
+                threshold_value = float(self.threshold.value.strip())
+            
+            # Remove the challenge role
+            await remove_guild_challenge_role(self.guild_id, challenge_id_value, threshold_value)
+            
+            if threshold_value is not None:
+                embed = discord.Embed(
+                    title="✅ Challenge Role Removed",
+                    description=(
+                        f"**Challenge:** {challenge_id_value}\n"
+                        f"**Threshold:** {threshold_value} points\n\n"
+                        f"Role configuration has been removed."
+                    ),
+                    color=discord.Color.green()
+                )
+                logger.info(f"Removed challenge role for guild {self.guild_id}: Challenge {challenge_id_value} at {threshold_value} points")
+            else:
+                embed = discord.Embed(
+                    title="✅ Challenge Roles Removed",
+                    description=(
+                        f"**Challenge:** {challenge_id_value}\n\n"
+                        f"All role configurations for this challenge have been removed."
+                    ),
+                    color=discord.Color.green()
+                )
+                logger.info(f"Removed all challenge roles for guild {self.guild_id}: Challenge {challenge_id_value}")
+            
+            await interaction.followup.send(embed=embed, ephemeral=True)
+        
+        except ValueError as e:
+            await interaction.followup.send(f"❌ Invalid input format: {str(e)}", ephemeral=True)
+        except Exception as e:
+            logger.error(f"Error removing challenge role: {e}", exc_info=True)
+            await interaction.followup.send("❌ Error removing challenge role.", ephemeral=True)
 
 
 class AddMangaModal(discord.ui.Modal):
@@ -818,7 +1092,7 @@ class ChallengeManage(commands.Cog):
 
     @app_commands.command(
         name="challenge-manage",
-        description="🎯 Interactive challenge management - add, remove, and manage manga in challenges"
+        description="🎯 Interactive challenge management - add, remove manga, and manage challenge roles"
     )
     @app_commands.default_permissions(manage_guild=True)
     async def challenge_manage(self, interaction: discord.Interaction):
@@ -835,6 +1109,7 @@ class ChallengeManage(commands.Cog):
                            f"➕ **Add Manga** - Add manga to a challenge\n"
                            f"🗑️ **Remove Manga** - Remove manga from challenges\n"
                            f"📋 **List Challenges** - View all active challenges\n"
+                           f"🎭 **Manage Roles** - Configure automatic role rewards\n"
                            f"🔍 **Search Manga** - Get information about specific manga",
                 color=discord.Color.green()
             )
@@ -844,6 +1119,7 @@ class ChallengeManage(commands.Cog):
                 value="• Challenges are specific to this server\n"
                       "• Challenges are created automatically when adding manga\n"
                       "• AniList manga information is fetched automatically\n"
+                      "• Role rewards can be configured for challenge thresholds\n"
                       "• All operations are logged for tracking",
                 inline=False
             )
