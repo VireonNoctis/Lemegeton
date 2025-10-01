@@ -5,6 +5,8 @@ from datetime import datetime
 import aiohttp
 import io
 from typing import Optional
+import logging
+import config
 
 from database import (
     set_guild_bot_update_channel, 
@@ -14,6 +16,9 @@ from database import (
     is_user_bot_moderator,
     is_bot_moderator
 )
+
+# Setup logger
+logger = logging.getLogger("changelog")
 
 
 def changelog_only():
@@ -57,6 +62,55 @@ def bot_moderator_only():
 class Changelog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+    
+    async def get_notification_role(self, guild: discord.Guild) -> Optional[discord.Role]:
+        """Get the bot update notification role for a guild (auto-creates if needed)."""
+        role_name = "bot-updates"
+        
+        # If BOT_UPDATE_ROLE_ID is configured, try to get that specific role
+        if config.BOT_UPDATE_ROLE_ID:
+            role = guild.get_role(config.BOT_UPDATE_ROLE_ID)
+            if role:
+                return role
+        
+        # Try to find role by name
+        role = discord.utils.get(guild.roles, name=role_name)
+        if role:
+            return role
+        
+        # Create the role if it doesn't exist and we have permissions
+        try:
+            role = await guild.create_role(
+                name=role_name,
+                mentionable=True,
+                reason="Auto-created for changelog notifications",
+                color=discord.Color.blue()
+            )
+            logger.info(f"Created notification role '{role.name}' in guild {guild.id} for changelog")
+            return role
+        except discord.Forbidden:
+            logger.warning(f"No permission to create notification role in guild {guild.id}")
+            return None
+        except Exception as e:
+            logger.error(f"Error creating notification role in guild {guild.id}: {e}")
+            return None
+    
+    async def mention_role_safely(self, role: discord.Role) -> tuple[str, bool]:
+        """Safely mention a role by temporarily making it mentionable if needed.
+        Returns: (mention_string, was_modified)
+        """
+        if role.mentionable:
+            return (role.mention, False)
+        
+        # Try to temporarily make role mentionable
+        try:
+            if role.guild.me.guild_permissions.manage_roles:
+                await role.edit(mentionable=True)
+                return (role.mention, True)
+            else:
+                return (f"@{role.name}", False)
+        except (discord.Forbidden, discord.HTTPException):
+            return (f"@{role.name}", False)
 
     def _parse_color(self, color_input: str, changelog_type: str) -> discord.Color:
         """Parse color input and return appropriate discord.Color."""
@@ -224,7 +278,7 @@ class Changelog(commands.Cog):
         publish_to="Where to publish the changelog",
         changelog_type="Type of changelog update",
         color="Embed color (hex code like #FF5733 or color name)",
-        role="Optional role to ping (only used for current server)",
+        role="Optional role to ping (defaults to @bot-updates if not specified)",
         image_url="Optional image URL to embed",
         title_override="Override the auto-detected title"
     )
@@ -340,34 +394,68 @@ class Changelog(commands.Cog):
                     await interaction.followup.send("❌ No servers have configured bot update channels.", ephemeral=True)
                     return
                 
-                # Send to all configured channels
+                # Send to all configured channels with automatic role mentions
                 success_count = 0
                 failed_guilds = []
+                roles_mentioned = 0
+                roles_restored = []
                 
                 for guild_id, channel_id in update_channels.items():
                     try:
                         channel = self.bot.get_channel(channel_id)
-                        if channel:
-                            if image_file:
-                                # Create a new file object for each send
-                                new_image_file = discord.File(
-                                    io.BytesIO(image_file.fp.getvalue()),
-                                    filename=image_file.filename
-                                ) if hasattr(image_file, 'fp') else None
-                                if new_image_file:
-                                    await channel.send(embed=embed, file=new_image_file)
-                                else:
-                                    await channel.send(embed=embed)
-                            else:
-                                await channel.send(embed=embed)
-                            success_count += 1
-                        else:
+                        if not channel:
                             failed_guilds.append(f"Guild {guild_id} (Channel {channel_id} not found)")
+                            continue
+                        
+                        guild = channel.guild
+                        
+                        # Try to get the notification role for this guild
+                        notification_role = await self.get_notification_role(guild)
+                        
+                        content_msg = None
+                        role_was_modified = False
+                        
+                        if notification_role:
+                            # Mention the role safely
+                            mention_text, was_modified = await self.mention_role_safely(notification_role)
+                            content_msg = mention_text
+                            role_was_modified = was_modified
+                            roles_mentioned += 1
+                            
+                            if role_was_modified:
+                                roles_restored.append((notification_role, guild))
+                        
+                        # Send the message
+                        if image_file:
+                            # Create a new file object for each send
+                            new_image_file = discord.File(
+                                io.BytesIO(image_file.fp.getvalue()),
+                                filename=image_file.filename
+                            ) if hasattr(image_file, 'fp') else None
+                            if new_image_file:
+                                await channel.send(content=content_msg, embed=embed, file=new_image_file)
+                            else:
+                                await channel.send(content=content_msg, embed=embed)
+                        else:
+                            await channel.send(content=content_msg, embed=embed)
+                        
+                        # Restore role mentionability if we changed it
+                        if role_was_modified and notification_role:
+                            try:
+                                await notification_role.edit(mentionable=False)
+                            except Exception as e:
+                                logger.warning(f"Failed to restore role mentionability in guild {guild_id}: {e}")
+                        
+                        success_count += 1
+                        
                     except Exception as e:
                         failed_guilds.append(f"Guild {guild_id}: {str(e)}")
+                        logger.error(f"Error publishing to guild {guild_id}: {e}")
                 
                 # Send summary
                 summary = f"✅ {type_config['title']} published to {success_count}/{len(update_channels)} configured servers."
+                if roles_mentioned > 0:
+                    summary += f"\n📢 Mentioned notification roles in {roles_mentioned} server(s)."
                 if failed_guilds:
                     summary += f"\n\n❌ Failed to send to:\n" + "\n".join(f"• {failure}" for failure in failed_guilds[:5])
                     if len(failed_guilds) > 5:
@@ -398,30 +486,33 @@ class Changelog(commands.Cog):
                     return
                 
                 content_msg = None
-                if role:
-                    # Check if role is mentionable
-                    if role.mentionable:
-                        content_msg = role.mention
-                    else:
-                        # Try to temporarily make role mentionable if we have permissions
+                role_to_mention = role  # Use manually specified role if provided
+                
+                # If no role specified, try to use the notification role
+                if not role_to_mention:
+                    role_to_mention = await self.get_notification_role(interaction.guild)
+                
+                if role_to_mention:
+                    # Use the safe mention method
+                    mention_text, was_modified = await self.mention_role_safely(role_to_mention)
+                    content_msg = mention_text
+                    
+                    # Restore role if we modified it
+                    if was_modified:
                         try:
-                            if interaction.guild.me.guild_permissions.manage_roles:
-                                await role.edit(mentionable=True)
-                                content_msg = role.mention
-                                await role.edit(mentionable=False)  # Reset after use
-                            else:
-                                content_msg = f"@{role.name} (Role not mentionable)"
-                        except discord.Forbidden:
-                            content_msg = f"@{role.name} (No permission to mention)"
-                        except Exception:
-                            content_msg = f"@{role.name} (Could not mention)"
+                            await role_to_mention.edit(mentionable=False)
+                        except Exception as e:
+                            logger.warning(f"Failed to restore role mentionability: {e}")
                 
                 if image_file:
                     await channel.send(content=content_msg, embed=embed, file=image_file)
                 else:
                     await channel.send(content=content_msg, embed=embed)
                 
-                await interaction.followup.send(f"✅ {type_config['title']} created from file **{file.filename}** and published to {channel.mention}!", ephemeral=True)
+                mention_info = ""
+                if role_to_mention:
+                    mention_info = f" and mentioned {role_to_mention.name}"
+                await interaction.followup.send(f"✅ {type_config['title']} created from file **{file.filename}** and published to {channel.mention}{mention_info}!", ephemeral=True)
             
         except Exception as e:
             try:
