@@ -28,6 +28,9 @@ ADMIN_DISCORD_ID = _int_env("ADMIN_DISCORD_ID")
 # This will be used as fallback if no guild-specific mod role is configured.
 MOD_ROLE_ID = _int_env("MOD_ROLE_ID")
 
+# Bot update notifications role ID (optional - will auto-create per guild if not specified)
+BOT_UPDATE_ROLE_ID = _int_env("BOT_UPDATE_ROLE_ID")
+
 # Primary Guild ID for backwards compatibility and default operations
 PRIMARY_GUILD_ID = GUILD_ID
 

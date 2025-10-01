@@ -51,27 +51,36 @@ class NotificationView(View):
     async def _handle_subscribe(self, interaction: discord.Interaction):
         """Handle subscription logic."""
         try:
-            # Check if BOT_UPDATE_ROLE_ID is configured
-            if not config.BOT_UPDATE_ROLE_ID:
+            # Get or create the notification role
+            notifications_cog = interaction.client.get_cog("NotificationsCog")
+            if not notifications_cog:
                 embed = discord.Embed(
-                    title="❌ Configuration Error",
-                    description="Bot update notifications are not configured on this server.",
+                    title="❌ System Error",
+                    description="Notifications system is not available.",
                     color=discord.Color.red()
                 )
                 await interaction.response.edit_message(embed=embed, view=None)
-                logger.warning(f"Subscribe button used but BOT_UPDATE_ROLE_ID not configured - User: {interaction.user.id}")
+                logger.error(f"NotificationsCog not found when user {interaction.user.id} tried to subscribe")
                 return
-
-            # Get the role
-            role = interaction.guild.get_role(config.BOT_UPDATE_ROLE_ID)
-            if not role:
+            
+            try:
+                role = await notifications_cog.get_or_create_notification_role(interaction.guild)
+            except discord.Forbidden:
                 embed = discord.Embed(
-                    title="❌ Role Not Found",
-                    description="The bot update role could not be found on this server.",
+                    title="❌ Permission Error",
+                    description="I don't have permission to create or manage the notification role. Please contact a server administrator.",
                     color=discord.Color.red()
                 )
                 await interaction.response.edit_message(embed=embed, view=None)
-                logger.error(f"Bot update role {config.BOT_UPDATE_ROLE_ID} not found in guild {interaction.guild.id}")
+                return
+            except Exception as e:
+                embed = discord.Embed(
+                    title="❌ Role Error",
+                    description="Failed to get or create the notification role. Please try again later.",
+                    color=discord.Color.red()
+                )
+                await interaction.response.edit_message(embed=embed, view=None)
+                logger.error(f"Error getting/creating role for user {interaction.user.id}: {e}")
                 return
 
             # Check if user already has the role
@@ -133,27 +142,36 @@ class NotificationView(View):
     async def _handle_unsubscribe(self, interaction: discord.Interaction):
         """Handle unsubscription logic."""
         try:
-            # Check if BOT_UPDATE_ROLE_ID is configured
-            if not config.BOT_UPDATE_ROLE_ID:
+            # Get or create the notification role
+            notifications_cog = interaction.client.get_cog("NotificationsCog")
+            if not notifications_cog:
                 embed = discord.Embed(
-                    title="❌ Configuration Error",
-                    description="Bot update notifications are not configured on this server.",
+                    title="❌ System Error",
+                    description="Notifications system is not available.",
                     color=discord.Color.red()
                 )
                 await interaction.response.edit_message(embed=embed, view=None)
-                logger.warning(f"Unsubscribe button used but BOT_UPDATE_ROLE_ID not configured - User: {interaction.user.id}")
+                logger.error(f"NotificationsCog not found when user {interaction.user.id} tried to unsubscribe")
                 return
-
-            # Get the role
-            role = interaction.guild.get_role(config.BOT_UPDATE_ROLE_ID)
-            if not role:
+            
+            try:
+                role = await notifications_cog.get_or_create_notification_role(interaction.guild)
+            except discord.Forbidden:
                 embed = discord.Embed(
-                    title="❌ Role Not Found",
-                    description="The bot update role could not be found on this server.",
+                    title="❌ Permission Error",
+                    description="I don't have permission to manage the notification role. Please contact a server administrator.",
                     color=discord.Color.red()
                 )
                 await interaction.response.edit_message(embed=embed, view=None)
-                logger.error(f"Bot update role {config.BOT_UPDATE_ROLE_ID} not found in guild {interaction.guild.id}")
+                return
+            except Exception as e:
+                embed = discord.Embed(
+                    title="❌ Role Error",
+                    description="Failed to get the notification role. Please try again later.",
+                    color=discord.Color.red()
+                )
+                await interaction.response.edit_message(embed=embed, view=None)
+                logger.error(f"Error getting role for user {interaction.user.id}: {e}")
                 return
 
             # Check if user doesn't have the role
@@ -219,32 +237,67 @@ class NotificationsCog(commands.Cog):
     
     def __init__(self, bot):
         self.bot = bot
+    
+    async def get_or_create_notification_role(self, guild: discord.Guild) -> discord.Role:
+        """Get the bot update notification role, creating it if it doesn't exist."""
+        role_name = "bot-updates"
+        
+        # If BOT_UPDATE_ROLE_ID is configured, try to get that specific role
+        if config.BOT_UPDATE_ROLE_ID:
+            role = guild.get_role(config.BOT_UPDATE_ROLE_ID)
+            if role:
+                logger.info(f"Using configured bot update role '{role.name}' (ID: {role.id}) in guild {guild.id}")
+                return role
+            else:
+                logger.warning(f"Configured BOT_UPDATE_ROLE_ID {config.BOT_UPDATE_ROLE_ID} not found in guild {guild.id}, will create new role")
+        
+        # Try to find role by name
+        role = discord.utils.get(guild.roles, name=role_name)
+        if role:
+            logger.info(f"Found existing bot update role '{role.name}' (ID: {role.id}) in guild {guild.id}")
+            return role
+        
+        # Create the role if it doesn't exist
+        try:
+            role = await guild.create_role(
+                name=role_name,
+                mentionable=True,
+                reason="Auto-created for bot update notifications",
+                color=discord.Color.blue()
+            )
+            logger.info(f"Created new bot update role '{role.name}' (ID: {role.id}) in guild {guild.id}")
+            return role
+        except discord.Forbidden:
+            logger.error(f"Insufficient permissions to create bot update role in guild {guild.id}")
+            raise
+        except Exception as e:
+            logger.error(f"Error creating bot update role in guild {guild.id}: {e}")
+            raise
 
     @app_commands.command(name="notifications", description="Manage your bot update notification preferences")
     async def notifications(self, interaction: discord.Interaction):
         """Main command to manage bot update notifications with button interface."""
         try:
-            # Check if BOT_UPDATE_ROLE_ID is configured
-            if not config.BOT_UPDATE_ROLE_ID:
+            # Get or create the notification role
+            try:
+                role = await self.get_or_create_notification_role(interaction.guild)
+            except discord.Forbidden:
                 embed = discord.Embed(
-                    title="❌ Configuration Error",
-                    description="Bot update notifications are not configured on this server.",
+                    title="❌ Permission Error",
+                    description="I don't have permission to create or manage the notification role. Please contact a server administrator and ensure I have the 'Manage Roles' permission.",
                     color=discord.Color.red()
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-                logger.warning(f"Bot-updates command used but BOT_UPDATE_ROLE_ID not configured - User: {interaction.user.id}")
+                logger.error(f"Insufficient permissions to create/manage notification role in guild {interaction.guild.id}")
                 return
-
-            # Get the role
-            role = interaction.guild.get_role(config.BOT_UPDATE_ROLE_ID)
-            if not role:
+            except Exception as e:
                 embed = discord.Embed(
-                    title="❌ Role Not Found",
-                    description="The bot update role could not be found on this server.",
+                    title="❌ Role Error",
+                    description="Failed to get or create the notification role. Please try again later.",
                     color=discord.Color.red()
                 )
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-                logger.error(f"Bot update role {config.BOT_UPDATE_ROLE_ID} not found in guild {interaction.guild.id}")
+                logger.error(f"Error getting/creating notification role in guild {interaction.guild.id}: {e}")
                 return
 
             # Check current subscription status
