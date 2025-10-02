@@ -25,7 +25,8 @@ LOG_FILE = "bot.log"
 LOG_MAX_SIZE = 50 * 1024 * 1024  # 50MB max log file size
 TRENDING_REFRESH_INTERVAL = 3 * 60 * 60  
 STATUS_UPDATE_INTERVAL = 3600  # 1 hour 
-COG_WATCH_INTERVAL = 2 
+# Adjust cog watch interval based on environment (10s for production, 2s for development)
+COG_WATCH_INTERVAL = 10 if os.getenv("ENVIRONMENT") == "production" else 2
 ANILIST_API_TIMEOUT = 10 
 DEFAULT_TRENDING_FALLBACK = ["AniList API ❤️"]
 
