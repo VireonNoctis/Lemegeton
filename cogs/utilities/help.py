@@ -50,27 +50,16 @@ class HelpCog(commands.Cog):
                     "desc": "Manage your account - register, update, or unregister",
                     "usage": "/login",
                     "note": "Start here to connect your AniList account!"
-                },
-                # /check_anilist was removed; users can verify via the Login UI instead
+                }
             },
             "📊 Profile & Stats": {
                 "profile": {
                     "desc": "View your AniList profile with stats & achievements",
                     "usage": "/profile [user]",
                     "note": "Shows detailed profile information and achievements"
-                },
-                "stats": {
-                    "desc": "Show your AniList statistics",
-                    "usage": "/stats",
-                    "note": "View your anime/manga consumption statistics"
                 }
             },
             "📺 Anime & Manga": {
-                "watchlist": {
-                    "desc": "Show what someone is currently watching or reading on AniList", 
-                    "usage": "/watchlist [member] [username]",
-                    "note": "View current watching/reading progress with detailed status"
-                },
                 "browse": {
                     "desc": "Search and browse anime, manga, light novels, and general novels",
                     "usage": "/browse",
@@ -86,15 +75,15 @@ class HelpCog(commands.Cog):
                     "usage": "/recommendations [member]",
                     "note": "AI-powered recommendations with interactive browsing by category"
                 },
-                "search_similar": {
-                    "desc": "Find anime/manga similar to a specific title",
-                    "usage": "/search_similar",
-                    "note": "Discover titles similar to ones you enjoy"
-                },
                 "random": {
                     "desc": "Get random anime/manga suggestions",
                     "usage": "/random",
                     "note": "For when you can't decide what to watch/read"
+                },
+                "news-manage": {
+                    "desc": "Manage Twitter/X news monitoring for anime/manga updates",
+                    "usage": "/news-manage",
+                    "note": "Monitor Twitter accounts for anime/manga news"
                 }
             },
             "🏆 Challenges & Competition": {
@@ -124,40 +113,62 @@ class HelpCog(commands.Cog):
                     "note": "Server rankings and competitions"
                 }
             },
-            "🔍 Comparison & Analysis": {
-                "compare": {
-                    "desc": "Compare anime/manga lists between users",
-                    "usage": "/compare",
-                    "note": "Find shared interests and differences"
+            "🎮 Gaming": {
+                "steam-profile": {
+                    "desc": "Show a Steam profile (vanity or SteamID)",
+                    "usage": "/steam-profile <username>",
+                    "note": "View Steam user profiles and stats"
                 },
-                "affinity": {
-                    "desc": "Check compatibility with other users",
-                    "usage": "/affinity",
-                    "note": "See how similar your tastes are"
+                "steam-recommendation": {
+                    "desc": "Get personalized game recommendations based on your Steam library",
+                    "usage": "/steam-recommendation <username>",
+                    "note": "Discover new games similar to ones you enjoy"
                 }
             },
-            "🎮 Gaming": {
-                "steam": {
-                    "desc": "Steam game information and recommendations",
-                    "usage": "/steam",
-                    "note": "Gaming recommendations based on your preferences"
+            "� Customization": {
+                "theme": {
+                    "desc": "Complete theme customization system - Browse, preview, and apply themes",
+                    "usage": "/theme",
+                    "note": "Customize your bot experience with themes"
+                },
+                "guild_theme": {
+                    "desc": "Manage guild-wide theme settings (Server Moderator only)",
+                    "usage": "/guild_theme",
+                    "note": "Set server-wide default themes"
+                }
+            },
+            "⚙️ Server Management": {
+                "server-config": {
+                    "desc": "Configure server settings - roles, channels, and notifications",
+                    "usage": "/server-config",
+                    "note": "Manage server-wide bot configuration (Admin only)"
+                },
+                "moderators": {
+                    "desc": "Manage bot moderators (bot-wide permissions)",
+                    "usage": "/moderators",
+                    "note": "Add/remove bot moderators with elevated permissions"
+                },
+                "set_bot_updates_channel": {
+                    "desc": "Set channel to receive bot updates and announcements (Admin only)",
+                    "usage": "/set_bot_updates_channel <channel>",
+                    "note": "Configure where bot update notifications appear"
+                },
+                "set_animanga_completion_channel": {
+                    "desc": "Set channel to receive anime/manga completion updates (Mod only)",
+                    "usage": "/set_animanga_completion_channel <channel>",
+                    "note": "Monitor when users complete series"
                 }
             },
             "🛠️ Utilities": {
-                "timestamp_watch": {
-                    "desc": "Toggle automatic timestamp conversion",
-                    "usage": "/timestamp_watch",
-                    "note": "Automatically convert timestamps in messages"
+                "notifications": {
+                    "desc": "Manage your bot update notification preferences",
+                    "usage": "/notifications",
+                    "note": "Control what notifications you receive"
                 },
-                "embed": {
-                    "desc": "Create custom embeds",
-                    "usage": "/embed",
-                    "note": "Create formatted message embeds"
-                },
-                "invite_tracker": {
-                    "desc": "Track server invites",
-                    "usage": "/invite_tracker",
-                    "note": "Monitor who joins via which invite"
+                "planned": {
+                    "desc": "View planned bot features",
+                    "usage": "/planned",
+                    "note": "See what's coming in future updates"
                 }
             },
             "ℹ️ Bot Information": {
@@ -165,11 +176,6 @@ class HelpCog(commands.Cog):
                     "desc": "Get an invite link to add this bot to your server",
                     "usage": "/invite",
                     "note": "Share the bot with other servers"
-                },
-                "changelog": {
-                    "desc": "View the latest bot updates and changes",
-                    "usage": "/changelog",
-                    "note": "Stay updated with new features"
                 },
                 "feedback": {
                     "desc": "Submit ideas or report bugs",
@@ -337,8 +343,9 @@ class HelpCog(commands.Cog):
         app_commands.Choice(name="📊 Profile & Stats", value="profile"),
         app_commands.Choice(name="📺 Anime & Manga", value="anime"),
         app_commands.Choice(name="🏆 Challenges", value="challenges"),
-        app_commands.Choice(name="🔍 Comparison", value="comparison"),
         app_commands.Choice(name="🎮 Gaming", value="gaming"),
+        app_commands.Choice(name="🎨 Customization", value="customization"),
+        app_commands.Choice(name="⚙️ Server Management", value="server"),
         app_commands.Choice(name="🛠️ Utilities", value="utilities"),
         app_commands.Choice(name="ℹ️ Bot Info", value="info"),
     ])
@@ -441,8 +448,9 @@ class HelpCog(commands.Cog):
             "profile": "📊 Profile & Stats", 
             "anime": "📺 Anime & Manga",
             "challenges": "🏆 Challenges & Competition",
-            "comparison": "🔍 Comparison & Analysis",
             "gaming": "🎮 Gaming",
+            "customization": "🎨 Customization",
+            "server": "⚙️ Server Management",
             "utilities": "🛠️ Utilities",
             "info": "ℹ️ Bot Information"
         }
@@ -506,30 +514,37 @@ class HelpCog(commands.Cog):
                 "• Most commands work with both anime and manga\n"
                 "• Recommendations use advanced AI filtering for quality results\n"
                 "• Rate titles 8.0+ for best recommendation accuracy\n"
-                "• Browse supports advanced filtering by genre, year, format"
+                "• Browse supports advanced filtering by genre, year, format\n"
+                "• News monitoring tracks Twitter/X accounts for updates"
             ),
             "challenges": (
                 "• Join reading challenges to stay motivated\n"
                 "• Progress updates automatically from your AniList\n"
                 "• Compete with friends on the leaderboards"
             ),
-            "comparison": (
-                "• Compare lists to find shared interests\n"
-                "• Affinity scores help find users with similar tastes\n"
-                "• Great for finding new friends and recommendations"
-            ),
             "gaming": (
                 "• Steam integration provides game recommendations\n"
                 "• Based on your gaming preferences and activity\n"
                 "• Discover new games similar to ones you enjoy"
             ),
+            "customization": (
+                "• Themes personalize your bot experience\n"
+                "• Preview themes before applying them\n"
+                "• Server moderators can set guild-wide themes\n"
+                "• Individual user preferences override guild themes"
+            ),
+            "server": (
+                "• Server-config provides centralized server management\n"
+                "• Configure roles, channels, and notification settings\n"
+                "• Bot moderators have bot-wide permissions\n"
+                "• Requires Admin or Moderator permissions"
+            ),
             "utilities": (
-                "• These commands enhance your server experience\n"
-                "• Timestamp conversion helps with scheduling\n"
-                "• Embed creation allows custom formatted messages"
+                "• Manage your notification preferences\n"
+                "• View planned features and upcoming updates\n"
+                "• These commands enhance your bot experience"
             ),
             "info": (
-                "• Keep up with bot updates via `/changelog`\n"
                 "• Use `/feedback` to suggest improvements\n"
                 "• Share the bot with `/invite` command\n"
                 "• Join our [Support Server](https://discord.gg/xUGD7krzws) for help"
@@ -604,27 +619,33 @@ class CategorySelect(discord.ui.Select):
                 emoji="🏆"
             ),
             discord.SelectOption(
-                label="Comparison",
-                value="comparison",
-                description="Compare lists and find compatibility",
-                emoji="🔍"
-            ),
-            discord.SelectOption(
                 label="Gaming",
                 value="gaming",
                 description="Steam integration and game recommendations",
                 emoji="🎮"
             ),
             discord.SelectOption(
+                label="Customization",
+                value="customization",
+                description="Themes and personalization",
+                emoji="🎨"
+            ),
+            discord.SelectOption(
+                label="Server Management",
+                value="server",
+                description="Server configuration and moderation",
+                emoji="⚙️"
+            ),
+            discord.SelectOption(
                 label="Utilities",
                 value="utilities",
-                description="Helper commands and tools",
+                description="Notifications and utility commands",
                 emoji="🛠️"
             ),
             discord.SelectOption(
                 label="Bot Information",
                 value="info",
-                description="Changelog, feedback, and bot info",
+                description="Feedback and bot info",
                 emoji="ℹ️"
             )
         ]
