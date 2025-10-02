@@ -65,11 +65,20 @@ class PlannedFeatures(commands.Cog):
                 description = feature.get('description', 'No description available')
                 added_date = feature.get('added_date', 'Unknown')
                 
+                # Discord embed field name limit is 256 characters
+                # Reserve space for number prefix (e.g., "99. ")
+                field_name = f"{i}. {name}"
+                if len(field_name) > 256:
+                    # Truncate name to fit: number + ". " + name + "..."
+                    prefix = f"{i}. "
+                    max_name_length = 256 - len(prefix) - 3  # 3 for "..."
+                    field_name = prefix + name[:max_name_length] + "..."
+                
                 # Format the date part
                 date_text = f"\n*Added: {added_date[:10] if len(added_date) >= 10 else added_date}*"
                 
                 # Discord embed field value limit is 1024 characters
-                # Reserve space for date text (approximately 30 characters)
+                # Reserve space for date text
                 max_desc_length = 1024 - len(date_text)
                 
                 # Truncate description if needed
@@ -77,7 +86,7 @@ class PlannedFeatures(commands.Cog):
                     description = description[:max_desc_length - 3] + "..."
                 
                 embed.add_field(
-                    name=f"{i}. {name}",
+                    name=field_name,
                     value=f"{description}{date_text}",
                     inline=False
                 )
