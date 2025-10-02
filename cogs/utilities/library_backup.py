@@ -1,4 +1,4 @@
-# library_backup_cog.py
+#library_backup.py
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -6,18 +6,17 @@ import io
 import csv
 import json
 import datetime
+import xml.etree.ElementTree as ET
 import yaml
 import asyncio
 import aiohttp
 import aiosqlite
 import logging
 from pathlib import Path
-from typing import Optional, Callable, Awaitable, List, Dict
+from typing import Optional, Callable, Awaitable
 from config import DB_PATH
 
-# -----------------------------
-# Logging Setup
-# -----------------------------
+# Set up dedicated logging for library backup
 LOG_DIR = Path("logs")
 LOG_DIR.mkdir(exist_ok=True)
 LOG_FILE = LOG_DIR / "library_backup.log"
@@ -25,67 +24,67 @@ LOG_FILE = LOG_DIR / "library_backup.log"
 logger = logging.getLogger("LibraryBackup")
 logger.setLevel(logging.DEBUG)
 
-if not any(isinstance(h, logging.FileHandler) and getattr(h, "baseFilename", None) == str(LOG_FILE)
+if not any(isinstance(h, logging.FileHandler) and getattr(h, 'baseFilename', None) == str(LOG_FILE)
            for h in logger.handlers):
     try:
-        fh = logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8")
-        fh.setLevel(logging.DEBUG)
-        fmt = logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
-                                datefmt="%Y-%m-%d %H:%M:%S")
-        fh.setFormatter(fmt)
-        logger.addHandler(fh)
+        file_handler = logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8')
+        file_handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter(
+            fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+            datefmt="%Y-%m-%d %H:%M:%S"
+        )
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
     except Exception:
-        sh = logging.StreamHandler()
-        sh.setLevel(logging.DEBUG)
-        sh.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
-                                          datefmt="%Y-%m-%d %H:%M:%S"))
-        logger.addHandler(sh)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.DEBUG)
+        stream_handler.setFormatter(logging.Formatter(fmt="[%(asctime)s] [%(levelname)-8s] [%(name)s] %(message)s",
+                                                      datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(stream_handler)
 
 logger.info("Library backup logging initialized")
 
 # -----------------------------
-# Type for progress callback
-# -----------------------------
-ProgressCallback = Optional[Callable[[int, Optional[str]], Awaitable[None]]]
-
-# -----------------------------
-# DB Helper (placeholder)
+# DB Helper
 # -----------------------------
 async def get_anilist_username_from_db(discord_id: int, guild_id: Optional[int] = None) -> Optional[str]:
     """
-    Returns AniList username for a discord user if stored in DB.
-    Checks guild-specific then global fallback.
+    Get AniList username from database for a Discord user.
+    Checks guild-specific entry first, then falls back to any entry for the user.
     """
     try:
         async with aiosqlite.connect(DB_PATH) as db:
             if guild_id:
-                cur = await db.execute(
+                cursor = await db.execute(
                     "SELECT anilist_username FROM users WHERE discord_id = ? AND guild_id = ? AND anilist_username IS NOT NULL",
                     (discord_id, guild_id)
                 )
-                row = await cur.fetchone()
-                if row:
-                    logger.debug(f"Found guild-specific AniList username for {discord_id} in {guild_id}: {row[0]}")
-                    return row[0]
+                result = await cursor.fetchone()
+                if result:
+                    logger.debug(f"Found guild-specific AniList username for user {discord_id} in guild {guild_id}: {result[0]}")
+                    return result[0]
 
-            cur = await db.execute(
+            cursor = await db.execute(
                 "SELECT anilist_username FROM users WHERE discord_id = ? AND anilist_username IS NOT NULL LIMIT 1",
                 (discord_id,)
             )
-            row = await cur.fetchone()
-            if row:
-                logger.debug(f"Found AniList username for {discord_id}: {row[0]}")
-                return row[0]
+            result = await cursor.fetchone()
+            if result:
+                logger.debug(f"Found AniList username for user {discord_id}: {result[0]}")
+                return result[0]
 
-        logger.debug(f"No AniList username found for {discord_id}")
-        return None
+            logger.debug(f"No AniList username found for user {discord_id}")
+            return None
+
     except Exception as e:
-        logger.error(f"DB error while fetching AniList username for {discord_id}: {e}", exc_info=True)
+        logger.error(f"Error fetching AniList username for user {discord_id}: {e}", exc_info=True)
         return None
 
+
 # -----------------------------
-# Status maps & emoji
+# AniList API Helper
 # -----------------------------
+# Map AniList statuses to our scope values to avoid mismatches
 _STATUS_MAP = {
     "CURRENT": "watching",
     "PLANNING": "planned",
@@ -95,7 +94,7 @@ _STATUS_MAP = {
     "REPEATING": "watching",
 }
 
-# For human-readable TXT exports / embeds
+# Emoji map for statuses
 _STATUS_EMOJI = {
     "watching": "🎬",
     "reading": "📖",
@@ -199,7 +198,6 @@ async def fetch_anilist_library(username: str, media_type: str, extended: bool =
                     "status": status_norm,
                     "progress": prog_str,
                     "rating": entry.get("score"),
-                    "tags": [],  # DB placeholder (fill after if you store user tags)
                     "start_date": start_date or "0000-00-00",
                     "finish_date": finish_date or "0000-00-00",
                     "rewatch_count": entry.get("repeat", 0),
@@ -216,7 +214,7 @@ async def fetch_anilist_library(username: str, media_type: str, extended: bool =
                         "site_url": media.get("siteUrl"),
                     })
 
-                # dedupe: keep latest updated_ts
+                # dedupe
                 existing = seen.get(media_id)
                 if not existing or item["updated_ts"] > existing.get("updated_ts", 0):
                     seen[media_id] = item
@@ -227,6 +225,8 @@ async def fetch_anilist_library(username: str, media_type: str, extended: bool =
     entries = list(seen.values())
     logger.info(f"Fetched {len(entries)} deduplicated entries for {username}")
     return entries
+
+
 
 # -----------------------------
 # Utilities & Exporter
@@ -457,6 +457,7 @@ async def generate_export_file(
         await progress_cb(100, "File generation complete (fallback).")
     return buffer, filename
 
+
 # -----------------------------
 # Cog
 # -----------------------------
@@ -610,19 +611,14 @@ class LibraryBackup(commands.Cog):
             return
 
         await edit_progress(12, "Processing entries...")
-
-        # 2) Optional tag filter (DB-powered placeholder)
-        if tag:
-            # If you store per-entry tags in DB, filter here. Placeholder: no-op for now.
-            logger.debug(f"Filtering by tag requested ({tag}) but tag filtering is DB-backed and not implemented.")
-
-        # 3) Scope filter
+          
+        # 2) Scope filter
         if scope.value != "full":
             filtered = [e for e in user_library if e.get("status", "").lower() == scope.value]
         else:
             filtered = user_library
 
-        # 4) Deduplicate by anilist id (keeps latest updated_ts). fetch already dedupes, but be defensive
+        # 3) Deduplicate by anilist id. fetch already dedupes, but be defensive
         filtered = deduplicate_entries_by_id(filtered)
 
         if not filtered:
