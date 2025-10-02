@@ -315,52 +315,6 @@ async def init_users_table():
         logger.error(f"❌ Failed to initialize users table: {e}", exc_info=True)
         raise
 
-async def add_user(discord_id: int, username: str, anilist_username: str = None, anilist_id: int = None):
-    """Add new user with comprehensive logging and validation. (DEPRECATED: Use add_user_guild_aware instead)"""
-    logger.warning("Using deprecated add_user function. Consider using add_user_guild_aware for multi-guild support")
-    
-    try:
-        # Validate input
-        if not isinstance(discord_id, int) or discord_id <= 0:
-            raise ValueError(f"Invalid discord_id: {discord_id}")
-        if not isinstance(username, str) or not username.strip():
-            raise ValueError(f"Invalid username: {username}")
-        
-        logger.debug(f"User data - Discord ID: {discord_id}, Username: {username}")
-        if anilist_username:
-            logger.debug(f"AniList data - Username: {anilist_username}, ID: {anilist_id}")
-        
-        # For backwards compatibility, use a default guild_id (your current server)
-        # This should be updated to use actual guild_id in all calling code
-        default_guild_id = 897814031346319382
-        
-        query = """
-            INSERT OR REPLACE INTO users (discord_id, guild_id, username, anilist_username, anilist_id, updated_at)
-            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        """
-        
-        await execute_db_operation(
-            f"add user {username}",
-            query,
-            (discord_id, default_guild_id, username.strip(), anilist_username, anilist_id)
-        )
-        
-        logger.info(f"✅ Successfully added user {username} (Discord ID: {discord_id}) to default guild")
-        
-    except aiosqlite.IntegrityError as integrity_error:
-        if "UNIQUE constraint failed" in str(integrity_error):
-            logger.warning(f"User {discord_id} already exists, cannot add duplicate")
-        else:
-            logger.error(f"Database integrity error adding user {discord_id}: {integrity_error}")
-        raise
-    except ValueError as validation_error:
-        logger.error(f"Validation error adding user: {validation_error}")
-        raise
-    except Exception as e:
-        logger.error(f"❌ Unexpected error adding user {discord_id}: {e}", exc_info=True)
-        raise
-
-
 async def add_user_guild_aware(discord_id: int, guild_id: int, username: str, anilist_username: str = None, anilist_id: int = None):
     """Add new user or update existing user with guild context for multi-server support."""
     logger.info(f"Upserting user: {username} (Discord ID: {discord_id}) to guild {guild_id}")
@@ -408,40 +362,6 @@ async def add_user_guild_aware(discord_id: int, guild_id: int, username: str, an
         raise
     except Exception as e:
         logger.error(f"❌ Unexpected error adding user {discord_id} to guild {guild_id}: {e}", exc_info=True)
-        raise
-
-
-async def get_user(discord_id: int):
-    """Get user by Discord ID with comprehensive logging. (DEPRECATED: Use get_user_guild_aware instead)"""
-    logger.warning("Using deprecated get_user function. Consider using get_user_guild_aware for multi-guild support")
-    logger.debug(f"Retrieving user data for Discord ID: {discord_id}")
-    
-    try:
-        if not isinstance(discord_id, int) or discord_id <= 0:
-            raise ValueError(f"Invalid discord_id: {discord_id}")
-        
-        # For backwards compatibility, try to get user from default guild first
-        default_guild_id = 897814031346319382
-        query = "SELECT * FROM users WHERE discord_id = ? AND guild_id = ?"
-        user = await execute_db_operation(
-            f"get user {discord_id} from default guild",
-            query,
-            (discord_id, default_guild_id),
-            fetch_type='one'
-        )
-        
-        if user:
-            logger.debug(f"✅ Found user: {user[3]} (ID: {user[0]}) in default guild")  # username at index 3
-        else:
-            logger.debug(f"No user found for Discord ID: {discord_id} in default guild")
-        
-        return user
-        
-    except ValueError as validation_error:
-        logger.error(f"Validation error getting user: {validation_error}")
-        raise
-    except Exception as e:
-        logger.error(f"❌ Unexpected error getting user {discord_id}: {e}", exc_info=True)
         raise
 
 
@@ -512,19 +432,20 @@ async def update_username(discord_id: int, username: str):
         if not isinstance(username, str) or not username.strip():
             raise ValueError(f"Invalid username: {username}")
         
-        # Check if user exists first
-        existing_user = await get_user(discord_id)
+        # Check if user exists first (use default guild for backward compatibility)
+        default_guild_id = int(os.getenv("PRIMARY_GUILD_ID", "897814031346319382"))
+        existing_user = await get_user_guild_aware(discord_id, default_guild_id)
         if not existing_user:
-            logger.warning(f"Cannot update username - user {discord_id} not found")
+            logger.warning(f"Cannot update username - user {discord_id} not found in default guild")
             return False
         
-        old_username = existing_user[2]  # username at index 2
+        old_username = existing_user[3]  # username at index 3 in guild-aware schema
         
-        query = "UPDATE users SET username = ? WHERE discord_id = ?"
+        query = "UPDATE users SET username = ?, updated_at = CURRENT_TIMESTAMP WHERE discord_id = ? AND guild_id = ?"
         await execute_db_operation(
             f"update username for {discord_id}",
             query,
-            (username.strip(), discord_id)
+            (username.strip(), discord_id, default_guild_id)
         )
         
         logger.info(f"✅ Updated username for {discord_id}: '{old_username}' → '{username}'")
@@ -553,13 +474,13 @@ async def remove_user(discord_id: int, guild_id: int = None):
         # Check if user exists first (guild-aware when possible)
         existing_user = None
         if guild_id is not None:
-            try:
-                existing_user = await get_user_guild_aware(discord_id, guild_id)
-            except Exception:
-                # Fall back to legacy get_user
-                existing_user = await get_user(discord_id)
+            existing_user = await get_user_guild_aware(discord_id, guild_id)
         else:
-            existing_user = await get_user(discord_id)
+            # If no guild_id provided, check default guild for backward compatibility
+            default_guild_id = int(os.getenv("PRIMARY_GUILD_ID", "897814031346319382"))
+            logger.warning(f"remove_user called without guild_id, using default guild {default_guild_id}")
+            existing_user = await get_user_guild_aware(discord_id, default_guild_id)
+        
         if not existing_user:
             logger.warning(f"Cannot remove user - user {discord_id} not found")
             return False
@@ -786,22 +707,23 @@ async def update_anilist_info(discord_id: int, anilist_username: str, anilist_id
         if not isinstance(anilist_id, int) or anilist_id <= 0:
             raise ValueError(f"Invalid anilist_id: {anilist_id}")
         
-        # Check if user exists
-        existing_user = await get_user(discord_id)
+        # Check if user exists (use default guild for backward compatibility)
+        default_guild_id = int(os.getenv("PRIMARY_GUILD_ID", "897814031346319382"))
+        existing_user = await get_user_guild_aware(discord_id, default_guild_id)
         if not existing_user:
-            logger.error(f"Cannot update AniList info - user {discord_id} not found")
+            logger.error(f"Cannot update AniList info - user {discord_id} not found in default guild")
             return False
         
         query = """
             UPDATE users
             SET anilist_username = ?, anilist_id = ?, updated_at = CURRENT_TIMESTAMP
-            WHERE discord_id = ?
+            WHERE discord_id = ? AND guild_id = ?
         """
         
         await execute_db_operation(
             f"update AniList info for {discord_id}",
             query,
-            (anilist_username.strip(), anilist_id, discord_id)
+            (anilist_username.strip(), anilist_id, discord_id, default_guild_id)
         )
         
         logger.info(f"✅ Updated AniList info for {discord_id}: {anilist_username} (ID: {anilist_id})")
@@ -1267,45 +1189,6 @@ async def upsert_user_stats(
         logger.error(f"❌ Error upserting stats for {discord_id}: {e}", exc_info=True)
         raise
 
-# Save or update a user with comprehensive logging
-async def save_user(discord_id: int, username: str):
-    """Save or update user with comprehensive logging and validation."""
-    logger.info(f"Saving user: {username} (Discord ID: {discord_id})")
-    
-    try:
-        if not isinstance(discord_id, int) or discord_id <= 0:
-            raise ValueError(f"Invalid discord_id: {discord_id}")
-        if not isinstance(username, str) or not username.strip():
-            raise ValueError(f"Invalid username: {username}")
-        
-        # Check if user already exists
-        existing_user = await get_user(discord_id)
-        operation_type = "update" if existing_user else "insert"
-        
-        query = """
-            INSERT INTO users (discord_id, username, updated_at)
-            VALUES (?, ?, CURRENT_TIMESTAMP)
-            ON CONFLICT(discord_id) DO UPDATE SET 
-                username=excluded.username,
-                updated_at=CURRENT_TIMESTAMP
-        """
-        
-        await execute_db_operation(
-            f"save user {username} ({operation_type})",
-            query,
-            (discord_id, username.strip())
-        )
-        
-        logger.info(f"✅ Successfully saved user: {username} ({operation_type})")
-        
-    except ValueError as validation_error:
-        logger.error(f"Validation error saving user: {validation_error}")
-        raise
-    except Exception as e:
-        logger.error(f"❌ Error saving user {discord_id}: {e}", exc_info=True)
-        raise
-
-
 # ------------------------------------------------------
 # MANGA CHALLENGES TABLE
 # ------------------------------------------------------
@@ -1409,29 +1292,6 @@ async def init_challenge_manga_table():
         except aiosqlite.OperationalError:
             # Column already exists, ignore
             pass
-        await db.commit()
-
-from datetime import datetime
-
-async def upsert_user_manga_progress(discord_id, manga_id, title, chapters, points, status, repeat=0, started_at=None):
-    """Upsert user manga progress including repeat, started_at, and updated_at"""
-    now = datetime.utcnow().isoformat()
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute(
-            """
-            INSERT INTO user_manga_progress(discord_id, manga_id, title, current_chapter, points, status, repeat, started_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(discord_id, manga_id) DO UPDATE SET
-                title=excluded.title,
-                current_chapter=excluded.current_chapter,
-                points=excluded.points,
-                status=excluded.status,
-                repeat=excluded.repeat,
-                started_at=excluded.started_at,
-                updated_at=excluded.updated_at
-            """,
-            (discord_id, manga_id, title, chapters, points, status, repeat, started_at, now)
-        )
         await db.commit()
 
 # ------------------------------------------------------
@@ -3313,37 +3173,6 @@ async def set_news_last_check(check_time: datetime) -> bool:
     except Exception as e:
         logger.error(f"Error setting news last check time: {e}", exc_info=True)
         return False
-
-
-async def get_news_last_check() -> Optional[datetime]:
-    """Get the last news check timestamp."""
-    try:
-        async with aiosqlite.connect(DB_PATH) as db:
-            async with db.execute("SELECT value FROM news_metadata WHERE key = 'last_check'") as cursor:
-                row = await cursor.fetchone()
-                if row:
-                    # Parse the ISO format datetime
-                    return datetime.fromisoformat(row[0])
-                return None
-    except Exception as e:
-        logger.error(f"Error getting news last check time: {e}", exc_info=True)
-        return None
-
-
-async def set_news_last_check(check_time: datetime) -> bool:
-    """Set the last news check timestamp."""
-    try:
-        async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute(
-                "INSERT OR REPLACE INTO news_metadata (key, value, updated_at) VALUES ('last_check', ?, CURRENT_TIMESTAMP)",
-                (check_time.isoformat(),)
-            )
-            await db.commit()
-            return True
-    except Exception as e:
-        logger.error(f"Error setting news last check time: {e}", exc_info=True)
-        return False
-
 
 
 # Account-specific whitelist functions
