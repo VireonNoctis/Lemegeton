@@ -664,14 +664,21 @@ class AniListCog(commands.Cog):
             self.add_item(self.next_btn)
 
         async def _load_message_state(self):
-            state = self.cog._load_state()
-            return state.get("messages", {}).get(self.message_id)
+            """Load state for this specific message from the database."""
+            return await get_paginator_state(str(self.message_id))
 
         async def _save_message_state(self, new_state: Dict[str, Any]):
-            state = self.cog._load_state()
-            state.setdefault("messages", {})
-            state["messages"][self.message_id] = new_state
-            self.cog._save_state(state)
+            """Save state for this specific message to the database."""
+            current_page = new_state.get("current_page", self.current_page)
+            await set_paginator_state(
+                message_id=str(self.message_id),
+                channel_id=str(self.channel_id),
+                guild_id=str(self.channel_id),  # Using channel_id as guild_id placeholder
+                state_type='activity',
+                total_pages=self.total_pages,
+                current_page=current_page,
+                activity_id=self.activity_id
+            )
 
         def _update_buttons_disabled(self):
             self.prev_btn.disabled = (self.current_page <= 1)

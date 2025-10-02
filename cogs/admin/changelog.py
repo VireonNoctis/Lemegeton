@@ -269,7 +269,30 @@ class Changelog(commands.Cog):
 
 
 
-
+    async def role_autocomplete(
+        self,
+        interaction: discord.Interaction,
+        current: str,
+    ) -> list[app_commands.Choice[str]]:
+        """Autocomplete for role parameter - shows all roles with search."""
+        if not interaction.guild:
+            return []
+        
+        # Get all roles (excluding @everyone)
+        roles = [role for role in interaction.guild.roles if role.name != "@everyone"]
+        
+        # Filter by current input (case-insensitive)
+        if current:
+            roles = [role for role in roles if current.lower() in role.name.lower()]
+        
+        # Sort by position (highest first) and limit to 25 (Discord's limit)
+        roles.sort(key=lambda r: r.position, reverse=True)
+        roles = roles[:25]
+        
+        return [
+            app_commands.Choice(name=role.name, value=str(role.id))
+            for role in roles
+        ]
 
     @bot_moderator_only()
     @app_commands.command(name="changelog", description="Create and publish a changelog from an uploaded text file (Bot Moderator only)")
@@ -278,10 +301,11 @@ class Changelog(commands.Cog):
         publish_to="Where to publish the changelog",
         changelog_type="Type of changelog update",
         color="Embed color (hex code like #FF5733 or color name)",
-        role="Optional role to ping (defaults to @bot-updates if not specified)",
+        role="Optional role to ping (type to search, defaults to @bot-updates if not specified)",
         image_url="Optional image URL to embed",
         title_override="Override the auto-detected title"
     )
+    @app_commands.autocomplete(role=role_autocomplete)
     @app_commands.choices(
         publish_to=[
             app_commands.Choice(name="📡 All Servers (Bot Update)", value="all_servers"),
@@ -303,7 +327,7 @@ class Changelog(commands.Cog):
         publish_to: str = "current_server",
         changelog_type: str = "general",
         color: str = None,
-        role: discord.Role = None,
+        role: str = None,
         image_url: str = None,
         title_override: str = None
     ):
@@ -486,9 +510,18 @@ class Changelog(commands.Cog):
                     return
                 
                 content_msg = None
-                role_to_mention = role  # Use manually specified role if provided
+                role_to_mention = None
                 
-                # If no role specified, try to use the notification role
+                # Convert role string (ID) to discord.Role object if provided
+                if role:
+                    try:
+                        role_to_mention = interaction.guild.get_role(int(role))
+                        if not role_to_mention:
+                            await interaction.followup.send(f"⚠️ Could not find the specified role. Using default @bot-updates instead.", ephemeral=True)
+                    except (ValueError, TypeError):
+                        await interaction.followup.send(f"⚠️ Invalid role ID. Using default @bot-updates instead.", ephemeral=True)
+                
+                # If no role specified or role not found, try to use the notification role
                 if not role_to_mention:
                     role_to_mention = await self.get_notification_role(interaction.guild)
                 

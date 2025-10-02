@@ -872,9 +872,22 @@ class AddAccountModal(discord.ui.Modal):
             if success:
                 target_channel = interaction.guild.get_channel(target_channel_id)
                 channel_mention = target_channel.mention if target_channel else f"<#{target_channel_id}>"
+                
+                # Auto-start background task if not running
+                task_status = ""
+                if hasattr(self.cog, 'check_tweets'):
+                    if not self.cog.check_tweets.is_running():
+                        try:
+                            self.cog.check_tweets.start()
+                            task_status = "\n\n🚀 Background task automatically started!"
+                            print(f"✅ Auto-started background task after adding @{username}")
+                        except Exception as task_error:
+                            task_status = f"\n\n⚠️ Couldn't auto-start task: {str(task_error)}\nUse 'Restart Task' button to start manually."
+                            print(f"❌ Failed to auto-start task: {task_error}")
+                
                 embed = discord.Embed(
                     title="✅ Account Added",
-                    description=f"Now monitoring [@{username}](https://twitter.com/{username}) in {channel_mention}",
+                    description=f"Now monitoring [@{username}](https://twitter.com/{username}) in {channel_mention}{task_status}",
                     color=0x00ff00
                 )
             else:
