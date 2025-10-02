@@ -1,4 +1,4 @@
-# library_backup_cog.py
+# library_backup.py
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -106,7 +106,7 @@ _STATUS_EMOJI = {
 }
 
 # -----------------------------
-# AniList API helper (dedupe built-in)
+# AniList API helper
 # -----------------------------
 async def fetch_anilist_library(username: str, media_type: str, extended: bool = False) -> List[Dict]:
     """
@@ -163,7 +163,7 @@ async def fetch_anilist_library(username: str, media_type: str, extended: bool =
         logger.warning(f"AniList returned no MediaListCollection for {username}: {data}")
         return []
 
-    seen: Dict[int, Dict] = {}  # media_id -> entry (keep latest updatedAt)
+    seen: Dict[int, Dict] = {}  # media_id -> entry
     try:
         lists = mlc.get("lists", [])
         for media_list in lists:
@@ -251,7 +251,7 @@ def deduplicate_entries_by_id(entries: List[Dict]) -> List[Dict]:
         if mid not in seen:
             seen[mid] = e
         else:
-            # keep one with larger updated_ts
+            #keep one with larger updated_ts
             if e.get("updated_ts", 0) > seen[mid].get("updated_ts", 0):
                 seen[mid] = e
     return list(seen.values())
@@ -394,7 +394,7 @@ async def generate_export_file(
             finish_date = e.get("finish_date") or "0000-00-00"
             notes = ",".join(e.get("tags", []))
 
-            # parse progress "done/total" (we wrote progress that way earlier)
+            # parse progress
             prog_parts = str(e.get("progress", "0/0")).split("/")
             done = prog_parts[0] if len(prog_parts) >= 1 else "0"
             total_val = prog_parts[1] if len(prog_parts) >= 2 else "0"
@@ -412,15 +412,13 @@ async def generate_export_file(
                     f"    <my_tags>{notes}</my_tags>\n"
                     f"  </anime>\n"
                 )
-            else:
-                # For manga & novel we present the same minimal accepted fields (manga_id + read chapters/volumes)
-                # Novel is kept as a separate tag block but uses the series_mangadb_id field (MAL format).
+            else:              
                 if media_type == "manga":
                     tag_name = "manga"
                     id_tag = "series_mangadb_id"
                 else:
                     tag_name = "novel"
-                    id_tag = "series_mangadb_id"  # AniList/MAL uses mangadb id for manga/novel entries
+                    id_tag = "series_mangadb_id"
 
                 block = (
                     f"  <{tag_name}>\n"
