@@ -251,28 +251,29 @@ class BrowseCog(commands.Cog):
             progress_lines = [f"`{'User':<20} {col_name:<10} {'Rating':<7} {'Status':<12}`"]
             progress_lines.append("`{:-<20} {:-<10} {:-<7} {:-<12}`".format("", "", "", ""))
 
-            # Track processed AniList usernames to prevent duplicates
+            # Track processed users by both discord_id and anilist_username to prevent duplicates
             processed_anilist_users = set()
+            processed_discord_ids = set()
 
             for user in users:
-                # DB rows can come in two shapes depending on schema/migration:
-                # - Guild-aware: (id, discord_id, guild_id, username, anilist_username, ...)
-                # - Legacy:     (id, discord_id, username, anilist_username, ...)
+                # Guild-aware schema: (id, discord_id, guild_id, username, anilist_username, anilist_id, ...)
+                # Expected structure from get_all_users_guild_aware with explicit columns
                 if len(user) >= 5:
-                    # guild-aware
+                    discord_id = user[1]
                     discord_name = user[3]
                     anilist_username = user[4]
-                elif len(user) >= 4:
-                    # legacy
-                    discord_name = user[2]
-                    anilist_username = user[3]
                 else:
-                    # Fallback: best-effort
-                    discord_name = str(user[1]) if len(user) > 1 else "Unknown"
-                    anilist_username = None
+                    # Fallback for unexpected structure
+                    logger.warning(f"Unexpected user row structure: {len(user)} columns")
+                    continue
 
-                # Skip if no AniList username or already processed
-                if not anilist_username or anilist_username in processed_anilist_users:
+                # Skip if no AniList username
+                if not anilist_username:
+                    continue
+                    
+                # Skip if already processed (check both identifiers to catch any duplicates)
+                if anilist_username in processed_anilist_users or discord_id in processed_discord_ids:
+                    logger.debug(f"Skipping duplicate user: {anilist_username} (Discord ID: {discord_id})")
                     continue
 
                 anilist_progress = await self.fetch_user_anilist_progress(
@@ -283,8 +284,9 @@ class BrowseCog(commands.Cog):
                 if not anilist_progress:
                     continue
 
-                # Mark this AniList username as processed to prevent duplicates
+                # Mark both identifiers as processed to prevent duplicates
                 processed_anilist_users.add(anilist_username)
+                processed_discord_ids.add(discord_id)
 
                 total = media.get("episodes") if real_type == "ANIME" else media.get("chapters")
                 progress_text = f"{anilist_progress['progress']}/{total or '?'}" if anilist_progress.get("progress") is not None else "—"

@@ -2423,7 +2423,12 @@ async def get_all_users_guild_aware(guild_id: int):
         if not isinstance(guild_id, int) or guild_id <= 0:
             raise ValueError(f"Invalid guild_id: {guild_id}")
         
-        query = "SELECT * FROM users WHERE guild_id = ?"
+        # Use DISTINCT to ensure no duplicate rows are returned
+        # Explicitly select columns for clarity
+        query = """SELECT DISTINCT id, discord_id, guild_id, username, anilist_username, anilist_id, created_at, updated_at 
+                   FROM users 
+                   WHERE guild_id = ? 
+                   ORDER BY username"""
         users = await execute_db_operation(
             f"get all users for guild {guild_id}",
             query,
