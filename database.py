@@ -870,39 +870,45 @@ async def init_user_stats_table():
             """)
             logger.info("Created new guild-aware user_stats table")
         else:
-            # Table exists, ensure all columns are present
-            await db.execute("""
-                CREATE TABLE IF NOT EXISTS user_stats (
-                    discord_id INTEGER PRIMARY KEY,
-                    username TEXT,
-                    total_manga INTEGER DEFAULT 0,
-                    total_anime INTEGER DEFAULT 0,
-                    avg_manga_score REAL DEFAULT 0,
-                    avg_anime_score REAL DEFAULT 0
-                )
-            """)
+            # Table exists - check if it has the correct schema
+            cursor = await db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='user_stats'")
+            table_sql = await cursor.fetchone()
+            await cursor.close()
+            
+            if table_sql and 'PRIMARY KEY (discord_id, guild_id)' not in table_sql[0]:
+                logger.warning("⚠️ user_stats table exists with OLD SCHEMA (single primary key)")
+                logger.warning("   Multi-guild upsert operations will FAIL until you run migration!")
+                logger.warning("   Run: python tools/migrate_user_stats_table.py")
             
             # Add missing columns for compatibility
-            try:
-                await db.execute("ALTER TABLE user_stats ADD COLUMN total_chapters INTEGER DEFAULT 0")
-            except aiosqlite.OperationalError:
-                pass
-            try:
-                await db.execute("ALTER TABLE user_stats ADD COLUMN total_episodes INTEGER DEFAULT 0")
-            except aiosqlite.OperationalError:
-                pass
-            try:
-                await db.execute("ALTER TABLE user_stats ADD COLUMN manga_completed INTEGER DEFAULT 0")
-            except aiosqlite.OperationalError:
-                pass
-            try:
-                await db.execute("ALTER TABLE user_stats ADD COLUMN anime_completed INTEGER DEFAULT 0")
-            except aiosqlite.OperationalError:
-                pass
-            try:
-                await db.execute("ALTER TABLE user_stats ADD COLUMN guild_id INTEGER")
-            except aiosqlite.OperationalError:
-                pass
+            column_names = [col[1] for col in schema]
+            
+            if 'total_chapters' not in column_names:
+                try:
+                    await db.execute("ALTER TABLE user_stats ADD COLUMN total_chapters INTEGER DEFAULT 0")
+                except aiosqlite.OperationalError:
+                    pass
+            if 'total_episodes' not in column_names:
+                try:
+                    await db.execute("ALTER TABLE user_stats ADD COLUMN total_episodes INTEGER DEFAULT 0")
+                except aiosqlite.OperationalError:
+                    pass
+            if 'manga_completed' not in column_names:
+                try:
+                    await db.execute("ALTER TABLE user_stats ADD COLUMN manga_completed INTEGER DEFAULT 0")
+                except aiosqlite.OperationalError:
+                    pass
+            if 'anime_completed' not in column_names:
+                try:
+                    await db.execute("ALTER TABLE user_stats ADD COLUMN anime_completed INTEGER DEFAULT 0")
+                except aiosqlite.OperationalError:
+                    pass
+            if 'guild_id' not in column_names:
+                try:
+                    await db.execute("ALTER TABLE user_stats ADD COLUMN guild_id INTEGER")
+                    logger.warning("   Added guild_id column, but PRIMARY KEY still needs migration!")
+                except aiosqlite.OperationalError:
+                    pass
                 
         await db.commit()
         logger.info("User stats table ready.")
