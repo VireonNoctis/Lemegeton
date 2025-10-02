@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import Optional
 
 from database import (
-    add_user, get_user, update_username, remove_user,
-    # New guild-aware functions
+    # Guild-aware functions (multi-guild support)
     add_user_guild_aware, get_user_guild_aware, register_user_guild_aware, 
-    is_user_registered_in_guild
+    is_user_registered_in_guild, update_username, remove_user
 )
 from config import STEAM_API_KEY, DB_PATH
 
@@ -518,9 +517,8 @@ class Login(commands.Cog):
 
     async def _register_new_user(self, user_id: int, discord_user: str, anilist_username: str, anilist_id: int):
         """Register a completely new user. (DEPRECATED: Use _register_new_user_guild_aware)"""
-        logger.warning("Using deprecated _register_new_user method. Consider using guild-aware version.")
-        await add_user(user_id, discord_user, anilist_username, anilist_id)
-        logger.info(f"Added new user to database: {discord_user} (ID: {user_id})")
+        logger.warning("Using deprecated _register_new_user method. This method is deprecated and should not be called.")
+        raise NotImplementedError("Legacy _register_new_user is deprecated. Use _register_new_user_guild_aware with guild_id instead.")
 
     async def _register_new_user_guild_aware(self, user_id: int, guild_id: int, discord_user: str, anilist_username: str, anilist_id: int):
         """Register a completely new user in a specific guild."""

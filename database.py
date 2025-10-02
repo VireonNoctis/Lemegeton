@@ -3239,3 +3239,621 @@ async def get_all_account_whitelists() -> Dict[str, List[str]]:
     except Exception as e:
         logger.error(f"Error getting all account whitelists: {e}", exc_info=True)
         return {}
+
+
+# ============================================================
+# PAGINATOR STATE FUNCTIONS (migrated from anilist_paginator_state.json)
+# ============================================================
+
+async def get_paginator_state(message_id: str) -> Optional[dict]:
+    """Get paginator state for a specific message ID."""
+    try:
+        result = await execute_db_operation(
+            "get paginator state",
+            """SELECT message_id, channel_id, guild_id, state_type, activity_id, media_id, 
+                      media_type, total_pages, current_page 
+               FROM paginator_state WHERE message_id = ?""",
+            (message_id,),
+            fetch_type='one'
+        )
+        
+        if result:
+            return {
+                'message_id': result['message_id'] if isinstance(result, dict) else result[0],
+                'channel_id': result['channel_id'] if isinstance(result, dict) else result[1],
+                'guild_id': result['guild_id'] if isinstance(result, dict) else result[2],
+                'state_type': result['state_type'] if isinstance(result, dict) else result[3],
+                'activity_id': result['activity_id'] if isinstance(result, dict) else result[4],
+                'media_id': result['media_id'] if isinstance(result, dict) else result[5],
+                'media_type': result['media_type'] if isinstance(result, dict) else result[6],
+                'total_pages': result['total_pages'] if isinstance(result, dict) else result[7],
+                'current_page': result['current_page'] if isinstance(result, dict) else result[8]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error getting paginator state for message {message_id}: {e}")
+        return None
+
+
+async def set_paginator_state(message_id: str, channel_id: str, guild_id: str, 
+                               state_type: str, total_pages: int, current_page: int,
+                               activity_id: Optional[int] = None, 
+                               media_id: Optional[int] = None,
+                               media_type: Optional[str] = None) -> bool:
+    """Set paginator state for a message."""
+    try:
+        await execute_db_operation(
+            "set paginator state",
+            """INSERT OR REPLACE INTO paginator_state 
+               (message_id, channel_id, guild_id, state_type, activity_id, media_id, 
+                media_type, total_pages, current_page, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+            (message_id, channel_id, guild_id, state_type, activity_id, media_id, 
+             media_type, total_pages, current_page)
+        )
+        logger.debug(f"Set paginator state for message {message_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error setting paginator state for message {message_id}: {e}")
+        return False
+
+
+async def delete_paginator_state(message_id: str) -> bool:
+    """Delete paginator state for a message."""
+    try:
+        await execute_db_operation(
+            "delete paginator state",
+            "DELETE FROM paginator_state WHERE message_id = ?",
+            (message_id,)
+        )
+        logger.debug(f"Deleted paginator state for message {message_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error deleting paginator state for message {message_id}: {e}")
+        return False
+
+
+async def get_all_paginator_states() -> dict:
+    """Get all paginator states organized by type."""
+    try:
+        results = await execute_db_operation(
+            "get all paginator states",
+            """SELECT message_id, channel_id, state_type, activity_id, media_id, 
+                      media_type, total_pages, current_page 
+               FROM paginator_state""",
+            fetch_type='all'
+        )
+        
+        states = {'messages': {}, 'media_messages': {}}
+        
+        if results:
+            for row in results:
+                if isinstance(row, dict):
+                    message_id = row['message_id']
+                    state_type = row['state_type']
+                    state_data = {
+                        'channel_id': int(row['channel_id']),
+                        'total_pages': row['total_pages'],
+                        'current_page': row['current_page']
+                    }
+                    
+                    if state_type == 'activity':
+                        state_data['activity_id'] = row['activity_id']
+                        states['messages'][message_id] = state_data
+                    elif state_type == 'media':
+                        state_data['media_id'] = row['media_id']
+                        state_data['media_type'] = row['media_type']
+                        states['media_messages'][message_id] = state_data
+                else:
+                    # Handle tuple results
+                    message_id = row[0]
+                    state_type = row[2]
+                    state_data = {
+                        'channel_id': int(row[1]),
+                        'total_pages': row[6],
+                        'current_page': row[7]
+                    }
+                    
+                    if state_type == 'activity':
+                        state_data['activity_id'] = row[3]
+                        states['messages'][message_id] = state_data
+                    elif state_type == 'media':
+                        state_data['media_id'] = row[4]
+                        state_data['media_type'] = row[5]
+                        states['media_messages'][message_id] = state_data
+        
+        return states
+    except Exception as e:
+        logger.error(f"Error getting all paginator states: {e}")
+        return {'messages': {}, 'media_messages': {}}
+
+
+# ============================================================
+# SCANNED MEDIA FUNCTIONS (migrated from anime_scan.json and manga_scan.json)
+# ============================================================
+
+async def is_media_scanned(media_id: int, media_type: str) -> bool:
+    """Check if a media ID has been scanned."""
+    try:
+        result = await execute_db_operation(
+            "check if media scanned",
+            "SELECT 1 FROM scanned_media WHERE media_id = ? AND media_type = ?",
+            (media_id, media_type),
+            fetch_type='one'
+        )
+        return result is not None
+    except Exception as e:
+        logger.error(f"Error checking if media {media_id} ({media_type}) is scanned: {e}")
+        return False
+
+
+async def add_scanned_media(media_id: int, media_type: str) -> bool:
+    """Add a scanned media ID."""
+    try:
+        await execute_db_operation(
+            "add scanned media",
+            "INSERT OR IGNORE INTO scanned_media (media_id, media_type) VALUES (?, ?)",
+            (media_id, media_type)
+        )
+        logger.debug(f"Added scanned media: {media_id} ({media_type})")
+        return True
+    except Exception as e:
+        logger.error(f"Error adding scanned media {media_id} ({media_type}): {e}")
+        return False
+
+
+async def get_scanned_media(media_type: str) -> List[int]:
+    """Get all scanned media IDs for a specific type (ANIME or MANGA)."""
+    try:
+        results = await execute_db_operation(
+            f"get scanned {media_type}",
+            "SELECT media_id FROM scanned_media WHERE media_type = ? ORDER BY media_id",
+            (media_type,),
+            fetch_type='all'
+        )
+        
+        if results:
+            return [row['media_id'] if isinstance(row, dict) else row[0] for row in results]
+        return []
+    except Exception as e:
+        logger.error(f"Error getting scanned {media_type}: {e}")
+        return []
+
+
+async def save_scanned_media_batch(media_ids: List[int], media_type: str) -> bool:
+    """Save a batch of scanned media IDs (replaces entire list for that type)."""
+    try:
+        # Use a transaction to replace all IDs for this media type
+        async with aiosqlite.connect(DB_PATH) as db:
+            # Delete existing entries for this media type
+            await db.execute("DELETE FROM scanned_media WHERE media_type = ?", (media_type,))
+            
+            # Insert new entries
+            await db.executemany(
+                "INSERT INTO scanned_media (media_id, media_type) VALUES (?, ?)",
+                [(media_id, media_type) for media_id in media_ids]
+            )
+            
+            await db.commit()
+            logger.info(f"Saved {len(media_ids)} scanned {media_type} IDs")
+            return True
+    except Exception as e:
+        logger.error(f"Error saving scanned {media_type} batch: {e}")
+        return False
+
+
+# ============================================================
+# SCAN METADATA FUNCTIONS (migrated from anime_scan_meta.json and manga_scan_meta.json)
+# ============================================================
+
+async def get_scan_metadata(scan_type: str) -> Optional[dict]:
+    """Get scan metadata (last_run timestamp) for anime or manga."""
+    try:
+        result = await execute_db_operation(
+            f"get {scan_type} scan metadata",
+            "SELECT last_run, updated_at FROM scan_metadata WHERE scan_type = ?",
+            (scan_type,),
+            fetch_type='one'
+        )
+        
+        if result:
+            return {
+                'last_run': result['last_run'] if isinstance(result, dict) else result[0],
+                'updated_at': result['updated_at'] if isinstance(result, dict) else result[1]
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error getting {scan_type} scan metadata: {e}")
+        return None
+
+
+async def set_scan_metadata(scan_type: str, last_run: str) -> bool:
+    """Set scan metadata (last_run timestamp) for anime or manga."""
+    try:
+        await execute_db_operation(
+            f"set {scan_type} scan metadata",
+            """INSERT OR REPLACE INTO scan_metadata (scan_type, last_run, updated_at)
+               VALUES (?, ?, CURRENT_TIMESTAMP)""",
+            (scan_type, last_run)
+        )
+        logger.debug(f"Set {scan_type} scan metadata: last_run={last_run}")
+        return True
+    except Exception as e:
+        logger.error(f"Error setting {scan_type} scan metadata: {e}")
+        return False
+
+
+# ============================================================
+# BOT CONFIG FUNCTIONS (migrated from changelog_channel.json and other configs)
+# ============================================================
+
+async def get_bot_config(config_key: str, guild_id: str) -> Optional[str]:
+    """Get a bot configuration value for a specific guild."""
+    try:
+        result = await execute_db_operation(
+            f"get bot config {config_key}",
+            "SELECT config_value FROM bot_config WHERE config_key = ? AND guild_id = ?",
+            (config_key, guild_id),
+            fetch_type='one'
+        )
+        
+        if result:
+            return result['config_value'] if isinstance(result, dict) else result[0]
+        return None
+    except Exception as e:
+        logger.error(f"Error getting bot config {config_key} for guild {guild_id}: {e}")
+        return None
+
+
+async def set_bot_config(config_key: str, guild_id: str, config_value: str) -> bool:
+    """Set a bot configuration value for a specific guild."""
+    try:
+        await execute_db_operation(
+            f"set bot config {config_key}",
+            """INSERT OR REPLACE INTO bot_config (config_key, guild_id, config_value, updated_at)
+               VALUES (?, ?, ?, CURRENT_TIMESTAMP)""",
+            (config_key, guild_id, config_value)
+        )
+        logger.debug(f"Set bot config {config_key}={config_value} for guild {guild_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error setting bot config {config_key} for guild {guild_id}: {e}")
+        return False
+
+
+# ============================================================
+# MEDIA CACHE FUNCTIONS (migrated from popular_titles_cache.json and recommendation_cache.json)
+# ============================================================
+
+async def get_media_cache(cache_key: str) -> List[int]:
+    """Get all media IDs for a specific cache key."""
+    try:
+        results = await execute_db_operation(
+            f"get media cache {cache_key}",
+            "SELECT media_id FROM media_cache WHERE cache_key = ? ORDER BY media_id",
+            (cache_key,),
+            fetch_type='all'
+        )
+        
+        if results:
+            return [row['media_id'] if isinstance(row, dict) else row[0] for row in results]
+        return []
+    except Exception as e:
+        logger.error(f"Error getting media cache for {cache_key}: {e}")
+        return []
+
+
+async def set_media_cache(cache_key: str, media_ids: List[int], expires_hours: Optional[int] = None) -> bool:
+    """Set media cache (replaces entire list for that cache key)."""
+    try:
+        from datetime import datetime, timedelta
+        
+        cached_at = datetime.now().isoformat()
+        expires_at = None
+        if expires_hours:
+            expires_at = (datetime.now() + timedelta(hours=expires_hours)).isoformat()
+        
+        async with aiosqlite.connect(DB_PATH) as db:
+            # Delete existing entries for this cache key
+            await db.execute("DELETE FROM media_cache WHERE cache_key = ?", (cache_key,))
+            
+            # Insert new entries
+            await db.executemany(
+                """INSERT INTO media_cache (cache_key, media_id, cached_at, expires_at)
+                   VALUES (?, ?, ?, ?)""",
+                [(cache_key, media_id, cached_at, expires_at) for media_id in media_ids]
+            )
+            
+            await db.commit()
+            logger.debug(f"Set media cache {cache_key} with {len(media_ids)} IDs")
+            return True
+    except Exception as e:
+        logger.error(f"Error setting media cache {cache_key}: {e}")
+        return False
+
+
+async def get_recommendation_count(media_id: int) -> Optional[int]:
+    """Get cached recommendation count for a media ID."""
+    try:
+        result = await execute_db_operation(
+            "get recommendation count",
+            """SELECT cache_value, expires_at FROM media_cache 
+               WHERE cache_key = 'recommendation_count' AND media_id = ?""",
+            (media_id,),
+            fetch_type='one'
+        )
+        
+        if result:
+            import json
+            from datetime import datetime
+            
+            expires_at = result['expires_at'] if isinstance(result, dict) else result[1]
+            
+            # Check if expired
+            if expires_at:
+                try:
+                    expiry_time = datetime.fromisoformat(expires_at)
+                    if datetime.now() > expiry_time:
+                        # Expired, delete and return None
+                        await execute_db_operation(
+                            "delete expired recommendation",
+                            """DELETE FROM media_cache 
+                               WHERE cache_key = 'recommendation_count' AND media_id = ?""",
+                            (media_id,)
+                        )
+                        return None
+                except:
+                    pass
+            
+            # Parse the cache_value JSON
+            cache_value = result['cache_value'] if isinstance(result, dict) else result[0]
+            if cache_value:
+                data = json.loads(cache_value)
+                return data.get('count')
+        
+        return None
+    except Exception as e:
+        logger.error(f"Error getting recommendation count for media {media_id}: {e}")
+        return None
+
+
+async def set_recommendation_count(media_id: int, count: int, expires_hours: int = 24) -> bool:
+    """Set cached recommendation count for a media ID."""
+    try:
+        import json
+        from datetime import datetime, timedelta
+        
+        cache_value = json.dumps({"count": count})
+        cached_at = datetime.now().isoformat()
+        expires_at = (datetime.now() + timedelta(hours=expires_hours)).isoformat()
+        
+        await execute_db_operation(
+            "set recommendation count",
+            """INSERT OR REPLACE INTO media_cache 
+               (cache_key, media_id, cache_value, cached_at, expires_at)
+               VALUES ('recommendation_count', ?, ?, ?, ?)""",
+            (media_id, cache_value, cached_at, expires_at)
+        )
+        
+        logger.debug(f"Set recommendation count for media {media_id}: {count}")
+        return True
+    except Exception as e:
+        logger.error(f"Error setting recommendation count for media {media_id}: {e}")
+        return False
+
+
+async def clean_expired_cache() -> int:
+    """Clean up expired cache entries. Returns number of entries removed."""
+    try:
+        from datetime import datetime
+        
+        result = await execute_db_operation(
+            "clean expired cache",
+            """DELETE FROM media_cache 
+               WHERE expires_at IS NOT NULL AND expires_at < ?""",
+            (datetime.now().isoformat(),)
+        )
+        
+        # Get rowcount from the operation
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                """DELETE FROM media_cache 
+                   WHERE expires_at IS NOT NULL AND expires_at < ?""",
+                (datetime.now().isoformat(),)
+            )
+            await db.commit()
+            count = cursor.rowcount
+            
+        if count > 0:
+            logger.info(f"Cleaned {count} expired cache entries")
+        return count
+    except Exception as e:
+        logger.error(f"Error cleaning expired cache: {e}")
+        return 0
+
+
+# ============================================================
+# PLANNED FEATURES FUNCTIONS (migrated from planned_features.json)
+# ============================================================
+
+async def get_planned_features(status: str = 'planned') -> List[dict]:
+    """Get all planned features with a specific status."""
+    try:
+        results = await execute_db_operation(
+            f"get {status} features",
+            """SELECT id, name, description, added_date, added_by, uploaded_from_file,
+                      last_edited, last_edited_by, status
+               FROM planned_features WHERE status = ? ORDER BY added_date DESC""",
+            (status,),
+            fetch_type='all'
+        )
+        
+        if results:
+            features = []
+            for row in results:
+                if isinstance(row, dict):
+                    features.append({
+                        'id': row['id'],
+                        'name': row['name'],
+                        'description': row['description'],
+                        'added_date': row['added_date'],
+                        'added_by': row['added_by'],
+                        'uploaded_from_file': row['uploaded_from_file'],
+                        'last_edited': row['last_edited'],
+                        'last_edited_by': row['last_edited_by'],
+                        'status': row['status']
+                    })
+                else:
+                    features.append({
+                        'id': row[0],
+                        'name': row[1],
+                        'description': row[2],
+                        'added_date': row[3],
+                        'added_by': row[4],
+                        'uploaded_from_file': row[5],
+                        'last_edited': row[6],
+                        'last_edited_by': row[7],
+                        'status': row[8]
+                    })
+            return features
+        return []
+    except Exception as e:
+        logger.error(f"Error getting {status} features: {e}")
+        return []
+
+
+async def add_planned_feature(name: str, description: str, added_by: str, **kwargs) -> int:
+    """Add a new planned feature. Returns the feature ID."""
+    try:
+        from datetime import datetime
+        
+        added_date = datetime.now().isoformat()
+        uploaded_from_file = kwargs.get('uploaded_from_file')
+        
+        result = await execute_db_operation(
+            "add planned feature",
+            """INSERT INTO planned_features 
+               (name, description, added_date, added_by, uploaded_from_file, status)
+               VALUES (?, ?, ?, ?, ?, 'planned')""",
+            (name, description, added_date, added_by, uploaded_from_file),
+            fetch_type='lastrowid'
+        )
+        
+        feature_id = result if result else 0
+        logger.info(f"Added planned feature: {name} (ID: {feature_id})")
+        return feature_id
+    except Exception as e:
+        logger.error(f"Error adding planned feature {name}: {e}")
+        return 0
+
+
+async def update_planned_feature(feature_id: int, **kwargs) -> bool:
+    """Update a planned feature with provided fields."""
+    try:
+        from datetime import datetime
+        
+        # Build dynamic update query
+        update_fields = []
+        values = []
+        
+        if 'name' in kwargs:
+            update_fields.append("name = ?")
+            values.append(kwargs['name'])
+        
+        if 'description' in kwargs:
+            update_fields.append("description = ?")
+            values.append(kwargs['description'])
+        
+        if 'status' in kwargs:
+            update_fields.append("status = ?")
+            values.append(kwargs['status'])
+        
+        if 'last_edited_by' in kwargs:
+            update_fields.append("last_edited = ?")
+            update_fields.append("last_edited_by = ?")
+            values.append(datetime.now().isoformat())
+            values.append(kwargs['last_edited_by'])
+        
+        if not update_fields:
+            return False
+        
+        values.append(feature_id)
+        query = f"UPDATE planned_features SET {', '.join(update_fields)} WHERE id = ?"
+        
+        await execute_db_operation(
+            "update planned feature",
+            query,
+            tuple(values)
+        )
+        
+        logger.info(f"Updated planned feature ID {feature_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error updating planned feature {feature_id}: {e}")
+        return False
+
+
+async def delete_planned_feature(feature_id: int) -> bool:
+    """Delete a planned feature."""
+    try:
+        await execute_db_operation(
+            "delete planned feature",
+            "DELETE FROM planned_features WHERE id = ?",
+            (feature_id,)
+        )
+        logger.info(f"Deleted planned feature ID {feature_id}")
+        return True
+    except Exception as e:
+        logger.error(f"Error deleting planned feature {feature_id}: {e}")
+        return False
+
+
+# ============================================================
+# BOT METRICS FUNCTIONS (migrated from monitoring_metrics.json)
+# ============================================================
+
+async def get_bot_metric(metric_key: str) -> Optional[dict]:
+    """Get a bot metric value."""
+    try:
+        import json
+        
+        result = await execute_db_operation(
+            f"get bot metric {metric_key}",
+            "SELECT metric_value, updated_at FROM bot_metrics WHERE metric_key = ?",
+            (metric_key,),
+            fetch_type='one'
+        )
+        
+        if result:
+            metric_value = result['metric_value'] if isinstance(result, dict) else result[0]
+            updated_at = result['updated_at'] if isinstance(result, dict) else result[1]
+            
+            return {
+                'value': json.loads(metric_value) if metric_value else None,
+                'updated_at': updated_at
+            }
+        return None
+    except Exception as e:
+        logger.error(f"Error getting bot metric {metric_key}: {e}")
+        return None
+
+
+async def set_bot_metric(metric_key: str, metric_value: any) -> bool:
+    """Set a bot metric value."""
+    try:
+        import json
+        
+        value_json = json.dumps(metric_value)
+        
+        await execute_db_operation(
+            f"set bot metric {metric_key}",
+            """INSERT OR REPLACE INTO bot_metrics (metric_key, metric_value, updated_at)
+               VALUES (?, ?, CURRENT_TIMESTAMP)""",
+            (metric_key, value_json)
+        )
+        
+        logger.debug(f"Set bot metric {metric_key}")
+        return True
+    except Exception as e:
+        logger.error(f"Error setting bot metric {metric_key}: {e}")
+        return False

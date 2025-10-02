@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import Optional, List, Dict, Tuple
 
 from database import (
-    get_user, save_user, upsert_user_stats,
-    # New guild-aware functions
+    # Guild-aware functions (multi-guild support)
     get_user_guild_aware, get_user_achievements_guild_aware,
     save_user_guild_aware, upsert_user_stats_guild_aware
 )

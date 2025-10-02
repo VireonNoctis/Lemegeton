@@ -2,24 +2,28 @@ import discord
 from discord.ext import commands, tasks
 from discord import app_commands
 from discord.ui import View, Button
-import json
 import datetime
-import os
 import asyncio
 import logging
 import aiohttp
 
 from config import CHANNEL_ID
-from database import is_user_moderator
-from database import set_guild_manga_channel, get_guild_manga_channel, get_all_guild_manga_channels
+from database import (
+    is_user_moderator,
+    set_guild_manga_channel,
+    get_guild_manga_channel,
+    get_all_guild_manga_channels,
+    get_scanned_media,
+    save_scanned_media_batch,
+    get_scan_metadata,
+    set_scan_metadata
+)
+
 ANILIST_URL = "https://graphql.anilist.co"
-SAVE_FILE = "data/manga_scan.json"
-LAST_RUN_FILE = "data/manga_scan_meta.json"  # stores metadata like last run timestamp
-ANIME_SAVE_FILE = "data/anime_scan.json"
-ANIME_LAST_RUN_FILE = "data/anime_scan_meta.json"
 
 # ---------------- Logging ----------------
 LOG_DIR = "logs"
+import os
 os.makedirs(LOG_DIR, exist_ok=True)
 LOG_FILE = os.path.join(LOG_DIR, "animanga_completion.log")
 
@@ -108,8 +112,6 @@ class Finisher(commands.Cog):
         # use module-level logger configured above
         self.logger = logger
         self.logger.info("Finisher cog initialized")
-        # Ensure data directory exists when saving
-        os.makedirs(os.path.dirname(SAVE_FILE) or '.', exist_ok=True)
 
     def cog_unload(self):
         self.daily_check.cancel()
@@ -190,60 +192,31 @@ class Finisher(commands.Cog):
             return []
 
     async def load_previous(self):
-        """Load previous saved IDs (runs in thread to avoid blocking)."""
-        def _read():
-            try:
-                with open(SAVE_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except FileNotFoundError:
-                return []
-            except Exception:
-                return []
-
-        result = await asyncio.to_thread(_read)
+        """Load previous saved manga IDs from database."""
+        result = await get_scanned_media('MANGA')
         try:
-            self.logger.debug(f"Loaded {len(result)} previous manga ids from {SAVE_FILE}")
+            self.logger.debug(f"Loaded {len(result)} previous manga ids from database")
         except Exception:
-            self.logger.debug("Loaded previous manga ids (unable to calculate length)")
+            self.logger.debug("Loaded previous manga ids from database")
         return result
 
     async def load_previous_anime(self):
-        def _read():
-            try:
-                with open(ANIME_SAVE_FILE, "r", encoding="utf-8") as f:
-                    return json.load(f)
-            except FileNotFoundError:
-                return []
-            except Exception:
-                return []
-
-        result = await asyncio.to_thread(_read)
+        """Load previous saved anime IDs from database."""
+        result = await get_scanned_media('ANIME')
         try:
-            self.logger.debug(f"Loaded {len(result)} previous anime ids from {ANIME_SAVE_FILE}")
+            self.logger.debug(f"Loaded {len(result)} previous anime ids from database")
         except Exception:
-            self.logger.debug("Loaded previous anime ids")
+            self.logger.debug("Loaded previous anime ids from database")
         return result
 
     async def save_current(self, data):
-        """Save current IDs atomically (runs in thread to avoid blocking)."""
-        def _write():
-            temp = SAVE_FILE + ".tmp"
-            try:
-                with open(temp, "w", encoding="utf-8") as f:
-                    json.dump([m.get("id") for m in data], f)
-                os.replace(temp, SAVE_FILE)
-            finally:
-                try:
-                    if os.path.exists(temp):
-                        os.remove(temp)
-                except Exception:
-                    pass
-
-        await asyncio.to_thread(_write)
+        """Save current manga IDs to database."""
+        media_ids = [m.get("id") for m in data]
+        await save_scanned_media_batch(media_ids, 'MANGA')
         try:
-            self.logger.info(f"Saved {len(data)} current manga ids to {SAVE_FILE}")
+            self.logger.info(f"Saved {len(data)} current manga ids to database")
         except Exception:
-            self.logger.info("Saved current manga ids")
+            self.logger.info("Saved current manga ids to database")
 
     def filter_new_manga(self, manga_list, prev_ids):
         """Filter list: exclude one-shots, short series, and prefer newly finished today or not seen before."""
@@ -329,24 +302,13 @@ class Finisher(commands.Cog):
             return None
 
     async def save_current_anime(self, data):
-        def _write():
-            temp = ANIME_SAVE_FILE + ".tmp"
-            try:
-                with open(temp, "w", encoding="utf-8") as f:
-                    json.dump([m.get("id") for m in data], f)
-                os.replace(temp, ANIME_SAVE_FILE)
-            finally:
-                try:
-                    if os.path.exists(temp):
-                        os.remove(temp)
-                except Exception:
-                    pass
-
-        await asyncio.to_thread(_write)
+        """Save current anime IDs to database."""
+        media_ids = [m.get("id") for m in data]
+        await save_scanned_media_batch(media_ids, 'ANIME')
         try:
-            self.logger.info(f"Saved {len(data)} current anime ids to {ANIME_SAVE_FILE}")
+            self.logger.info(f"Saved {len(data)} current anime ids to database")
         except Exception:
-            self.logger.info("Saved current anime ids")
+            self.logger.info("Saved current anime ids to database")
 
     async def load_all_defined_channels(self) -> dict:
         """Return the full mapping of guild_id -> channel_id or empty dict."""
@@ -369,41 +331,22 @@ class Finisher(commands.Cog):
 
     # === Last-run persistence (to ensure runs are once-per-24h) ===
     async def load_last_run(self) -> datetime.datetime | None:
-        """Return the last run datetime or None."""
-        def _read():
-            try:
-                if os.path.exists(LAST_RUN_FILE):
-                    with open(LAST_RUN_FILE, "r", encoding="utf-8") as f:
-                        data = json.load(f) or {}
-                        s = data.get("last_run")
-                        if s:
-                            return datetime.datetime.fromisoformat(s)
-                return None
-            except Exception:
-                return None
-
-        return await asyncio.to_thread(_read)
+        """Return the last run datetime from database or None."""
+        try:
+            metadata = await get_scan_metadata('manga')
+            if metadata and metadata.get('last_run'):
+                return datetime.datetime.fromisoformat(metadata['last_run'])
+            return None
+        except Exception:
+            return None
 
     async def save_last_run(self, dt: datetime.datetime):
-        """Persist the last run datetime atomically."""
-        def _write(ts: str):
-            temp = LAST_RUN_FILE + ".tmp"
-            try:
-                with open(temp, "w", encoding="utf-8") as f:
-                    json.dump({"last_run": ts}, f)
-                os.replace(temp, LAST_RUN_FILE)
-            finally:
-                try:
-                    if os.path.exists(temp):
-                        os.remove(temp)
-                except Exception:
-                    pass
-
-        await asyncio.to_thread(_write, dt.isoformat())
+        """Persist the last run datetime to database."""
+        await set_scan_metadata('manga', dt.isoformat())
         try:
-            self.logger.info(f"Saved last run timestamp {dt.isoformat()} to {LAST_RUN_FILE}")
+            self.logger.info(f"Saved last run timestamp {dt.isoformat()} to database")
         except Exception:
-            self.logger.debug("Saved last run timestamp")
+            self.logger.debug("Saved last run timestamp to database")
 
     async def _user_is_mod(self, interaction: discord.Interaction) -> bool:
         """Return True if the invoking user should be considered a moderator.
@@ -646,20 +589,7 @@ class Finisher(commands.Cog):
             self.logger.exception("Failed to save last run timestamp after daily_check (manga)")
         try:
             # persist anime last run separately
-            temp_dt = now
-            def _write_anime(ts: str):
-                temp = ANIME_LAST_RUN_FILE + ".tmp"
-                try:
-                    with open(temp, "w", encoding="utf-8") as f:
-                        json.dump({"last_run": ts}, f)
-                    os.replace(temp, ANIME_LAST_RUN_FILE)
-                finally:
-                    try:
-                        if os.path.exists(temp):
-                            os.remove(temp)
-                    except Exception:
-                        pass
-            await asyncio.to_thread(_write_anime, temp_dt.isoformat())
+            await set_scan_metadata('anime', now.isoformat())
         except Exception:
             self.logger.exception("Failed to save last run timestamp after daily_check (anime)")
 
@@ -734,20 +664,7 @@ class Finisher(commands.Cog):
             except Exception:
                 self.logger.exception("Failed to persist last_run after forceupdate (manga)")
             try:
-                temp_dt = datetime.datetime.utcnow()
-                def _write_anime(ts: str):
-                    temp = ANIME_LAST_RUN_FILE + ".tmp"
-                    try:
-                        with open(temp, "w", encoding="utf-8") as f:
-                            json.dump({"last_run": ts}, f)
-                        os.replace(temp, ANIME_LAST_RUN_FILE)
-                    finally:
-                        try:
-                            if os.path.exists(temp):
-                                os.remove(temp)
-                        except Exception:
-                            pass
-                await asyncio.to_thread(_write_anime, temp_dt.isoformat())
+                await set_scan_metadata('anime', datetime.datetime.utcnow().isoformat())
             except Exception:
                 self.logger.exception("Failed to persist last_run after forceupdate (anime)")
 

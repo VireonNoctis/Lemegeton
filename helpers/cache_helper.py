@@ -273,10 +273,27 @@ def clean_expired_cache(cache_data: Dict[str, Tuple[Any, float]], max_age_second
 
 class RecommendationCache:
     """
-    Specialized cache for recommendation data with persistence.
+    ⚠️ DEPRECATED: This class is deprecated as of October 2, 2025.
+    
+    Use database functions instead:
+    - `database.get_recommendation_count(media_id)` to get count
+    - `database.set_recommendation_count(media_id, count, expires_hours)` to set count
+    - `database.clean_expired_cache()` to clean expired entries
+    
+    This class still uses JSON file persistence which has been replaced by
+    the database. It remains here for backwards compatibility but is not
+    used by any active code.
+    
+    Original purpose: Specialized cache for recommendation data with persistence.
     """
     
     def __init__(self, cache_name: str = "recommendation", cache_duration: int = RECOMMENDATION_CACHE_DURATION):
+        logger.warning(
+            "RecommendationCache is DEPRECATED. Use database functions instead:\n"
+            "  - database.get_recommendation_count(media_id)\n"
+            "  - database.set_recommendation_count(media_id, count, expires_hours)\n"
+            "  - database.clean_expired_cache()"
+        )
         self.cache_name = cache_name
         self.cache_duration = cache_duration
         self.data: Dict[int, Tuple[int, float]] = {}  # {media_id: (count, timestamp)}

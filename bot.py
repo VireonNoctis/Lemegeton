@@ -371,6 +371,9 @@ async def _load_cogs_impl():
                     continue
                 if f == '__init__.py':
                     continue
+                # Skip backup/old files
+                if f.endswith('_old.py') or f.endswith('.backup.py'):
+                    continue
                 full_path = os.path.join(root, f)
                 rel_path = os.path.relpath(full_path, cogs_dir)  # e.g. 'anilist/watchlist.py'
                 module_rel = rel_path.replace(os.path.sep, '.')  # e.g. 'anilist.watchlist.py'

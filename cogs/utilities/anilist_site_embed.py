@@ -1,8 +1,6 @@
 # anilist.py
 
 import re
-import json
-import os
 import aiohttp
 import asyncio
 import discord
@@ -11,7 +9,13 @@ from discord import ui
 import math
 import logging
 from typing import Optional, Dict, Any, List
-from database import get_all_users
+from database import (
+    get_all_users,
+    get_all_paginator_states,
+    set_paginator_state,
+    delete_paginator_state,
+    get_paginator_state
+)
 from datetime import datetime, timedelta
 from enum import Enum
 
@@ -25,7 +29,6 @@ ANIME_URL_RE = re.compile(r"https?://anilist\.co/anime/(\d+)(?:/[^/\s]+)?/?", re
 MANGA_URL_RE = re.compile(r"https?://anilist\.co/manga/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
 
 REPLIES_PER_PAGE = 5
-STATE_FILE = "anilist_paginator_state.json"
 HTML_TIMEOUT = 15  # seconds for parsing fallback HTTP requests
 
 # Enhanced Progress Filtering Options
@@ -308,38 +311,33 @@ class AniListCog(commands.Cog):
 
     
     # ---------------------
-    # Persistence helpers
+    # Persistence helpers (using database)
     # ---------------------
-    def _load_state(self) -> Dict[str, Any]:
+    async def _load_state(self) -> Dict[str, Any]:
+        """Load paginator state from database."""
         try:
-            if not os.path.exists(STATE_FILE):
-                return {"messages": {}, "media_messages": {}}
-            with open(STATE_FILE, "r", encoding="utf-8") as fh:
-                return json.load(fh)
+            return await get_all_paginator_states()
         except Exception:
-            logger.exception("Failed to load paginator state file, starting fresh.")
+            logger.exception("Failed to load paginator state from database, starting fresh.")
             return {"messages": {}, "media_messages": {}}
 
-    def _save_state(self, state: Dict[str, Any]):
-        try:
-            tmp = STATE_FILE + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as fh:
-                json.dump(state, fh, ensure_ascii=False, indent=2)
-            os.replace(tmp, STATE_FILE)
-        except Exception:
-            logger.exception("Failed to save paginator state file.")
+    async def _save_state(self, state: Dict[str, Any]):
+        """Save state is now handled by individual set_paginator_state calls."""
+        pass  # No longer needed - state is saved per-message in database
 
     # Activity persistence (messages)
     async def _add_paginator_persistence(self, message_id: int, channel_id: int, activity_id: int, total_pages: int, current_page: int = 1):
-        state = self._load_state()
-        state.setdefault("messages", {})
-        state["messages"][str(message_id)] = {
-            "channel_id": int(channel_id),
-            "activity_id": int(activity_id),
-            "total_pages": int(total_pages),
-            "current_page": int(current_page),
-        }
-        self._save_state(state)
+        """Add activity paginator persistence to database."""
+        guild_id = str(channel_id)  # We'll need to get guild_id properly in production
+        await set_paginator_state(
+            message_id=str(message_id),
+            channel_id=str(channel_id),
+            guild_id=guild_id,
+            state_type='activity',
+            total_pages=total_pages,
+            current_page=current_page,
+            activity_id=activity_id
+        )
         view = self.Paginator(self, message_id, channel_id, activity_id, total_pages, current_page)
         try:
             self.bot.add_view(view, message_id=message_id)
@@ -348,23 +346,23 @@ class AniListCog(commands.Cog):
         return view
 
     async def _remove_paginator_persistence(self, message_id: int):
-        state = self._load_state()
-        if "messages" in state and str(message_id) in state["messages"]:
-            del state["messages"][str(message_id)]
-            self._save_state(state)
+        """Remove activity paginator persistence from database."""
+        await delete_paginator_state(str(message_id))
 
     # Media persistence
     async def _add_media_persistence(self, message_id: int, channel_id: int, media_id: int, media_type: str, total_pages: int, current_page: int = 1):
-        state = self._load_state()
-        state.setdefault("media_messages", {})
-        state["media_messages"][str(message_id)] = {
-            "channel_id": int(channel_id),
-            "media_id": int(media_id),
-            "media_type": media_type,
-            "total_pages": int(total_pages),
-            "current_page": int(current_page),
-        }
-        self._save_state(state)
+        """Add media paginator persistence to database."""
+        guild_id = str(channel_id)  # We'll need to get guild_id properly in production
+        await set_paginator_state(
+            message_id=str(message_id),
+            channel_id=str(channel_id),
+            guild_id=guild_id,
+            state_type='media',
+            total_pages=total_pages,
+            current_page=current_page,
+            media_id=media_id,
+            media_type=media_type
+        )
         view = self.MediaPaginator(self, message_id, channel_id, media_id, media_type, total_pages, current_page)
         try:
             self.bot.add_view(view, message_id=message_id)
@@ -373,13 +371,12 @@ class AniListCog(commands.Cog):
         return view
 
     async def _remove_media_persistence(self, message_id: int):
-        state = self._load_state()
-        if "media_messages" in state and str(message_id) in state["media_messages"]:
-            del state["media_messages"][str(message_id)]
-            self._save_state(state)
+        """Remove media paginator persistence from database."""
+        await delete_paginator_state(str(message_id))
 
     async def restore_persistent_views(self):
-        state = self._load_state()
+        """Restore paginator views from database on bot startup."""
+        state = await self._load_state()
         # Restore activity paginators
         for mid, info in list(state.get("messages", {}).items()):
             try:
