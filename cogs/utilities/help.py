@@ -123,6 +123,11 @@ class HelpCog(commands.Cog):
                     "desc": "Get personalized game recommendations based on your Steam library",
                     "usage": "/steam-recommendation <username>",
                     "note": "Discover new games similar to ones you enjoy"
+                },
+                "free-games": {
+                    "desc": "Manage free games notifications with interactive interface",
+                    "usage": "/free-games",
+                    "note": "Check current free games and setup automatic notifications (Epic, GOG, Steam)"
                 }
             },
             "� Customization": {

@@ -6,7 +6,7 @@ import logging
 import os
 import time
 from typing import List, Dict, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import config
 
 # ------------------------------------------------------
@@ -2990,6 +2990,38 @@ async def init_news_tables():
                 )
             """)
             
+            # Create free_games_channels table
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS free_games_channels (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    guild_id INTEGER NOT NULL UNIQUE,
+                    channel_id INTEGER NOT NULL,
+                    created_at TEXT,
+                    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create free_games_metadata table for tracking last check times
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS free_games_metadata (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create free_games_posted table for tracking which games have been announced
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS free_games_posted (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_title TEXT NOT NULL,
+                    game_url TEXT NOT NULL,
+                    store TEXT NOT NULL,
+                    posted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(game_url, store)
+                )
+            """)
+            
             await db.commit()
             logger.info("✅ News tables initialized successfully")
             
@@ -3250,6 +3282,179 @@ async def get_all_account_whitelists() -> Dict[str, List[str]]:
     except Exception as e:
         logger.error(f"Error getting all account whitelists: {e}", exc_info=True)
         return {}
+
+
+# ============================================================
+# FREE GAMES NOTIFICATION FUNCTIONS
+# ============================================================
+
+async def set_free_games_channel(guild_id: int, channel_id: int) -> bool:
+    """Set the free games notification channel for a guild."""
+    try:
+        await execute_db_operation(
+            "set free games channel",
+            """INSERT INTO free_games_channels (guild_id, channel_id, created_at)
+               VALUES (?, ?, ?)
+               ON CONFLICT(guild_id) DO UPDATE SET
+                   channel_id = excluded.channel_id,
+                   updated_at = CURRENT_TIMESTAMP""",
+            (guild_id, channel_id, datetime.utcnow())
+        )
+        return True  # If no exception, operation succeeded
+    except Exception as e:
+        logger.error(f"Error setting free games channel: {e}", exc_info=True)
+        return False
+
+
+async def get_free_games_channel(guild_id: int) -> Optional[int]:
+    """Get the free games notification channel for a guild."""
+    try:
+        result = await execute_db_operation(
+            "get free games channel",
+            "SELECT channel_id FROM free_games_channels WHERE guild_id = ?",
+            (guild_id,),
+            fetch_type='one'
+        )
+        return result[0] if result else None
+    except Exception as e:
+        logger.error(f"Error getting free games channel: {e}", exc_info=True)
+        return None
+
+
+async def get_all_free_games_channels() -> List[tuple]:
+    """Get all guilds with free games notifications enabled."""
+    try:
+        results = await execute_db_operation(
+            "get all free games channels",
+            "SELECT guild_id, channel_id FROM free_games_channels",
+            fetch_type='all'
+        )
+        return results if results else []
+    except Exception as e:
+        logger.error(f"Error getting all free games channels: {e}", exc_info=True)
+        return []
+
+
+async def remove_free_games_channel(guild_id: int) -> bool:
+    """Remove free games notification channel for a guild."""
+    try:
+        await execute_db_operation(
+            "remove free games channel",
+            "DELETE FROM free_games_channels WHERE guild_id = ?",
+            (guild_id,)
+        )
+        return True  # If no exception, operation succeeded
+    except Exception as e:
+        logger.error(f"Error removing free games channel: {e}", exc_info=True)
+        return False
+
+
+async def get_free_games_last_check() -> Optional[datetime]:
+    """Get the last free games check timestamp."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            async with db.execute("SELECT value FROM free_games_metadata WHERE key = 'last_check'") as cursor:
+                row = await cursor.fetchone()
+                if row:
+                    # Parse the ISO format datetime
+                    return datetime.fromisoformat(row[0])
+                return None
+    except Exception as e:
+        logger.error(f"Error getting free games last check time: {e}", exc_info=True)
+        return None
+
+
+async def set_free_games_last_check(check_time: datetime) -> bool:
+    """Set the last free games check timestamp."""
+    try:
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO free_games_metadata (key, value, updated_at) VALUES ('last_check', ?, CURRENT_TIMESTAMP)",
+                (check_time.isoformat(),)
+            )
+            await db.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error setting free games last check time: {e}", exc_info=True)
+        return False
+
+
+async def add_posted_game(game_title: str, game_url: str, store: str) -> bool:
+    """Mark a game as posted to avoid duplicate announcements."""
+    try:
+        await execute_db_operation(
+            "add posted game",
+            "INSERT OR IGNORE INTO free_games_posted (game_title, game_url, store, posted_at) VALUES (?, ?, ?, ?)",
+            (game_title, game_url, store, datetime.utcnow())
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Error adding posted game: {e}", exc_info=True)
+        return False
+
+
+async def is_game_already_posted(game_url: str, store: str) -> bool:
+    """Check if a game has already been posted."""
+    try:
+        result = await execute_db_operation(
+            "check if game posted",
+            "SELECT id FROM free_games_posted WHERE game_url = ? AND store = ?",
+            (game_url, store),
+            fetch_type='one'
+        )
+        return result is not None
+    except Exception as e:
+        logger.error(f"Error checking if game posted: {e}", exc_info=True)
+        return False
+
+
+async def get_all_posted_games() -> List[tuple]:
+    """Get all posted games (for debugging)."""
+    try:
+        results = await execute_db_operation(
+            "get all posted games",
+            "SELECT game_title, game_url, store, posted_at FROM free_games_posted ORDER BY posted_at DESC",
+            fetch_type='all'
+        )
+        return results if results else []
+    except Exception as e:
+        logger.error(f"Error getting posted games: {e}", exc_info=True)
+        return []
+
+
+async def cleanup_old_posted_games(days: int = 30) -> int:
+    """Remove posted game entries older than specified days.
+    
+    Args:
+        days: Number of days to keep posted game records (default 30)
+        
+    Returns:
+        Number of entries removed
+    """
+    try:
+        cutoff_date = datetime.utcnow() - timedelta(days=days)
+        
+        # Get count before deletion
+        count_result = await execute_db_operation(
+            "count old posted games",
+            "SELECT COUNT(*) FROM free_games_posted WHERE posted_at < ?",
+            (cutoff_date,),
+            fetch_type='one'
+        )
+        count = count_result[0] if count_result else 0
+        
+        # Delete old entries
+        await execute_db_operation(
+            "cleanup old posted games",
+            "DELETE FROM free_games_posted WHERE posted_at < ?",
+            (cutoff_date,)
+        )
+        
+        logger.info(f"Cleaned up {count} posted game entries older than {days} days")
+        return count
+    except Exception as e:
+        logger.error(f"Error cleaning up old posted games: {e}", exc_info=True)
+        return 0
 
 
 # ============================================================
