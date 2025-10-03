@@ -182,6 +182,8 @@ class PlannedFeatures(commands.Cog):
             
             # Show edit feature selection
             view = PlannedFeatures.EditFeatureView(self.cog, self.current_page)
+            select = await view.create_and_add_select_menu()
+            view.add_item(select)
             await interaction.response.send_message(
                 "✏️ **Edit Planned Feature**\n\nSelect a feature to edit:",
                 view=view,
@@ -208,6 +210,8 @@ class PlannedFeatures(commands.Cog):
             
             # Show remove feature selection
             view = PlannedFeatures.RemoveFeatureView(self.cog, self.current_page)
+            select = await view.create_and_add_select_menu()
+            view.add_item(select)
             await interaction.response.send_message(
                 "🗑️ **Remove Planned Feature**\n\nSelect a feature to remove:",
                 view=view,
@@ -305,8 +309,9 @@ class PlannedFeatures(commands.Cog):
             super().__init__(timeout=300)
             self.cog = cog
             self.current_page = current_page
+            # Note: Select menu will be added after view creation due to async requirement
             
-        async def create_select_menu(self) -> discord.ui.Select:
+        async def create_and_add_select_menu(self):
             """Create select menu with features"""
             features = await get_planned_features('planned')
             
@@ -315,10 +320,21 @@ class PlannedFeatures(commands.Cog):
             
             options = []
             for i, feature in enumerate(features, 1):
+                # Safely truncate label to 100 chars (Discord limit)
+                name = feature.get('name', 'Unknown')
+                label = f"{i}. {name}"
+                if len(label) > 100:
+                    label = f"{i}. {name[:97 - len(str(i)) - 2]}..."
+                
+                # Safely truncate description to 100 chars (Discord limit)
+                desc = feature.get('description', '')
+                if len(desc) > 100:
+                    desc = desc[:97] + "..."
+                
                 options.append(
                     discord.SelectOption(
-                        label=f"{i}. {feature.get('name', 'Unknown')[:90]}",
-                        description=feature.get('description', '')[:100],
+                        label=label,
+                        description=desc,
                         value=str(feature.get('id'))
                     )
                 )
@@ -437,8 +453,9 @@ class PlannedFeatures(commands.Cog):
             super().__init__(timeout=300)
             self.cog = cog
             self.current_page = current_page
+            # Note: Select menu will be added after view creation due to async requirement
             
-        async def create_select_menu(self) -> discord.ui.Select:
+        async def create_and_add_select_menu(self):
             """Create select menu with features"""
             features = await get_planned_features('planned')
             
@@ -447,10 +464,21 @@ class PlannedFeatures(commands.Cog):
             
             options = []
             for i, feature in enumerate(features, 1):
+                # Safely truncate label to 100 chars (Discord limit)
+                name = feature.get('name', 'Unknown')
+                label = f"{i}. {name}"
+                if len(label) > 100:
+                    label = f"{i}. {name[:97 - len(str(i)) - 2]}..."
+                
+                # Safely truncate description to 100 chars (Discord limit)
+                desc = feature.get('description', '')
+                if len(desc) > 100:
+                    desc = desc[:97] + "..."
+                
                 options.append(
                     discord.SelectOption(
-                        label=f"{i}. {feature.get('name', 'Unknown')[:90]}",
-                        description=feature.get('description', '')[:100],
+                        label=label,
+                        description=desc,
                         value=str(feature.get('id'))
                     )
                 )
@@ -561,10 +589,13 @@ class PlannedFeatures(commands.Cog):
     async def planned(self, interaction: discord.Interaction):
         """Display planned features"""
         try:
+            # Defer response first to prevent timeout
+            await interaction.response.defer()
+            
             features = await get_planned_features('planned')
             
             if not features:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "📝 **No Planned Features**\n\nThere are currently no planned features.",
                     ephemeral=True
                 )
@@ -575,15 +606,22 @@ class PlannedFeatures(commands.Cog):
             view = self.FeatureView(self, current_page=1)
             await view.update_buttons()
             
-            await interaction.response.send_message(embed=embed, view=view)
+            await interaction.followup.send(embed=embed, view=view)
             logger.info(f"User {interaction.user.id} ({interaction.user.display_name}) viewed planned features")
             
         except Exception as e:
             logger.error(f"Error displaying planned features: {e}")
-            await interaction.response.send_message(
-                "❌ **Error**\n\nFailed to load planned features. Please try again later.",
-                ephemeral=True
-            )
+            # Check if response was already deferred
+            if interaction.response.is_done():
+                await interaction.followup.send(
+                    "❌ **Error**\n\nFailed to load planned features. Please try again later.",
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    "❌ **Error**\n\nFailed to load planned features. Please try again later.",
+                    ephemeral=True
+                )
 
 
 async def setup(bot):
