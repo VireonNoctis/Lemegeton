@@ -30,41 +30,49 @@ def log_command(func: Callable) -> Callable:
     """
     Decorator to log command usage with user, guild, and command information.
     Works with both regular commands and app commands.
+    Logs AFTER execution to avoid delaying interaction responses.
     """
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
-        # Extract interaction or context based on the first argument
+        # Pre-extract logging info but don't log yet
+        log_info = None
+        
         if args and hasattr(args[0], 'guild_id'):  # App command interaction
             interaction = args[0]
-            user_id = interaction.user.id
-            user_name = interaction.user.display_name
-            guild_id = interaction.guild_id
-            guild_name = interaction.guild.name if interaction.guild else "DM"
-            command_name = func.__name__
-            
-            logger.info(f"Command '{command_name}' used by {user_name} ({user_id}) in guild '{guild_name}' ({guild_id})")
-            
+            log_info = {
+                'user_id': interaction.user.id,
+                'user_name': interaction.user.display_name,
+                'guild_id': interaction.guild_id,
+                'guild_name': interaction.guild.name if interaction.guild else "DM",
+                'command_name': func.__name__
+            }
         elif args and hasattr(args[0], 'author'):  # Traditional command context
             ctx = args[0]
-            user_id = ctx.author.id
-            user_name = ctx.author.display_name
-            guild_id = ctx.guild.id if ctx.guild else None
-            guild_name = ctx.guild.name if ctx.guild else "DM"
-            command_name = func.__name__
-            
-            logger.info(f"Command '{command_name}' used by {user_name} ({user_id}) in guild '{guild_name}' ({guild_id})")
-            
-        else:
-            # Fallback logging
-            logger.info(f"Command '{func.__name__}' executed")
+            log_info = {
+                'user_id': ctx.author.id,
+                'user_name': ctx.author.display_name,
+                'guild_id': ctx.guild.id if ctx.guild else None,
+                'guild_name': ctx.guild.name if ctx.guild else "DM",
+                'command_name': func.__name__
+            }
         
-        # Execute the original function
+        # Execute the original function FIRST to avoid interaction delays
         try:
             result = await func(*args, **kwargs)
+            
+            # Log success AFTER execution
+            if log_info:
+                logger.info(f"Command '{log_info['command_name']}' used by {log_info['user_name']} ({log_info['user_id']}) in guild '{log_info['guild_name']}' ({log_info['guild_id']})")
+            else:
+                logger.info(f"Command '{func.__name__}' executed")
+            
             return result
         except Exception as e:
-            # Log any errors that occur during command execution
-            logger.error(f"Error in command '{func.__name__}': {e}")
+            # Log error with context
+            if log_info:
+                logger.error(f"Error in command '{log_info['command_name']}' by {log_info['user_name']}: {e}")
+            else:
+                logger.error(f"Error in command '{func.__name__}': {e}")
             raise
     
     return wrapper

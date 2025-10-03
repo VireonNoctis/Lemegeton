@@ -3,6 +3,7 @@ import os
 import time
 import re
 import html
+import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
 
@@ -20,6 +21,9 @@ except ImportError:
 
 import database
 from helpers.command_logger import log_command
+
+# Set up logging
+logger = logging.getLogger("NewsBot")
 
 
 # ---------------------- Scraper Config ----------------------
@@ -358,119 +362,198 @@ async def fetch_tweets(username: str, limit: int = 5) -> List[Dict]:
 class NewsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self._task_started = False
+        print("🔧 NewsCog: __init__ called")
 
     async def initialize(self):
+        """Initialize the news cog and start background task."""
         if not _AIOSQLITE_AVAILABLE:
             print("❌ aiosqlite not available - news cog disabled")
+            logger.error("aiosqlite not available - news cog disabled")
             return
+        
         try:
             print("✅ News cog initialized using main database")
-            if not self.check_tweets.is_running():
-                self.check_tweets.start()
-                print("✅ Background tweet checking started")
+            logger.info("News cog initialized using main database")
+            
+            # Ensure task starts
+            await self._ensure_task_running()
+            
         except Exception as e:
             print(f"❌ Failed to initialize news cog: {e}")
+            logger.error(f"Failed to initialize news cog: {e}")
+            import traceback
+            traceback.print_exc()
+
+    async def _ensure_task_running(self):
+        """Ensure the background task is running."""
+        try:
+            if not self.check_tweets.is_running():
+                print("🚀 Starting background tweet checking task...")
+                logger.info("Starting background tweet checking task")
+                self.check_tweets.start()
+                self._task_started = True
+                print("✅ Background tweet checking task started successfully")
+                logger.info("Background tweet checking task started successfully")
+            else:
+                print("✅ Background tweet checking task is already running")
+                logger.info("Background tweet checking task is already running")
+                self._task_started = True
+        except RuntimeError as e:
+            # Task might already be running or starting
+            if "already running" in str(e).lower() or "already started" in str(e).lower():
+                print("✅ Background task already running (caught RuntimeError)")
+                logger.info("Background task already running (caught RuntimeError)")
+                self._task_started = True
+            else:
+                print(f"❌ Failed to start background task: {e}")
+                logger.error(f"Failed to start background task: {e}")
+                raise
+        except Exception as e:
+            print(f"❌ Unexpected error starting background task: {e}")
+            logger.error(f"Unexpected error starting background task: {e}")
+            raise
 
     async def cog_load(self):
+        """Called when the cog is loaded."""
+        print("🔧 NewsCog: cog_load called")
+        logger.info("NewsCog: cog_load called")
         await self.initialize()
 
     async def cog_unload(self):
+        """Called when the cog is unloaded."""
+        print("🔧 NewsCog: cog_unload called")
+        logger.info("NewsCog: cog_unload called")
         if self.check_tweets.is_running():
+            print("⏹️ Stopping background tweet checking task...")
+            logger.info("Stopping background tweet checking task")
             self.check_tweets.cancel()
+            self._task_started = False
 
     # Replace individual commands with single admin interface
     @app_commands.command(name="news-manage", description="Manage Twitter news monitoring system")
     @log_command
     async def news_manage(self, interaction: discord.Interaction):
         """Main news management interface with all functionality."""
-        await interaction.response.defer()
-        
-        # Get current system status
-        accounts = await database.get_news_accounts()
-        all_account_whitelists = await database.get_all_account_whitelists()
-        total_whitelist_keywords = sum(len(keywords) for keywords in all_account_whitelists.values())
-        
-        # Create status embed
-        status_lines = []
-        status_lines.append("✅ Database: Connected (Main Database)")
+        # Check if interaction is still valid before attempting to defer
+        try:
+            await interaction.response.defer()
+        except discord.NotFound:
+            # Interaction expired, log and return
+            logger.error("Interaction expired before deferring - user may have waited too long")
+            return
+        except Exception as e:
+            logger.error(f"Failed to defer interaction: {e}")
+            return
         
         try:
-            tweets = await fetch_tweets("nasa", 1)
-            if tweets:
-                status_lines.append("✅ Scraping: Working")
-            else:
-                status_lines.append("⚠️ Scraping: No tweets found")
-        except Exception:
-            status_lines.append("❌ Scraping: Error")
-
-        if hasattr(self, 'check_tweets') and self.check_tweets.is_running():
-            status_lines.append("✅ Background Task: Running")
+            # Get current system status
+            accounts = await database.get_news_accounts()
+            all_account_whitelists = await database.get_all_account_whitelists()
+            total_whitelist_keywords = sum(len(keywords) for keywords in all_account_whitelists.values())
             
-            # Get last check time from database
-            last_check = await database.get_news_last_check()
-            if last_check:
-                # Convert to timestamp for Discord formatting
-                timestamp = int(last_check.timestamp())
-                status_lines.append(f"🕐 Last Check: <t:{timestamp}:R>")
-                # Calculate next check (15 minutes after last check)
-                next_check_timestamp = timestamp + 900  # 15 minutes = 900 seconds
-                status_lines.append(f"📅 Next Check: <t:{next_check_timestamp}:R>")
-            else:
-                status_lines.append("📅 Next check: <t:{int(time.time()) + 900}:R>")
-        else:
-            status_lines.append("⚠️ Background Task: Not running")
-            if hasattr(self, 'check_tweets'):
-                if self.check_tweets.failed():
-                    status_lines.append("❌ Task Status: Failed (use 'Restart Task' button)")
-                elif self.check_tweets.is_being_cancelled():
-                    status_lines.append("⏸️ Task Status: Being cancelled")
+            # Create status embed
+            status_lines = []
+            status_lines.append("✅ Database: Connected (Main Database)")
+            
+            try:
+                tweets = await fetch_tweets("nasa", 1)
+                if tweets:
+                    status_lines.append("✅ Scraping: Working")
                 else:
-                    status_lines.append("⏹️ Task Status: Stopped (use 'Restart Task' button)")
+                    status_lines.append("⚠️ Scraping: No tweets found")
+            except Exception:
+                status_lines.append("❌ Scraping: Error")
+
+            if hasattr(self, 'check_tweets') and self.check_tweets.is_running():
+                status_lines.append("✅ Background Task: Running")
+                
+                # Get last check time from database
+                last_check = await database.get_news_last_check()
+                if last_check:
+                    # Convert to timestamp for Discord formatting
+                    timestamp = int(last_check.timestamp())
+                    status_lines.append(f"🕐 Last Check: <t:{timestamp}:R>")
+                    # Calculate next check (15 minutes after last check)
+                    next_check_timestamp = timestamp + 900  # 15 minutes = 900 seconds
+                    status_lines.append(f"📅 Next Check: <t:{next_check_timestamp}:R>")
+                else:
+                    status_lines.append("📅 Next check: <t:{int(time.time()) + 900}:R>")
             else:
-                status_lines.append("❌ Task Status: Not initialized")
+                status_lines.append("⚠️ Background Task: Not running")
+                if hasattr(self, 'check_tweets'):
+                    if self.check_tweets.failed():
+                        status_lines.append("❌ Task Status: Failed (use 'Restart Task' button)")
+                    elif self.check_tweets.is_being_cancelled():
+                        status_lines.append("⏸️ Task Status: Being cancelled")
+                    else:
+                        status_lines.append("⏹️ Task Status: Stopped (use 'Restart Task' button)")
+                else:
+                    status_lines.append("❌ Task Status: Not initialized")
 
-        status_lines.append(f"📊 Tracked Accounts: {len(accounts)}")
-        status_lines.append(f"✅ Total Whitelist Keywords: {total_whitelist_keywords} across {len(all_account_whitelists)} accounts")
+            status_lines.append(f"📊 Tracked Accounts: {len(accounts)}")
+            status_lines.append(f"✅ Total Whitelist Keywords: {total_whitelist_keywords} across {len(all_account_whitelists)} accounts")
 
-        embed = discord.Embed(
-            title="📰 News Management System",
-            description="\n".join(status_lines),
-            color=0x1DA1F2
-        )
-        
-        # Add accounts field if any exist
-        if accounts:
-            account_list = "\n".join(
-                f"[@{acc['handle']}](https://twitter.com/{acc['handle']}) → <#{acc['channel_id']}>"
-                for acc in accounts[:10]  # Limit to 10 to avoid embed limits
+            embed = discord.Embed(
+                title="📰 News Management System",
+                description="\n".join(status_lines),
+                color=0x1DA1F2
             )
-            if len(accounts) > 10:
-                account_list += f"\n... and {len(accounts) - 10} more"
-            embed.add_field(name="📋 Monitored Accounts", value=account_list, inline=False)
-        
-        # Add account-specific whitelist field if any exist
-        if all_account_whitelists:
-            # Show a summary of account whitelists
-            whitelist_summary = []
-            for handle, keywords in list(all_account_whitelists.items())[:5]:  # Show up to 5 accounts
-                keyword_preview = ", ".join(keywords[:3])
-                if len(keywords) > 3:
-                    keyword_preview += f" (+{len(keywords) - 3} more)"
-                whitelist_summary.append(f"@{handle}: {keyword_preview}")
             
-            if len(all_account_whitelists) > 5:
-                whitelist_summary.append(f"... and {len(all_account_whitelists) - 5} more accounts")
-            
-            embed.add_field(name="✅ Account Whitelists", value="\n".join(whitelist_summary), inline=False)
+            # Add accounts field if any exist
+            if accounts:
+                account_list = "\n".join(
+                    f"[@{acc['handle']}](https://twitter.com/{acc['handle']}) → <#{acc['channel_id']}>"
+                    for acc in accounts[:10]  # Limit to 10 to avoid embed limits
+                )
+                if len(accounts) > 10:
+                    account_list += f"\n... and {len(accounts) - 10} more"
+                embed.add_field(name="📋 Monitored Accounts", value=account_list, inline=False)
         
-        view = NewsManagementView(self)
-        await interaction.followup.send(embed=embed, view=view)
+            # Add account-specific whitelist field if any exist
+            if all_account_whitelists:
+                # Show a summary of account whitelists
+                whitelist_summary = []
+                for handle, keywords in list(all_account_whitelists.items())[:5]:  # Show up to 5 accounts
+                    keyword_preview = ", ".join(keywords[:3])
+                    if len(keywords) > 3:
+                        keyword_preview += f" (+{len(keywords) - 3} more)"
+                    whitelist_summary.append(f"@{handle}: {keyword_preview}")
+                
+                if len(all_account_whitelists) > 5:
+                    whitelist_summary.append(f"... and {len(all_account_whitelists) - 5} more accounts")
+                
+                embed.add_field(name="✅ Account Whitelists", value="\n".join(whitelist_summary), inline=False)
+            
+            view = NewsManagementView(self)
+            
+            # Send followup response
+            try:
+                await interaction.followup.send(embed=embed, view=view)
+            except discord.NotFound:
+                logger.error("Interaction expired before sending followup message")
+            except Exception as e:
+                logger.error(f"Failed to send followup message: {e}")
+                
+        except Exception as e:
+            logger.error(f"Error in news_manage command: {e}")
+            try:
+                await interaction.followup.send("❌ An error occurred while loading the news management system.", ephemeral=True)
+            except:
+                pass  # Interaction might be expired
 
     @app_commands.command(name="test-twitter-scrape", description="Test Twitter scraping for debugging")
     @app_commands.describe(username="Twitter username to test scraping")
     async def test_scrape(self, interaction: discord.Interaction, username: str):
         """Test command to debug Twitter scraping issues."""
-        await interaction.response.defer()
+        try:
+            await interaction.response.defer()
+        except discord.NotFound:
+            logger.error("Interaction expired before deferring for test-scrape command")
+            return
+        except Exception as e:
+            logger.error(f"Failed to defer test-scrape interaction: {e}")
+            return
         
         username = username.replace("@", "").lower()
         
@@ -535,11 +618,14 @@ class NewsCog(commands.Cog):
     async def check_tweets(self):
         """Check for new tweets every 15 minutes. This task is designed to recover from errors."""
         try:
-            print(f"\n🔄 Tweet check started at {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            current_time = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')
+            print(f"\n🔄 Tweet check started at {current_time}")
+            logger.info(f"Tweet check cycle started at {current_time}")
             
             accounts = await database.get_news_accounts()
             if not accounts:
                 print("⚠️ No news accounts configured")
+                logger.info("No news accounts configured - skipping check")
                 return
                 
             for account in accounts:
@@ -638,33 +724,43 @@ class NewsCog(commands.Cog):
                         
                 except Exception as e:
                     print(f"❌ Error checking tweets for {handle}: {e}")
+                    logger.error(f"Error checking tweets for {handle}: {e}")
                     import traceback
                     traceback.print_exc()
             
             # Save the check time at the END after all work is done
             check_time = datetime.utcnow()
             await database.set_news_last_check(check_time)
-            print(f"✅ Tweet check completed at {check_time.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            completed_time = check_time.strftime('%Y-%m-%d %H:%M:%S UTC')
+            print(f"✅ Tweet check completed at {completed_time}")
+            logger.info(f"Tweet check completed at {completed_time} - checked {len(accounts)} accounts")
         
         except Exception as e:
             # Catch any uncaught exceptions to prevent the task from stopping
             print(f"💥 CRITICAL ERROR in check_tweets task: {e}")
+            logger.critical(f"CRITICAL ERROR in check_tweets task: {e}")
             import traceback
             traceback.print_exc()
             # Task will continue and retry in 15 minutes
 
     @check_tweets.before_loop
     async def before_check_tweets(self):
+        """Wait for the bot to be ready before starting the task."""
+        print("⏳ Tweet checker task waiting for bot to be ready...")
+        logger.info("Tweet checker task waiting for bot to be ready")
         await self.bot.wait_until_ready()
-        print("✅ Tweet checker task is ready to start")
+        print("✅ Bot is ready - tweet checker task starting")
+        logger.info("Bot is ready - tweet checker task starting")
 
     @check_tweets.error
     async def check_tweets_error(self, error):
         """Handle errors in the check_tweets task to prevent it from stopping permanently."""
         print(f"💥 ERROR in check_tweets task: {error}")
+        logger.error(f"ERROR in check_tweets task: {error}")
         import traceback
         traceback.print_exc()
         print("⏰ Task will restart in 15 minutes...")
+        logger.warning("Tweet checking task encountered error - will restart in 15 minutes")
         # The task will automatically restart after the interval
 
 
@@ -678,15 +774,35 @@ class NewsManagementView(discord.ui.View):
     @discord.ui.button(label="Add Account", style=discord.ButtonStyle.green, emoji="➕")
     async def add_account(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Add a new Twitter account to monitor."""
-        modal = AddAccountModal(self.cog)
-        await interaction.response.send_modal(modal)
+        try:
+            modal = AddAccountModal(self.cog)
+            await interaction.response.send_modal(modal)
+        except discord.NotFound:
+            logger.error("Interaction expired in add_account button")
+        except Exception as e:
+            logger.error(f"Error in add_account button: {e}")
+            try:
+                await interaction.response.send_message("❌ An error occurred. Please try again.", ephemeral=True)
+            except:
+                pass
     
     @discord.ui.button(label="Remove Account", style=discord.ButtonStyle.red, emoji="➖")
     async def remove_account(self, interaction: discord.Interaction, button: discord.ui.Button):
         """Remove a monitored Twitter account."""
-        accounts = await database.get_news_accounts()
-        if not accounts:
-            await interaction.response.send_message("❌ No accounts are currently being monitored.", ephemeral=True)
+        try:
+            accounts = await database.get_news_accounts()
+            if not accounts:
+                await interaction.response.send_message("❌ No accounts are currently being monitored.", ephemeral=True)
+                return
+        except discord.NotFound:
+            logger.error("Interaction expired in remove_account button")
+            return
+        except Exception as e:
+            logger.error(f"Error in remove_account button: {e}")
+            try:
+                await interaction.response.send_message("❌ An error occurred. Please try again.", ephemeral=True)
+            except:
+                pass
             return
         
         # Create dropdown with accounts
