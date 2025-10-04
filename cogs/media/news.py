@@ -746,7 +746,7 @@ class NewsCog(commands.Cog):
                             
                         print(f"✅ Tweet passed all filters, posting...")
                         try:
-                            await channel.send(f"🐦 [@{handle}](https://twitter.com/{handle}) has posted a new update:\n{t['url']}")
+                            await channel.send(f"🐦 [@{handle}](https://twitter.com/{handle}) has posted a new update:\n<{t['url']}>")
                             posted_count += 1
                             last_posted_tweet_id = str(t['id'])  # Track last successfully posted tweet
                             print(f"🎉 Successfully posted tweet {t['id']}")
