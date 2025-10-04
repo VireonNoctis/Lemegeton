@@ -54,9 +54,9 @@ class HelpCog(commands.Cog):
             },
             "📊 Profile & Stats": {
                 "profile": {
-                    "desc": "View your AniList profile with stats & achievements",
+                    "desc": "View your AniList profile with comprehensive stats, achievements, and bio gallery",
                     "usage": "/profile [user]",
-                    "note": "Shows detailed profile information and achievements"
+                    "note": "Features: 🖼️ Gallery (view all bio images), 🏅 Achievements, ⭐ Favorites, 📝 Bio with auto-cleanup, 👥 Social stats, 📅 Account age. Data cached for 12 hours for faster loading."
                 }
             },
             "📺 Anime & Manga": {
@@ -127,7 +127,7 @@ class HelpCog(commands.Cog):
                 "free-games": {
                     "desc": "Manage free games notifications with interactive interface",
                     "usage": "/free-games",
-                    "note": "Check current free games and setup automatic notifications (Epic, GOG, Steam)"
+                    "note": "Check current free games and setup automatic notifications (Epic, GOG, Steam). Checks every 6 hours."
                 }
             },
             "� Customization": {

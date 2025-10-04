@@ -13,9 +13,16 @@ A comprehensive Discord bot that combines anime/manga tracking with AI-powered r
 
 ### 📚 Anime & Manga Tracking
 - **AniList Integration** - Connect your AniList profile for seamless tracking
+- **Enhanced Profile Viewing** - Comprehensive profiles with:
+  - 🖼️ **Bio Gallery** - Browse all bio images in a paginated gallery
+  - 🏅 **Achievements** - View unlocked achievements and progress
+  - ⭐ **Favorites** - Browse favorite anime, manga, characters, and studios
+  - 📝 **Auto-Cleaned Bio** - Markdown formatting cleaned for readability
+  - 👥 **Social Stats** - Followers and following counts
+  - 📅 **Account Age** - See how long you've been on AniList
+  - ⚡ **12-Hour Cache** - Faster loading with smart caching system
 - **AI-Powered Recommendations** - Get personalized suggestions based on your highly-rated titles (8.0+)
 - **Interactive Browsing** - Browse anime, manga, light novels, and general novels with advanced filtering
-- **Profile Viewing** - Comprehensive user statistics, achievements, and favorite series
 - **Trending Lists** - Stay updated with the latest popular series
 - **Twitter/X News Monitoring** - Track anime/manga news from Twitter accounts
 
@@ -34,6 +41,7 @@ A comprehensive Discord bot that combines anime/manga tracking with AI-powered r
 ### 🎮 Gaming Integration
 - **Steam Profile Viewing** - Display Steam profiles and stats
 - **Steam Recommendations** - Get personalized game recommendations based on your library
+- **Free Games Tracker** - Automatic notifications for free games from Epic, GOG, and Steam (checks every 6 hours)
 - **Cross-Platform Discovery** - Connect your anime/manga and gaming interests
 
 ### 🌐 Multi-Guild Support & Configuration
@@ -134,7 +142,12 @@ ENVIRONMENT=development
 - `/login` - Register or update your AniList account connection
 
 ### 📊 Profile & Stats
-- `/profile [user]` - View AniList profile with stats & achievements
+- `/profile [user]` - View comprehensive AniList profile with:
+  - Interactive buttons: 🖼️ Gallery, 🏅 Achievements, ⭐ Favorites
+  - Bio with automatic formatting cleanup and image extraction
+  - Social stats (followers/following) and account age
+  - Unified anime/manga statistics comparison
+  - 12-hour cache for improved performance
 
 ### 📺 Anime & Manga
 - `/browse` - Interactive browsing with filtering and sorting
@@ -153,6 +166,7 @@ ENVIRONMENT=development
 ### 🎮 Gaming
 - `/steam-profile <username>` - Show Steam profile and stats
 - `/steam-recommendation <username>` - Get game recommendations
+- `/free-games` - Check free games and manage automatic notifications (checks every 6 hours)
 
 ### 🎨 Customization
 - `/theme` - Browse, preview, and apply custom themes
