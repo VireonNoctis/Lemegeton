@@ -20,6 +20,16 @@ data/
 *.backup
 data/*.backup
 
+# Compiled Python files and bytecode
+*.pyc
+
+# Monitoring and metrics
+monitoring_metrics.json
+
+# Temporary/cache files
+copilot-instructions.md
+copilot-instructions-updated.md
+
 # OS generated files
 .DS_Store
 .DS_Store?
