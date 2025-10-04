@@ -800,12 +800,12 @@ class FreeGamesCog(commands.Cog):
             except:
                 pass
     
-    @tasks.loop(hours=24)
+    @tasks.loop(hours=6)
     async def check_free_games(self):
-        """Check for free games daily and post to configured channels."""
+        """Check for free games every 6 hours and post to configured channels."""
         try:
             now = datetime.utcnow()
-            logger.info(f"Daily free games check started at {now.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+            logger.info(f"Free games check (every 6 hours) started at {now.strftime('%Y-%m-%d %H:%M:%S UTC')}")
             
             # Check if we already ran today
             last_check = await database.get_free_games_last_check()
