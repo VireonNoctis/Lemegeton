@@ -363,6 +363,7 @@ class NewsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._task_started = False
+        self._watchdog_started = False
         print("🔧 NewsCog: __init__ called")
 
     async def initialize(self):
@@ -378,6 +379,9 @@ class NewsCog(commands.Cog):
             
             # Ensure task starts
             await self._ensure_task_running()
+            
+            # Start watchdog task to monitor main task
+            await self._ensure_watchdog_running()
             
         except Exception as e:
             print(f"❌ Failed to initialize news cog: {e}")
@@ -414,6 +418,34 @@ class NewsCog(commands.Cog):
             logger.error(f"Unexpected error starting background task: {e}")
             raise
 
+    async def _ensure_watchdog_running(self):
+        """Ensure the watchdog task is running."""
+        try:
+            if not self.task_watchdog.is_running():
+                print("🐕 Starting task watchdog...")
+                logger.info("Starting task watchdog to monitor background task")
+                self.task_watchdog.start()
+                self._watchdog_started = True
+                print("✅ Task watchdog started successfully")
+                logger.info("Task watchdog started successfully")
+            else:
+                print("✅ Task watchdog is already running")
+                logger.info("Task watchdog is already running")
+                self._watchdog_started = True
+        except RuntimeError as e:
+            if "already running" in str(e).lower() or "already started" in str(e).lower():
+                print("✅ Watchdog already running (caught RuntimeError)")
+                logger.info("Watchdog already running (caught RuntimeError)")
+                self._watchdog_started = True
+            else:
+                print(f"❌ Failed to start watchdog: {e}")
+                logger.error(f"Failed to start watchdog: {e}")
+                raise
+        except Exception as e:
+            print(f"❌ Unexpected error starting watchdog: {e}")
+            logger.error(f"Unexpected error starting watchdog: {e}")
+            raise
+
     async def cog_load(self):
         """Called when the cog is loaded."""
         print("🔧 NewsCog: cog_load called")
@@ -424,6 +456,13 @@ class NewsCog(commands.Cog):
         """Called when the cog is unloaded."""
         print("🔧 NewsCog: cog_unload called")
         logger.info("NewsCog: cog_unload called")
+        
+        if self.task_watchdog.is_running():
+            print("⏹️ Stopping task watchdog...")
+            logger.info("Stopping task watchdog")
+            self.task_watchdog.cancel()
+            self._watchdog_started = False
+        
         if self.check_tweets.is_running():
             print("⏹️ Stopping background tweet checking task...")
             logger.info("Stopping background tweet checking task")
@@ -464,6 +503,12 @@ class NewsCog(commands.Cog):
                     status_lines.append("⚠️ Scraping: No tweets found")
             except Exception:
                 status_lines.append("❌ Scraping: Error")
+
+            # Add watchdog status
+            if hasattr(self, 'task_watchdog') and self.task_watchdog.is_running():
+                status_lines.append("✅ Watchdog: Active (monitors every 5 minutes)")
+            else:
+                status_lines.append("❌ Watchdog: Not running")
 
             if hasattr(self, 'check_tweets') and self.check_tweets.is_running():
                 status_lines.append("✅ Background Task: Running")
@@ -762,6 +807,76 @@ class NewsCog(commands.Cog):
         print("⏰ Task will restart in 15 minutes...")
         logger.warning("Tweet checking task encountered error - will restart in 15 minutes")
         # The task will automatically restart after the interval
+
+    @tasks.loop(minutes=5)
+    async def task_watchdog(self):
+        """Watchdog task that monitors and restarts the main task if it stops unexpectedly."""
+        try:
+            print(f"🐕 Watchdog check: Main task running = {self.check_tweets.is_running()}")
+            
+            if not self.check_tweets.is_running():
+                print("⚠️ WATCHDOG ALERT: Main task is not running!")
+                logger.warning("WATCHDOG ALERT: Main tweet checking task is not running - attempting restart")
+                
+                # Check if task failed
+                if self.check_tweets.failed():
+                    print("❌ Task failed - restarting...")
+                    logger.error("Main task failed - watchdog restarting it")
+                elif self.check_tweets.is_being_cancelled():
+                    print("⏸️ Task is being cancelled - waiting...")
+                    logger.info("Task is being cancelled - watchdog will check again later")
+                    return
+                else:
+                    print("⏹️ Task stopped - restarting...")
+                    logger.warning("Main task stopped unexpectedly - watchdog restarting it")
+                
+                try:
+                    # Attempt to restart the task
+                    self.check_tweets.restart()
+                    print("✅ Watchdog successfully restarted main task")
+                    logger.info("Watchdog successfully restarted main task")
+                except Exception as restart_error:
+                    print(f"❌ Watchdog failed to restart task: {restart_error}")
+                    logger.error(f"Watchdog failed to restart task: {restart_error}")
+                    
+                    # If restart fails, try canceling and starting fresh
+                    try:
+                        self.check_tweets.cancel()
+                        await asyncio.sleep(2)
+                        self.check_tweets.start()
+                        print("✅ Watchdog force-started main task after cancel")
+                        logger.info("Watchdog force-started main task after cancel")
+                    except Exception as force_start_error:
+                        print(f"❌ Watchdog force-start also failed: {force_start_error}")
+                        logger.critical(f"Watchdog unable to restart main task: {force_start_error}")
+            else:
+                print("✅ Watchdog check: Main task is running normally")
+                
+        except Exception as e:
+            print(f"💥 ERROR in watchdog task: {e}")
+            logger.error(f"ERROR in watchdog task: {e}")
+            import traceback
+            traceback.print_exc()
+            # Watchdog continues despite errors
+
+    @task_watchdog.before_loop
+    async def before_task_watchdog(self):
+        """Wait for the bot to be ready before starting the watchdog."""
+        print("⏳ Watchdog waiting for bot to be ready...")
+        logger.info("Watchdog waiting for bot to be ready")
+        await self.bot.wait_until_ready()
+        print("✅ Bot is ready - watchdog starting")
+        logger.info("Bot is ready - watchdog starting")
+
+    @task_watchdog.error
+    async def task_watchdog_error(self, error):
+        """Handle errors in the watchdog task."""
+        print(f"💥 ERROR in watchdog task: {error}")
+        logger.error(f"ERROR in watchdog task: {error}")
+        import traceback
+        traceback.print_exc()
+        print("⏰ Watchdog will restart in 5 minutes...")
+        logger.warning("Watchdog task encountered error - will restart in 5 minutes")
 
 
 class NewsManagementView(discord.ui.View):
