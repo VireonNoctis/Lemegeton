@@ -13,6 +13,7 @@ import random
 import io
 from typing import Optional
 from pathlib import Path
+from difflib import SequenceMatcher
 try:
     # Import helpers robustly: some deployment environments don't include the
     # project root on sys.path which causes `helpers` to be unresolvable. Try an
@@ -118,6 +119,9 @@ class SteamGame(commands.Cog):
             return await interaction.followup.send(f"❌ No results found for '{game_name}'" + 
                                                  (f" with filters" if any([genre, max_price, platform, tag]) else ""))
 
+        # Apply fuzzy matching to improve search results
+        items = self._fuzzy_match_games(game_name, items)
+        
         # Apply additional filters
         filtered_items = await self._apply_filters(session, items, max_price, platform, tag)
         
@@ -156,6 +160,45 @@ class SteamGame(commands.Cog):
                 pass
 
     # ==================== ENHANCED GAME SEARCH HELPER METHODS ====================
+    
+    def _fuzzy_match_games(self, query, items, threshold=0.6):
+        """
+        Apply fuzzy matching to search results to improve relevance.
+        Returns items sorted by similarity score, filtering out low matches.
+        
+        Args:
+            query: User's search query
+            items: List of game items from Steam API
+            threshold: Minimum similarity score (0.0-1.0) to include in results
+        """
+        query_lower = query.lower()
+        scored_items = []
+        
+        for item in items:
+            name = item.get("name", "").lower()
+            
+            # Calculate similarity score using SequenceMatcher
+            similarity = SequenceMatcher(None, query_lower, name).ratio()
+            
+            # Boost score for exact substring matches
+            if query_lower in name:
+                similarity = min(1.0, similarity + 0.3)
+            
+            # Boost score for word-level matches
+            query_words = set(query_lower.split())
+            name_words = set(name.split())
+            if query_words.issubset(name_words):
+                similarity = min(1.0, similarity + 0.2)
+            
+            # Only include items above threshold
+            if similarity >= threshold:
+                scored_items.append((similarity, item))
+        
+        # Sort by similarity score (highest first)
+        scored_items.sort(key=lambda x: x[0], reverse=True)
+        
+        # Return sorted items without scores
+        return [item for score, item in scored_items]
     
     async def _apply_filters(self, session, items, max_price=None, platform=None, tag=None):
         """Apply additional filters to search results"""
