@@ -7,6 +7,9 @@ import logging
 import os
 from pathlib import Path
 from typing import Optional, List, Dict, Tuple
+from datetime import datetime, timedelta
+import re
+import json
 
 from database import (
     # Guild-aware functions (multi-guild support)
@@ -19,9 +22,12 @@ ANILIST_API_URL = "https://graphql.anilist.co"
 # Configuration constants
 LOG_DIR = Path("logs")
 LOG_FILE = LOG_DIR / "profile.log"
+CACHE_FILE = Path("data") / "profile_cache.json"
+CACHE_DURATION_HOURS = 12  # Cache profile data for 12 hours
 
-# Ensure logs directory exists
+# Ensure logs and data directories exist
 LOG_DIR.mkdir(exist_ok=True)
+CACHE_FILE.parent.mkdir(exist_ok=True)
 
 # Set up file-based logging
 logger = logging.getLogger("Profile")
@@ -59,6 +65,8 @@ query ($username: String) {
     name
     avatar { large }
     bannerImage
+    about(asHtml: false)
+    createdAt
     statistics {
       anime {
         count
@@ -135,6 +143,28 @@ query ($username: String) {
 }
 """
 
+# Query to get social stats (followers/following)
+SOCIAL_STATS_QUERY = """
+query ($userId: Int) {
+  followers: Page(page: 1, perPage: 1) {
+    pageInfo {
+      total
+    }
+    followers(userId: $userId) {
+      id
+    }
+  }
+  following: Page(page: 1, perPage: 1) {
+    pageInfo {
+      total
+    }
+    following(userId: $userId) {
+      id
+    }
+  }
+}
+"""
+
 async def fetch_user_stats(username: str) -> Optional[dict]:
     variables = {"username": username}
     async with aiohttp.ClientSession() as session:
@@ -146,6 +176,21 @@ async def fetch_user_stats(username: str) -> Optional[dict]:
                 return await resp.json()
         except Exception as e:
             logger.exception(f"Error fetching AniList stats for {username}: {e}")
+            return None
+
+
+async def fetch_social_stats(user_id: int) -> Optional[dict]:
+    """Fetch followers and following counts for a user"""
+    variables = {"userId": user_id}
+    async with aiohttp.ClientSession() as session:
+        try:
+            async with session.post(ANILIST_API_URL, json={"query": SOCIAL_STATS_QUERY, "variables": variables}) as resp:
+                if resp.status != 200:
+                    logger.error(f"AniList API request failed [{resp.status}] for user_id {user_id}")
+                    return None
+                return await resp.json()
+        except Exception as e:
+            logger.exception(f"Error fetching social stats for user_id {user_id}: {e}")
             return None
 
 
@@ -576,6 +621,78 @@ def build_favorites_embed(user_data: dict, avatar_url: str, profile_url: str) ->
 
 
 # -----------------------------
+# Cache Helper Functions
+# -----------------------------
+def load_cache() -> Dict:
+    """Load profile cache from disk"""
+    try:
+        if CACHE_FILE.exists():
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        logger.error(f"Failed to load cache: {e}")
+    return {}
+
+
+def save_cache(cache: Dict):
+    """Save profile cache to disk"""
+    try:
+        with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(cache, f, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save cache: {e}")
+
+
+def get_cached_profile(username: str) -> Optional[Dict]:
+    """
+    Get cached profile data if it exists and is not expired (< 12 hours old)
+    Returns None if cache miss or expired
+    """
+    cache = load_cache()
+    
+    if username not in cache:
+        logger.info(f"Cache miss for {username}")
+        return None
+    
+    cached_data = cache[username]
+    cached_time_str = cached_data.get('cached_at')
+    
+    if not cached_time_str:
+        logger.info(f"Cache entry for {username} has no timestamp")
+        return None
+    
+    try:
+        cached_time = datetime.fromisoformat(cached_time_str)
+        time_diff = datetime.now() - cached_time
+        
+        if time_diff < timedelta(hours=CACHE_DURATION_HOURS):
+            hours_old = time_diff.total_seconds() / 3600
+            logger.info(f"Cache HIT for {username} (cached {hours_old:.1f}h ago)")
+            return cached_data.get('data')
+        else:
+            hours_old = time_diff.total_seconds() / 3600
+            logger.info(f"Cache EXPIRED for {username} (cached {hours_old:.1f}h ago, max {CACHE_DURATION_HOURS}h)")
+            return None
+    except Exception as e:
+        logger.error(f"Error checking cache timestamp for {username}: {e}")
+        return None
+
+
+def set_cached_profile(username: str, data: Dict):
+    """Cache profile data with current timestamp"""
+    try:
+        cache = load_cache()
+        cache[username] = {
+            'cached_at': datetime.now().isoformat(),
+            'data': data
+        }
+        save_cache(cache)
+        logger.info(f"Cached profile data for {username}")
+    except Exception as e:
+        logger.error(f"Failed to cache profile for {username}: {e}")
+
+
+# -----------------------------
 # The Cog
 # -----------------------------
 class Profile(commands.Cog):
@@ -585,9 +702,25 @@ class Profile(commands.Cog):
     @app_commands.command(name="profile", description="View your AniList profile (with stats & achievements) or another user's.")
     @app_commands.describe(user="Optional: Discord user whose profile to view")
     async def profile(self, interaction: discord.Interaction, user: Optional[discord.Member] = None):
+        try:
+            # Defer FIRST - before any other operations
+            await interaction.response.defer(ephemeral=False)
+        except discord.errors.NotFound:
+            # Interaction token already expired - log and exit gracefully
+            logger.error(f"Interaction token expired before defer for user {interaction.user.id}")
+            return
+        except Exception as e:
+            # Catch any other defer errors
+            logger.error(f"Error deferring interaction: {e}")
+            try:
+                await interaction.response.send_message("❌ An error occurred. Please try again.", ephemeral=True)
+            except:
+                pass
+            return
+        
         # Ensure command is used in a guild
         if not interaction.guild:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ This command can only be used in a server!", 
                 ephemeral=True
             )
@@ -602,7 +735,7 @@ class Profile(commands.Cog):
             # Not registered → present registration
             view = discord.ui.View()
             view.add_item(RegisterButton(target.id, guild_id))
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"❌ {target.mention} hasn’t registered an AniList username.\nClick below to register:",
                 view=view,
                 ephemeral=True if target.id == interaction.user.id else False
@@ -610,24 +743,100 @@ class Profile(commands.Cog):
             return
 
         username = record[4]  # anilist_username from guild-aware schema
-        await interaction.response.defer(ephemeral=False)
 
-        data = await fetch_user_stats(username)
-        if not data:
-            await interaction.followup.send(f"⚠️ Failed to fetch AniList data for **{username}**.", ephemeral=True)
-            return
+        # Check cache first (12-hour expiry)
+        user_data = None
+        cached_data = get_cached_profile(username)
+        
+        if cached_data:
+            # Use cached data
+            user_data = cached_data.get("User")
+            logger.info(f"Using cached profile data for {username}")
+        else:
+            # Fetch fresh data from AniList
+            logger.info(f"Fetching fresh profile data for {username} from AniList")
+            data = await fetch_user_stats(username)
+            if not data:
+                await interaction.followup.send(f"⚠️ Failed to fetch AniList data for **{username}**.", ephemeral=True)
+                return
 
-        user_data = data.get("data", {}).get("User")
-        if not user_data:
-            await interaction.followup.send(f"⚠️ No AniList data found for **{username}**.", ephemeral=True)
-            return
+            user_data = data.get("data", {}).get("User")
+            if not user_data:
+                await interaction.followup.send(f"⚠️ No AniList data found for **{username}**.", ephemeral=True)
+                return
+            
+            # Cache the fresh data
+            set_cached_profile(username, data.get("data", {}))
 
         stats_anime = user_data["statistics"]["anime"]
         stats_manga = user_data["statistics"]["manga"]
 
         # Compute weighted averages from distribution buckets
-        anime_avg = calc_weighted_avg(stats_anime.get("scores", []))
-        manga_avg = calc_weighted_avg(stats_manga.get("scores", []))
+        anime_scores = stats_anime.get("scores", [])
+        manga_scores = stats_manga.get("scores", [])
+        
+        logger.info(f"Anime scores data for {user_data['name']}: {anime_scores}")
+        logger.info(f"Manga scores data for {user_data['name']}: {manga_scores}")
+        
+        anime_avg = calc_weighted_avg(anime_scores)
+        manga_avg = calc_weighted_avg(manga_scores)
+        
+        logger.info(f"Calculated anime_avg: {anime_avg}, manga_avg: {manga_avg}")
+        
+        # Extract account info
+        bio = user_data.get("about", "")
+        created_at = user_data.get("createdAt")
+        
+        # Calculate account age
+        account_age = ""
+        if created_at:
+            created_date = datetime.fromtimestamp(created_at)
+            age_delta = datetime.now() - created_date
+            years = age_delta.days // 365
+            months = (age_delta.days % 365) // 30
+            if years > 0:
+                account_age = f"{years} year{'s' if years != 1 else ''}"
+                if months > 0:
+                    account_age += f", {months} month{'s' if months != 1 else ''}"
+            elif months > 0:
+                account_age = f"{months} month{'s' if months != 1 else ''}"
+            else:
+                days = age_delta.days
+                account_age = f"{days} day{'s' if days != 1 else ''}"
+        
+        # Extract images from bio (img tags in markdown)
+        bio_images = []
+        if bio:
+            # Find image URLs in various formats
+            markdown_imgs = re.findall(r'!\[.*?\]\((https?://[^\)]+)\)', bio)  # ![alt](url)
+            html_imgs = re.findall(r'<img[^>]+src=["\']([^"\'>]+)["\']', bio)  # <img src="url">
+            
+            # AniList img() format: img(url) or img##%(url) where ## is percentage
+            img_function = re.findall(r'img(?:\d+%)?\((https?://[^\)]+)\)', bio)  # img(url) or img100%(url)
+            
+            # Images wrapped in markdown links: [ img##%(url) ](link)
+            linked_imgs = re.findall(r'\[\s*img(?:\d+%)?\((https?://[^\)]+)\)\s*\]', bio)
+            
+            # Also extract standalone image URLs (common image hosts including catbox.moe)
+            standalone_imgs = re.findall(
+                r'(https?://(?:i\.)?(?:postimg\.cc|imgur\.com|ibb\.co|imgbb\.com|prnt\.sc|gyazo\.com|'
+                r'i\.redd\.it|media\.discordapp\.net|cdn\.discordapp\.com|files\.catbox\.moe)/[^\s<>\)]+\.(?:gif|png|jpg|jpeg|webp))',
+                bio,
+                re.IGNORECASE
+            )
+            
+            bio_images = markdown_imgs + html_imgs + img_function + linked_imgs + standalone_imgs
+            logger.info(f"Found {len(bio_images)} images in bio for {user_data['name']}: {bio_images}")
+        
+        # Fetch social stats (followers/following)
+        followers_count = 0
+        following_count = 0
+        social_data = await fetch_social_stats(user_data['id'])
+        if social_data and social_data.get("data"):
+            data = social_data["data"]
+            followers_count = data.get("followers", {}).get("pageInfo", {}).get("total", 0)
+            following_count = data.get("following", {}).get("pageInfo", {}).get("total", 0)
+            logger.info(f"Social stats for {user_data['name']}: {followers_count} followers, {following_count} following")
 
         # Persist headline stats
         await upsert_user_stats_guild_aware(
@@ -648,74 +857,112 @@ class Profile(commands.Cog):
         # Achievements data - calculate this first before building embeds
         achievements_data = build_achievements(stats_anime, stats_manga)
 
-        # Manga page
-        manga_embed = discord.Embed(
-            title=f"📖 {user_data['name']}'s Manga Profile",
+        # Create unified profile embed
+        profile_embed = discord.Embed(
+            title=f"� {user_data['name']}'s AniList Profile",
             url=profile_url,
             color=discord.Color.blurple()
         )
-        if avatar_url: manga_embed.set_thumbnail(url=avatar_url)
-        if banner_url: manga_embed.set_image(url=banner_url)
-        manga_embed.add_field(name="Total Manga", value=str(stats_manga.get("count", 0)), inline=True)
-        manga_embed.add_field(name="Avg Score", value=str(manga_avg), inline=True)
-        manga_embed.add_field(
-            name="Top Genres",
-            value=", ".join(top_genres(stats_manga.get("genres", []), 5)) or "N/A",
-            inline=False
+        if avatar_url: profile_embed.set_thumbnail(url=avatar_url)
+        
+        # Use first bio image if available, otherwise banner
+        if bio_images:
+            try:
+                profile_embed.set_image(url=bio_images[0])
+                logger.info(f"Set profile embed image to bio image: {bio_images[0]}")
+            except Exception as e:
+                logger.error(f"Failed to set bio image: {e}")
+                if banner_url: profile_embed.set_image(url=banner_url)
+        elif banner_url:
+            profile_embed.set_image(url=banner_url)
+        
+        # Account info row
+        account_info = []
+        if account_age:
+            account_info.append(f"📅 **Member For:** {account_age}")
+        if followers_count > 0 or following_count > 0:
+            account_info.append(f"👥 **Social:** {followers_count:,} followers • {following_count:,} following")
+        
+        if account_info:
+            profile_embed.add_field(
+                name="Account Info",
+                value="\n".join(account_info),
+                inline=False
+            )
+        
+        # Bio
+        if bio:
+            bio_text = bio.strip()
+            # Remove large JSON/CSS blocks (often profile styling code)
+            bio_text = re.sub(r'\[]\(json[^)]*\)', '', bio_text)  # Remove [](json...)
+            # Remove code blocks wrapped in triple tildes
+            bio_text = re.sub(r'~~~[^~]*~~~', '', bio_text, flags=re.DOTALL)  # Remove ~~~code~~~
+            # Remove markdown formatting for cleaner display
+            bio_text = re.sub(r'~!(.+?)!~', r'\1', bio_text)  # Remove spoiler tags
+            bio_text = re.sub(r'~~(.+?)~~', r'\1', bio_text)  # Remove strikethrough (double tilde)
+            bio_text = re.sub(r'\*\*(.+?)\*\*', r'\1', bio_text)  # Remove bold
+            bio_text = re.sub(r'__(.+?)__', r'\1', bio_text)  # Remove underline
+            # Convert img(url) or img##%(url) to plain url, including those in markdown links
+            bio_text = re.sub(r'\[\s*img(?:\d+%)?\((https?://[^\)]+)\)\s*\]\([^\)]+\)', r'\1', bio_text)  # [ img##%(url) ](link) → url
+            bio_text = re.sub(r'img(?:\d+%)?\((https?://[^\)]+)\)', r'\1', bio_text)  # img##%(url) → url
+            # Clean up excessive whitespace
+            bio_text = re.sub(r'\n{3,}', '\n\n', bio_text)  # Replace 3+ newlines with 2
+            
+            if len(bio_text) > 400:
+                bio_text = bio_text[:397] + "..."
+            profile_embed.add_field(
+                name="📝 Bio",
+                value=bio_text,
+                inline=False
+            )
+        
+        # Anime stats
+        anime_genres = ", ".join(top_genres(stats_anime.get("genres", []), 3)) or "N/A"
+        profile_embed.add_field(
+            name="🎬 Anime Stats",
+            value=f"**Total:** {stats_anime.get('count', 0):,}\n**Avg Score:** {anime_avg}\n**Top Genres:** {anime_genres}",
+            inline=True
         )
         
-        # Add basic stats from achievements data
+        # Manga stats
+        manga_genres = ", ".join(top_genres(stats_manga.get("genres", []), 3)) or "N/A"
+        profile_embed.add_field(
+            name="� Manga Stats",
+            value=f"**Total:** {stats_manga.get('count', 0):,}\n**Avg Score:** {manga_avg}\n**Top Genres:** {manga_genres}",
+            inline=True
+        )
+        
+        # Achievement summary
         if achievements_data:
             stats = achievements_data.get("stats", {})
-            manga_embed.add_field(
-                name="📊 Quick Stats",
-                value=f"Completed: **{stats.get('manga_completed', 0):,}**\nAchievements: **{len(achievements_data.get('achieved', []))}** unlocked",
+            profile_embed.add_field(
+                name="🏆 Achievements",
+                value=f"**Unlocked:** {len(achievements_data.get('achieved', []))}\n**Total Entries:** {stats.get('total_entries', 0):,}",
                 inline=True
             )
 
-        manga_embed.set_footer(text="Data from AniList • Page 1/2")
-
-        # Anime page
-        anime_embed = discord.Embed(
-            title=f"🎬 {user_data['name']}'s Anime Profile",
-            url=profile_url,
-            color=discord.Color.green()
-        )
-        if avatar_url: anime_embed.set_thumbnail(url=avatar_url)
-        if banner_url: anime_embed.set_image(url=banner_url)
-        anime_embed.add_field(name="Total Anime", value=str(stats_anime.get("count", 0)), inline=True)
-        anime_embed.add_field(name="Avg Score", value=str(anime_avg), inline=True)
-        anime_embed.add_field(
-            name="Top Genres",
-            value=", ".join(top_genres(stats_anime.get("genres", []), 5)) or "N/A",
-            inline=False
-        )
-        
-        # Add basic stats from achievements data  
-        if achievements_data:
-            stats = achievements_data.get("stats", {})
-            anime_embed.add_field(
-                name="📊 Quick Stats", 
-                value=f"Completed: **{stats.get('anime_completed', 0):,}**\nTotal Entries: **{stats.get('total_entries', 0):,}**",
-                inline=True
-            )
-
-        anime_embed.set_footer(text="Data from AniList • Page 2/2")
+        profile_embed.set_footer(text="Data from AniList • Use buttons below for more details")
 
         # Create achievements and favorites button views
         achievements_view = AchievementsView(achievements_data, user_data, avatar_url, profile_url)
         favorites_view = FavoritesView(user_data, avatar_url, profile_url)
+        
+        # Create gallery view if there are bio images
+        gallery_view = None
+        if bio_images:
+            gallery_view = GalleryView(bio_images, user_data['name'], avatar_url)
 
-        pages: List[discord.Embed] = [manga_embed, anime_embed]
-
-        # Send first page and attach pager with achievements and favorites buttons
-        pager = ProfilePager(pages, achievements_view, favorites_view)
-        achievements_view.profile_pager = pager  # Set the reference after creating the pager
-        favorites_view.profile_pager = pager  # Set the reference after creating the pager
+        # Create unified view with achievements, favorites, and gallery buttons
+        unified_view = UnifiedProfileView(profile_embed, achievements_view, favorites_view, gallery_view)
+        achievements_view.profile_pager = unified_view
+        favorites_view.profile_pager = unified_view
+        if gallery_view:
+            gallery_view.profile_pager = unified_view
+        
         try:
-            msg = await interaction.followup.send(embed=pages[0], view=pager)
+            msg = await interaction.followup.send(embed=profile_embed, view=unified_view)
         except Exception as e:
-            logger.exception(f"Failed to send profile pager followup: {e}")
+            logger.exception(f"Failed to send profile followup: {e}")
             # Attempt to send a simple message so the user sees something
             try:
                 await interaction.followup.send("⚠️ Failed to attach interactive controls. Showing static profile.", ephemeral=True)
@@ -726,12 +973,52 @@ class Profile(commands.Cog):
         # Debug: log the returned message and component structure for troubleshooting
         try:
             comp_count = len(msg.components) if hasattr(msg, 'components') else 0
-            logger.info(f"Profile pager sent: message_id={getattr(msg, 'id', None)} components={comp_count}")
+            logger.info(f"Profile sent: message_id={getattr(msg, 'id', None)} components={comp_count}")
             # Log labels of the view children
-            children_labels = [getattr(c, 'label', repr(type(c))) for c in pager.children]
-            logger.info(f"Pager view children labels: {children_labels}")
+            children_labels = [getattr(c, 'label', repr(type(c))) for c in unified_view.children]
+            logger.info(f"View children labels: {children_labels}")
         except Exception:
-            logger.exception("Error while logging sent message components for profile pager")
+            logger.exception("Error while logging sent message components for profile")
+
+
+class UnifiedProfileView(discord.ui.View):
+    """View for unified profile with achievements, favorites, and gallery buttons"""
+    
+    def __init__(self, profile_embed: discord.Embed, achievements_view, favorites_view, gallery_view=None):
+        super().__init__(timeout=120)
+        self.profile_embed = profile_embed
+        self.achievements_view = achievements_view
+        self.favorites_view = favorites_view
+        self.gallery_view = gallery_view
+
+    async def on_timeout(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+
+    @discord.ui.button(label="🏅 Achievements", style=discord.ButtonStyle.primary)
+    async def show_achievements(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            embed=self.achievements_view.get_current_embed(),
+            view=self.achievements_view
+        )
+
+    @discord.ui.button(label="⭐ Favorites", style=discord.ButtonStyle.primary)
+    async def show_favorites(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(
+            embed=self.favorites_view.get_current_embed(),
+            view=self.favorites_view
+        )
+    
+    @discord.ui.button(label="🖼️ Gallery", style=discord.ButtonStyle.primary)
+    async def show_gallery(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.gallery_view:
+            await interaction.response.edit_message(
+                embed=self.gallery_view.get_current_embed(),
+                view=self.gallery_view
+            )
+        else:
+            await interaction.response.send_message("📭 No images found in bio.", ephemeral=True)
 
 
 class ProfilePager(discord.ui.View):
@@ -976,7 +1263,7 @@ class AchievementsView(discord.ui.View):
     async def back_to_profile(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.profile_pager:
             await interaction.response.edit_message(
-                embed=self.profile_pager.pages[self.profile_pager.index],
+                embed=self.profile_pager.profile_embed,
                 view=self.profile_pager
             )
 
@@ -1174,7 +1461,80 @@ class FavoritesView(discord.ui.View):
     async def back_to_profile(self, interaction: discord.Interaction, button: discord.ui.Button):
         if self.profile_pager:
             await interaction.response.edit_message(
-                embed=self.profile_pager.pages[self.profile_pager.index],
+                embed=self.profile_pager.profile_embed,
+                view=self.profile_pager
+            )
+
+
+class GalleryView(discord.ui.View):
+    """View for displaying bio images in a paginated gallery"""
+    
+    def __init__(self, images: List[str], user_name: str, avatar_url: str, profile_pager=None):
+        super().__init__(timeout=120)
+        self.images = images
+        self.user_name = user_name
+        self.avatar_url = avatar_url
+        self.profile_pager = profile_pager
+        self.current_index = 0
+        
+        # Disable prev button on first page
+        if len(images) <= 1:
+            self.children[0].disabled = True  # Previous button
+            self.children[1].disabled = True  # Next button
+    
+    async def on_timeout(self):
+        for child in self.children:
+            if isinstance(child, discord.ui.Button):
+                child.disabled = True
+    
+    def get_current_embed(self) -> discord.Embed:
+        """Build embed for current image"""
+        embed = discord.Embed(
+            title=f"🖼️ {self.user_name}'s Gallery",
+            description=f"Image {self.current_index + 1} of {len(self.images)}",
+            color=discord.Color.purple()
+        )
+        
+        if self.avatar_url:
+            embed.set_thumbnail(url=self.avatar_url)
+        
+        # Set current image
+        embed.set_image(url=self.images[self.current_index])
+        embed.set_footer(text=f"Page {self.current_index + 1}/{len(self.images)}")
+        
+        return embed
+    
+    @discord.ui.button(label="◀ Previous", style=discord.ButtonStyle.primary)
+    async def prev_image(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_index = (self.current_index - 1) % len(self.images)
+        
+        # Update button states
+        self.children[0].disabled = (self.current_index == 0)
+        self.children[1].disabled = (self.current_index == len(self.images) - 1)
+        
+        await interaction.response.edit_message(
+            embed=self.get_current_embed(),
+            view=self
+        )
+    
+    @discord.ui.button(label="Next ▶", style=discord.ButtonStyle.primary)
+    async def next_image(self, interaction: discord.Interaction, button: discord.ui.Button):
+        self.current_index = (self.current_index + 1) % len(self.images)
+        
+        # Update button states
+        self.children[0].disabled = (self.current_index == 0)
+        self.children[1].disabled = (self.current_index == len(self.images) - 1)
+        
+        await interaction.response.edit_message(
+            embed=self.get_current_embed(),
+            view=self
+        )
+    
+    @discord.ui.button(label="◀ Back to Profile", style=discord.ButtonStyle.secondary, row=1)
+    async def back_to_profile(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.profile_pager:
+            await interaction.response.edit_message(
+                embed=self.profile_pager.profile_embed,
                 view=self.profile_pager
             )
 
