@@ -92,6 +92,12 @@ class HelpCog(commands.Cog):
                     "note": "Fetches trailers with autocomplete support and debug options",
                     "examples": ["/trailer anime Demon Slayer", "/trailer manga Chainsaw Man"]
                 },
+                "3x3": {
+                    "desc": "Create a 3x3 grid image of your favorite anime or manga covers",
+                    "usage": "/3x3 <media_type>",
+                    "note": "Generate shareable 3x3 grids with custom selections. Fetches covers from AniList automatically.",
+                    "examples": ["/3x3 anime", "/3x3 manga"]
+                },
                 "news-manage": {
                     "desc": "Manage Twitter/X news monitoring for anime/manga updates",
                     "usage": "/news-manage",
