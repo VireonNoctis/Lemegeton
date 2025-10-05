@@ -296,7 +296,7 @@ class PresetManager:
 
 
 class ThreeByThreeModal(discord.ui.Modal):
-    """Modal for collecting 9 anime/manga titles"""
+    """Modal for collecting 9 anime/manga/character names"""
     
     def __init__(self, media_type: str, cog, preset_name: Optional[str] = None):
         super().__init__(title=f"Create Your 3x3 {media_type.title()} Grid")
@@ -304,34 +304,38 @@ class ThreeByThreeModal(discord.ui.Modal):
         self.cog = cog
         self.preset_name = preset_name
         
+        # Determine placeholder text based on media type
+        placeholder = "Enter character name" if media_type == "character" else "Enter anime/manga title"
+        label_prefix = "Character" if media_type == "character" else "Title"
+        
         # Create 9 input fields (3 rows)
         self.title1 = discord.ui.TextInput(
-            label="Row 1 - Title 1",
-            placeholder="Enter anime/manga title",
+            label=f"Row 1 - {label_prefix} 1",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title2 = discord.ui.TextInput(
-            label="Row 1 - Title 2",
-            placeholder="Enter anime/manga title",
+            label=f"Row 1 - {label_prefix} 2",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title3 = discord.ui.TextInput(
-            label="Row 1 - Title 3",
-            placeholder="Enter anime/manga title",
+            label=f"Row 1 - {label_prefix} 3",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title4 = discord.ui.TextInput(
-            label="Row 2 - Title 1",
-            placeholder="Enter anime/manga title",
+            label=f"Row 2 - {label_prefix} 1",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title5 = discord.ui.TextInput(
-            label="Row 2 - Title 2",
-            placeholder="Enter anime/manga title",
+            label=f"Row 2 - {label_prefix} 2",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
@@ -363,37 +367,41 @@ class ThreeByThreeModal(discord.ui.Modal):
 
 
 class ThreeByThreeModalPart2(discord.ui.Modal):
-    """Second modal for collecting remaining 4 titles"""
+    """Second modal for collecting remaining 4 titles/characters"""
     
     def __init__(self, media_type: str, previous_titles: List[str], cog, preset_name: Optional[str] = None):
-        super().__init__(title=f"3x3 Grid - Remaining Titles")
+        super().__init__(title=f"3x3 Grid - Remaining {'Characters' if media_type == 'character' else 'Titles'}")
         self.media_type = media_type
         self.previous_titles = previous_titles
         self.cog = cog
         self.preset_name = preset_name
         
+        # Determine placeholder text based on media type
+        placeholder = "Enter character name" if media_type == "character" else "Enter anime/manga title"
+        label_prefix = "Character" if media_type == "character" else "Title"
+        
         # Remaining 4 fields
         self.title6 = discord.ui.TextInput(
-            label="Row 2 - Title 3",
-            placeholder="Enter anime/manga title",
+            label=f"Row 2 - {label_prefix} 3",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title7 = discord.ui.TextInput(
-            label="Row 3 - Title 1",
-            placeholder="Enter anime/manga title",
+            label=f"Row 3 - {label_prefix} 1",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title8 = discord.ui.TextInput(
-            label="Row 3 - Title 2",
-            placeholder="Enter anime/manga title",
+            label=f"Row 3 - {label_prefix} 2",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
         self.title9 = discord.ui.TextInput(
-            label="Row 3 - Title 3",
-            placeholder="Enter anime/manga title",
+            label=f"Row 3 - {label_prefix} 3",
+            placeholder=placeholder,
             required=True,
             max_length=100
         )
@@ -435,11 +443,11 @@ class ThreeByThreeModalPart2(discord.ui.Modal):
                 
                 embed = discord.Embed(
                     title=f"🎨 {interaction.user.display_name}'s 3x3 {self.media_type.title()} Grid",
-                    description=f"Your favorite {self.media_type}!",
+                    description=f"Your favorite {self.media_type}{'s' if self.media_type == 'character' else ''}!",
                     color=discord.Color.purple()
                 )
                 embed.set_image(url=f"attachment://3x3_{self.media_type}.png")
-                embed.set_footer(text="Generated from AniList covers")
+                embed.set_footer(text="Generated from AniList" + (" character images" if self.media_type == "character" else " covers"))
                 
                 await interaction.followup.send(embed=embed, file=file)
                 
@@ -481,6 +489,83 @@ class ThreeByThree(commands.Cog):
         if not PIL_AVAILABLE:
             logger.warning("PIL/Pillow not available - 3x3 generation will not work!")
     
+    async def fetch_character_image(self, session: aiohttp.ClientSession, character_name: str) -> Optional[Dict]:
+        """
+        Fetch character information and image from AniList (with caching)
+        
+        Args:
+            session: aiohttp session
+            character_name: Character name to search for
+            
+        Returns:
+            Dict with 'title', 'cover_url', 'cover_bytes' or None
+        """
+        # Check cache first
+        cached_data = self.cover_cache.get(character_name, "character")
+        if cached_data:
+            return cached_data
+        
+        query = """
+        query ($search: String) {
+            Character(search: $search) {
+                id
+                name {
+                    full
+                    native
+                }
+                image {
+                    large
+                    medium
+                }
+            }
+        }
+        """
+        
+        variables = {
+            "search": character_name
+        }
+        
+        try:
+            async with session.post(
+                API_URL,
+                json={"query": query, "variables": variables},
+                timeout=aiohttp.ClientTimeout(total=30)
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    character = data.get("data", {}).get("Character")
+                    
+                    if character:
+                        image_url = character["image"].get("large") or character["image"].get("medium")
+                        display_name = character["name"].get("full") or character_name
+                        
+                        # Download character image
+                        if image_url:
+                            async with session.get(image_url, timeout=aiohttp.ClientTimeout(total=30)) as img_response:
+                                if img_response.status == 200:
+                                    cover_bytes = await img_response.read()
+                                    
+                                    result = {
+                                        "title": display_name,
+                                        "cover_url": image_url,
+                                        "cover_bytes": cover_bytes
+                                    }
+                                    
+                                    # Cache the result
+                                    self.cover_cache.set(character_name, "character", result)
+                                    
+                                    return result
+                
+                logger.warning(f"Failed to fetch character image for '{character_name}': HTTP {response.status}")
+                return None
+                
+        except asyncio.TimeoutError:
+            logger.error(f"Timeout fetching character image for '{character_name}'")
+            return None
+        except Exception as e:
+            logger.error(f"Error fetching character image for '{character_name}': {e}")
+            return None
+    
     async def fetch_media_cover(self, session: aiohttp.ClientSession, title: str, media_type: str) -> Optional[Dict]:
         """
         Fetch media information and cover image from AniList (with caching)
@@ -488,11 +573,15 @@ class ThreeByThree(commands.Cog):
         Args:
             session: aiohttp session
             title: Title to search for
-            media_type: 'anime' or 'manga'
+            media_type: 'anime', 'manga', or 'character'
             
         Returns:
             Dict with 'title', 'cover_url', 'cover_bytes' or None
         """
+        # Handle character type separately
+        if media_type == "character":
+            return await self.fetch_character_image(session, title)
+        
         # Check cache first
         cached_data = self.cover_cache.get(title, media_type)
         if cached_data:
@@ -620,11 +709,11 @@ class ThreeByThree(commands.Cog):
     
     async def generate_3x3(self, titles: List[str], media_type: str, user: discord.User) -> Optional[io.BytesIO]:
         """
-        Generate a 3x3 grid image from 9 anime/manga titles
+        Generate a 3x3 grid image from 9 anime/manga titles or character names
         
         Args:
-            titles: List of 9 titles
-            media_type: 'anime' or 'manga'
+            titles: List of 9 titles or character names
+            media_type: 'anime', 'manga', or 'character'
             user: Discord user who requested the grid
             
         Returns:
@@ -754,14 +843,15 @@ class ThreeByThree(commands.Cog):
             logger.error(f"Error generating 3x3 image: {e}", exc_info=True)
             return None
     
-    @app_commands.command(name="3x3", description="🎨 Create a 3x3 grid of your favorite anime or manga covers")
-    @app_commands.describe(media_type="Choose anime or manga")
+    @app_commands.command(name="3x3", description="🎨 Create a 3x3 grid of your favorite anime, manga, or characters")
+    @app_commands.describe(media_type="Choose anime, manga, or character")
     @app_commands.choices(media_type=[
         app_commands.Choice(name="Anime", value="anime"),
-        app_commands.Choice(name="Manga", value="manga")
+        app_commands.Choice(name="Manga", value="manga"),
+        app_commands.Choice(name="Character", value="character")
     ])
     async def three_by_three(self, interaction: discord.Interaction, media_type: app_commands.Choice[str]):
-        """Create a 3x3 grid of anime/manga covers"""
+        """Create a 3x3 grid of anime/manga covers or character images"""
         
         if not PIL_AVAILABLE:
             await interaction.response.send_message(
