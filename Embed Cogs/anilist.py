@@ -1,8 +1,6 @@
 # anilist.py
 
 import re
-import json
-import os
 import aiohttp
 import asyncio
 import discord
@@ -11,7 +9,15 @@ from discord import ui
 import math
 import logging
 from typing import Optional, Dict, Any, List
-from database import get_all_users
+from database import (
+    get_all_users,
+    get_all_paginator_states,
+    set_paginator_state,
+    delete_paginator_state,
+    get_paginator_state
+)
+from datetime import datetime, timedelta
+from enum import Enum
 
 logger = logging.getLogger("AniListCog")
 logger.setLevel(logging.INFO)
@@ -22,9 +28,58 @@ ACTIVITY_URL_RE = re.compile(r"https?://anilist\.co/activity/(\d+)", re.IGNORECA
 ANIME_URL_RE = re.compile(r"https?://anilist\.co/anime/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
 MANGA_URL_RE = re.compile(r"https?://anilist\.co/manga/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
 
+# NEW: review url regex
+REVIEW_URL_RE = re.compile(r"https?://anilist\.co/review/(\d+)", re.IGNORECASE)
+
 REPLIES_PER_PAGE = 5
-STATE_FILE = "anilist_paginator_state.json"
 HTML_TIMEOUT = 15  # seconds for parsing fallback HTTP requests
+
+# DEFAULT EMBED COLOR requested by user
+DEFAULT_EMBED_COLOR = 0x0F1720
+
+# Enhanced Progress Filtering Options
+class ProgressFilter(Enum):
+    ALL = "all"  # Default: show all users
+    ACTIVE_ONLY = "active_only"  # Users with >0 progress
+    COMPLETED_ONLY = "completed_only"  # Users who completed the series
+    HIGH_SCORERS = "high_scorers"  # Users with 8+ ratings
+    RECENT_ACTIVITY = "recent_activity"  # Active within 30 days
+    CUSTOM_RANGE = "custom_range"  # Progress between X-Y
+    WATCHING_NOW = "watching_now"  # Currently watching/reading
+    DROPPED = "dropped"  # Users who dropped the series
+
+PROGRESS_FILTER_OPTIONS = {
+    ProgressFilter.ALL: {
+        "label": "🌟 All Users",
+        "description": "Show all registered users",
+        "emoji": "🌟"
+    },
+    ProgressFilter.ACTIVE_ONLY: {
+        "label": "⚡ Active Users", 
+        "description": "Users with progress > 0",
+        "emoji": "⚡"
+    },
+    ProgressFilter.COMPLETED_ONLY: {
+        "label": "✅ Completed Only",
+        "description": "Users who finished the series", 
+        "emoji": "✅"
+    },
+    ProgressFilter.HIGH_SCORERS: {
+        "label": "⭐ High Scorers",
+        "description": "Users with 8+ ratings",
+        "emoji": "⭐"
+    },
+    ProgressFilter.WATCHING_NOW: {
+        "label": "📺 Currently Active",
+        "description": "Users actively watching/reading",
+        "emoji": "📺"
+    },
+    ProgressFilter.DROPPED: {
+        "label": "❌ Dropped",
+        "description": "Users who dropped the series",
+        "emoji": "❌"
+    }
+}
 
 
 class AniListCog(commands.Cog):
@@ -38,13 +93,13 @@ class AniListCog(commands.Cog):
 
 
     # ---------------------
-    # User Progress Builder
+    # Enhanced User Progress System
     # ---------------------
-    async def build_user_progress_embed(self, media: dict, media_type: str) -> Optional[discord.Embed]:
-        """Build embed showing registered users' progress for a given media"""
+    async def build_user_progress_embed(self, media: dict, media_type: str, filter_type: ProgressFilter = ProgressFilter.ACTIVE_ONLY) -> Optional[discord.Embed]:
+        """Build embed showing registered users' progress for a given media with enhanced filtering"""
         import time
         start_time = time.time()
-        logger.info(f"Building user progress embed for media ID: {media.get('id')}, type: {media_type}")
+        logger.info(f"Building user progress embed for media ID: {media.get('id')}, type: {media_type}, filter: {filter_type.value}")
         
         try:
             users = await get_all_users()
@@ -58,11 +113,12 @@ class AniListCog(commands.Cog):
                 )
 
             col_name = "Episodes" if media_type.upper() == "ANIME" else "Chapters"
-            progress_lines = [f"`{'AniList User':<20} {col_name:<10} {'Rating':<7}`"]
-            progress_lines.append("`{:-<20} {:-<10} {:-<7}`".format("", "", ""))
-
+            
+            # Enhanced filtering with progress insights
+            filtered_users_data = []
+            total_users_checked = 0
+            
             # Use a single session for all requests to improve performance
-            successful_users = 0
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=30)) as session:
                 for user in users:
                     discord_name = user[3]  # Discord username (from username column)
@@ -72,9 +128,10 @@ class AniListCog(commands.Cog):
                         logger.debug(f"Skipping user {discord_name} - no AniList username")
                         continue
                     
+                    total_users_checked += 1
                     logger.debug(f"Fetching progress for {discord_name} (AniList: {anilist_username})")
                     
-                    # Fetch user progress with timeout
+                    # Enhanced query to get more progress details for filtering
                     query = """
                     query($userName: String, $mediaId: Int, $type: MediaType) {
                         User(name: $userName) {
@@ -83,6 +140,10 @@ class AniListCog(commands.Cog):
                         MediaList(userName: $userName, mediaId: $mediaId, type: $type) {
                             progress
                             score
+                            status
+                            updatedAt
+                            startedAt { year month day }
+                            completedAt { year month day }
                         }
                     }
                     """
@@ -102,63 +163,52 @@ class AniListCog(commands.Cog):
                     except Exception as e:
                         logger.debug(f"Error fetching progress for {anilist_username}: {e}")
                         continue
-
-                    user_opts = payload.get("data", {}).get("User", {}).get("mediaListOptions", {})
-                    score_format = user_opts.get("scoreFormat", "POINT_100")
-
-                    entry = payload.get("data", {}).get("MediaList")
-                    if not entry:
+                    
+                    user_data = payload.get("data", {}).get("User")
+                    media_list = payload.get("data", {}).get("MediaList")
+                    
+                    if not user_data:
+                        logger.debug(f"No user data found for {anilist_username}")
                         continue
-
-                    progress = entry.get("progress")
-                    score = entry.get("score")
-
-                    # Skip users with no progress (0 or None)
-                    if not progress or progress == 0:
-                        logger.debug(f"Skipping user {anilist_username} - no progress recorded")
-                        continue
-
-                    # Normalize rating to /10
-                    rating10: Optional[float] = None
-                    if score is not None:
-                        if score_format == "POINT_100":
-                            rating10 = round(score / 10.0, 1)
-                        elif score_format in ("POINT_10", "POINT_10_DECIMAL"):
-                            rating10 = float(score)
-                        elif score_format == "POINT_5":
-                            rating10 = round((score / 5) * 10, 1)
-                        elif score_format == "POINT_3":
-                            mapping = {1: 3.0, 2: 6.0, 3: 9.0}
-                            rating10 = mapping.get(score, None)
-
-                    total = media.get("episodes") if media_type.upper() == "ANIME" else media.get("chapters")
-                    progress_text = f"{progress}/{total or '?'}" if progress is not None else "—"
-                    rating_text = f"{rating10}/10" if rating10 is not None else "—"
-
-                    # Use AniList username for display, fallback to Discord username if needed
-                    display_name = anilist_username or discord_name
-                    progress_lines.append(f"`{display_name:<20} {progress_text:<10} {rating_text:<7}`")
-                    successful_users += 1
-
-            elapsed_time = time.time() - start_time
-            logger.info(f"User progress fetch completed in {elapsed_time:.2f}s for {successful_users} users")
-
-            if len(progress_lines) <= 2:
-                return discord.Embed(
-                    title="👥 Registered Users' Progress",
-                    description="No progress found for this title.",
-                    color=discord.Color.red()
-                )
-
-            embed = discord.Embed(
-                title="👥 Registered Users' Progress",
-                description="\n".join(progress_lines),
-                color=discord.Color.blue()
-            )
-            embed.set_footer(text="Fetched from AniList")
-            logger.info(f"Successfully built user progress embed with {successful_users} users in {elapsed_time:.2f}s")
-            return embed
-        
+                    
+                    # Collect comprehensive user progress data
+                    progress = media_list.get("progress", 0) if media_list else 0
+                    score = media_list.get("score", 0) if media_list else 0
+                    status = media_list.get("status") if media_list else None
+                    updated_at = media_list.get("updatedAt") if media_list else None
+                    
+                    # Calculate if user is recently active (within 30 days)
+                    is_recent = False
+                    if updated_at:
+                        try:
+                            updated_time = datetime.fromtimestamp(updated_at)
+                            is_recent = (datetime.now() - updated_time) <= timedelta(days=30)
+                        except:
+                            is_recent = False
+                    
+                    # Create user data object for filtering
+                    user_progress_data = {
+                        "discord_name": discord_name,
+                        "anilist_username": anilist_username,
+                        "progress": progress,
+                        "score": score,
+                        "status": status,
+                        "is_recent": is_recent,
+                        "score_format": user_data.get("mediaListOptions", {}).get("scoreFormat", "POINT_10")
+                    }
+                    
+                    # Apply filtering logic
+                    should_include = self._apply_progress_filter(user_progress_data, filter_type, media)
+                    
+                    if should_include:
+                        filtered_users_data.append(user_progress_data)
+                    
+                    if len(filtered_users_data) >= 20:  # Limit display to avoid embed size issues
+                        break
+            
+            # Build the progress display with insights
+            return self._build_filtered_progress_embed(filtered_users_data, media, media_type, filter_type, col_name, total_users_checked, time.time() - start_time)
+            
         except Exception as e:
             logger.error(f"Error building user progress embed: {e}", exc_info=True)
             return discord.Embed(
@@ -166,42 +216,134 @@ class AniListCog(commands.Cog):
                 description="❌ An error occurred while fetching user progress data.",
                 color=discord.Color.red()
             )
+
+    def _apply_progress_filter(self, user_data: dict, filter_type: ProgressFilter, media: dict) -> bool:
+        """Apply filtering logic to determine if user should be included"""
+        progress = user_data["progress"]
+        score = user_data["score"]
+        status = user_data["status"]
+        is_recent = user_data["is_recent"]
+        
+        if filter_type == ProgressFilter.ALL:
+            return True
+        elif filter_type == ProgressFilter.ACTIVE_ONLY:
+            return progress > 0
+        elif filter_type == ProgressFilter.COMPLETED_ONLY:
+            return status == "COMPLETED" or progress >= self._get_total_episodes_chapters(media)
+        elif filter_type == ProgressFilter.HIGH_SCORERS:
+            return score >= 8
+        elif filter_type == ProgressFilter.RECENT_ACTIVITY:
+            return is_recent and progress > 0
+        elif filter_type == ProgressFilter.WATCHING_NOW:
+            return status in ["CURRENT", "REPEATING"] or (progress > 0 and status != "COMPLETED")
+        elif filter_type == ProgressFilter.DROPPED:
+            return status == "DROPPED"
+        else:
+            return True  # Default to showing all
     
+    def _get_total_episodes_chapters(self, media: dict) -> int:
+        """Get total episodes or chapters for completion checking"""
+        return media.get("episodes") or media.get("chapters") or float('inf')
+    
+    def _build_filtered_progress_embed(self, filtered_data: List[dict], media: dict, media_type: str, 
+                                     filter_type: ProgressFilter, col_name: str, total_checked: int, elapsed_time: float) -> discord.Embed:
+        """Build the final embed with filtered progress data and insights"""
+        filter_info = PROGRESS_FILTER_OPTIONS[filter_type]
+        
+        if not filtered_data:
+            return discord.Embed(
+                title=f"{filter_info['emoji']} User Progress - {filter_info['label']}",
+                description=f"No users found matching filter: {filter_info['description']}",
+                color=discord.Color.orange()
+            )
+        
+        # Build progress lines
+        progress_lines = [f"`{'AniList User':<20} {col_name:<10} {'Rating':<7} {'Status':<10}`"]
+        progress_lines.append("`{:-<20} {:-<10} {:-<7} {:-<10}`".format("", "", "", ""))
+        
+        for user_data in filtered_data:
+            progress = user_data["progress"]
+            score = user_data["score"]
+            status = user_data["status"] or "UNKNOWN"
+            
+            # Format score display - normalize all to /10 scale
+            score_format = user_data["score_format"]
+            if score == 0:
+                score_display = "-"
+            elif score_format == "POINT_100":
+                # Convert 100-point to 10-point scale
+                normalized_score = score / 10.0
+                score_display = f"{normalized_score:.1f}/10"
+            elif score_format == "POINT_10_DECIMAL":
+                score_display = f"{score:.1f}/10"
+            elif score_format == "POINT_5":
+                # Convert 5-star to 10-point scale
+                normalized_score = (score / 5.0) * 10.0
+                score_display = f"{normalized_score:.1f}/10"
+            elif score_format == "POINT_3":
+                # Convert 3-point to 10-point scale  
+                normalized_score = (score / 3.0) * 10.0
+                score_display = f"{normalized_score:.1f}/10"
+            else:  # POINT_10 or others
+                score_display = f"{score:.1f}/10"
+            
+            # Format status display
+            status_display = status[:9] if status else "-"
+            
+            progress_lines.append(f"`{user_data['anilist_username'][:19]:<20} {progress:<10} {score_display:<7} {status_display:<10}`")
+        
+        # Calculate insights
+        avg_progress = sum(u["progress"] for u in filtered_data) / len(filtered_data) if filtered_data else 0
+        avg_score = sum(u["score"] for u in filtered_data if u["score"] > 0) / max(1, sum(1 for u in filtered_data if u["score"] > 0))
+        
+        embed = discord.Embed(
+            title=f"{filter_info['emoji']} User Progress - {filter_info['label']}",
+            description="\n".join(progress_lines[:25]),  # Limit to prevent embed overflow
+            color=discord.Color.blue()
+        )
+        
+        # Add insights footer
+        insights = []
+        if filtered_data:
+            insights.append(f"📊 Showing {len(filtered_data)}/{total_checked} users")
+            insights.append(f"📈 Avg Progress: {avg_progress:.1f}")
+            if avg_score > 0:
+                insights.append(f"⭐ Avg Score: {avg_score:.1f}")
+        
+        embed.set_footer(text=" | ".join(insights) + f" | Fetched in {elapsed_time:.2f}s")
+        
+        return embed
+
 
     
     # ---------------------
-    # Persistence helpers
+    # Persistence helpers (using database)
     # ---------------------
-    def _load_state(self) -> Dict[str, Any]:
+    async def _load_state(self) -> Dict[str, Any]:
+        """Load paginator state from database."""
         try:
-            if not os.path.exists(STATE_FILE):
-                return {"messages": {}, "media_messages": {}}
-            with open(STATE_FILE, "r", encoding="utf-8") as fh:
-                return json.load(fh)
+            return await get_all_paginator_states()
         except Exception:
-            logger.exception("Failed to load paginator state file, starting fresh.")
+            logger.exception("Failed to load paginator state from database, starting fresh.")
             return {"messages": {}, "media_messages": {}}
 
-    def _save_state(self, state: Dict[str, Any]):
-        try:
-            tmp = STATE_FILE + ".tmp"
-            with open(tmp, "w", encoding="utf-8") as fh:
-                json.dump(state, fh, ensure_ascii=False, indent=2)
-            os.replace(tmp, STATE_FILE)
-        except Exception:
-            logger.exception("Failed to save paginator state file.")
+    async def _save_state(self, state: Dict[str, Any]):
+        """Save state is now handled by individual set_paginator_state calls."""
+        pass  # No longer needed - state is saved per-message in database
 
     # Activity persistence (messages)
     async def _add_paginator_persistence(self, message_id: int, channel_id: int, activity_id: int, total_pages: int, current_page: int = 1):
-        state = self._load_state()
-        state.setdefault("messages", {})
-        state["messages"][str(message_id)] = {
-            "channel_id": int(channel_id),
-            "activity_id": int(activity_id),
-            "total_pages": int(total_pages),
-            "current_page": int(current_page),
-        }
-        self._save_state(state)
+        """Add activity paginator persistence to database."""
+        guild_id = str(channel_id)  # We'll need to get guild_id properly in production
+        await set_paginator_state(
+            message_id=str(message_id),
+            channel_id=str(channel_id),
+            guild_id=guild_id,
+            state_type='activity',
+            total_pages=total_pages,
+            current_page=current_page,
+            activity_id=activity_id
+        )
         view = self.Paginator(self, message_id, channel_id, activity_id, total_pages, current_page)
         try:
             self.bot.add_view(view, message_id=message_id)
@@ -210,23 +352,23 @@ class AniListCog(commands.Cog):
         return view
 
     async def _remove_paginator_persistence(self, message_id: int):
-        state = self._load_state()
-        if "messages" in state and str(message_id) in state["messages"]:
-            del state["messages"][str(message_id)]
-            self._save_state(state)
+        """Remove activity paginator persistence from database."""
+        await delete_paginator_state(str(message_id))
 
     # Media persistence
     async def _add_media_persistence(self, message_id: int, channel_id: int, media_id: int, media_type: str, total_pages: int, current_page: int = 1):
-        state = self._load_state()
-        state.setdefault("media_messages", {})
-        state["media_messages"][str(message_id)] = {
-            "channel_id": int(channel_id),
-            "media_id": int(media_id),
-            "media_type": media_type,
-            "total_pages": int(total_pages),
-            "current_page": int(current_page),
-        }
-        self._save_state(state)
+        """Add media paginator persistence to database."""
+        guild_id = str(channel_id)  # We'll need to get guild_id properly in production
+        await set_paginator_state(
+            message_id=str(message_id),
+            channel_id=str(channel_id),
+            guild_id=guild_id,
+            state_type='media',
+            total_pages=total_pages,
+            current_page=current_page,
+            media_id=media_id,
+            media_type=media_type
+        )
         view = self.MediaPaginator(self, message_id, channel_id, media_id, media_type, total_pages, current_page)
         try:
             self.bot.add_view(view, message_id=message_id)
@@ -235,13 +377,12 @@ class AniListCog(commands.Cog):
         return view
 
     async def _remove_media_persistence(self, message_id: int):
-        state = self._load_state()
-        if "media_messages" in state and str(message_id) in state["media_messages"]:
-            del state["media_messages"][str(message_id)]
-            self._save_state(state)
+        """Remove media paginator persistence from database."""
+        await delete_paginator_state(str(message_id))
 
     async def restore_persistent_views(self):
-        state = self._load_state()
+        """Restore paginator views from database on bot startup."""
+        state = await self._load_state()
         # Restore activity paginators
         for mid, info in list(state.get("messages", {}).items()):
             try:
@@ -529,14 +670,21 @@ class AniListCog(commands.Cog):
             self.add_item(self.next_btn)
 
         async def _load_message_state(self):
-            state = self.cog._load_state()
-            return state.get("messages", {}).get(self.message_id)
+            """Load state for this specific message from the database."""
+            return await get_paginator_state(str(self.message_id))
 
         async def _save_message_state(self, new_state: Dict[str, Any]):
-            state = self.cog._load_state()
-            state.setdefault("messages", {})
-            state["messages"][self.message_id] = new_state
-            self.cog._save_state(state)
+            """Save state for this specific message to the database."""
+            current_page = new_state.get("current_page", self.current_page)
+            await set_paginator_state(
+                message_id=str(self.message_id),
+                channel_id=str(self.channel_id),
+                guild_id=str(self.channel_id),  # Using channel_id as guild_id placeholder
+                state_type='activity',
+                total_pages=self.total_pages,
+                current_page=current_page,
+                activity_id=self.activity_id
+            )
 
         def _update_buttons_disabled(self):
             self.prev_btn.disabled = (self.current_page <= 1)
@@ -1245,13 +1393,16 @@ class AniListCog(commands.Cog):
                     return
 
                 if value == "user_progress":
-                    # Acknowledge the interaction immediately to prevent timeout
+                    # Show enhanced progress filtering options
                     if not interaction.response.is_done():
                         await interaction.response.defer()
                     
-                    embed = await self.cog.build_user_progress_embed(media, self.media_type)
+                    # Create enhanced user progress view with filtering
+                    progress_view = self.UserProgressView(self.cog, media, self.media_type, self.message_id)
+                    embed = await self.cog.build_user_progress_embed(media, self.media_type, ProgressFilter.ACTIVE_ONLY)
+                    
                     if embed:
-                        await interaction.followup.edit_message(interaction.message.id, embeds=[embed], view=self)
+                        await interaction.followup.edit_message(interaction.message.id, embeds=[embed], view=progress_view)
                     else:
                         await interaction.followup.send("❌ Could not fetch user progress data.", ephemeral=True)
                     return
@@ -1310,6 +1461,99 @@ class AniListCog(commands.Cog):
                         await interaction.followup.send("⚠️ Failed to show details. Please try again.", ephemeral=True)
                 except Exception:
                     logger.exception("Failed to send error message")
+
+        class UserProgressView(ui.View):
+            """Enhanced user progress view with filtering options"""
+            def __init__(self, cog: "AniListCog", media: dict, media_type: str, original_message_id: int):
+                super().__init__(timeout=300)
+                self.cog = cog
+                self.media = media
+                self.media_type = media_type
+                self.original_message_id = original_message_id
+                self.current_filter = ProgressFilter.ACTIVE_ONLY
+                
+                # Add filter dropdown
+                filter_options = []
+                for filter_type, info in PROGRESS_FILTER_OPTIONS.items():
+                    filter_options.append(discord.SelectOption(
+                        label=info["label"],
+                        description=info["description"],
+                        value=filter_type.value,
+                        emoji=info["emoji"]
+                    ))
+                
+                self.filter_select = ui.Select(
+                    placeholder="Choose filter...",
+                    options=filter_options,
+                    custom_id=f"progress_filter:{original_message_id}"
+                )
+                self.filter_select.callback = self.filter_callback
+                self.add_item(self.filter_select)
+                
+                # Add back button
+                self.back_button = ui.Button(
+                    label="⬅ Back to Media", 
+                    style=discord.ButtonStyle.secondary,
+                    custom_id=f"back_to_media:{original_message_id}"
+                )
+                self.back_button.callback = self.back_to_media
+                self.add_item(self.back_button)
+            
+            async def filter_callback(self, interaction: discord.Interaction):
+                """Handle filter selection"""
+                try:
+                    if not interaction.response.is_done():
+                        await interaction.response.defer()
+                    
+                    selected_filter = interaction.data.get("values", [None])[0]
+                    if selected_filter:
+                        self.current_filter = ProgressFilter(selected_filter)
+                        
+                        # Generate new embed with selected filter
+                        embed = await self.cog.build_user_progress_embed(
+                            self.media, self.media_type, self.current_filter
+                        )
+                        
+                        if embed:
+                            await interaction.followup.edit_message(interaction.message.id, embeds=[embed], view=self)
+                        else:
+                            await interaction.followup.send("❌ Could not apply filter.", ephemeral=True)
+                    
+                except Exception as e:
+                    logger.exception(f"Filter callback failed: {e}")
+                    try:
+                        if not interaction.response.is_done():
+                            await interaction.response.send_message("⚠️ Failed to apply filter.", ephemeral=True)
+                        else:
+                            await interaction.followup.send("⚠️ Failed to apply filter.", ephemeral=True)
+                    except:
+                        pass
+            
+            async def back_to_media(self, interaction: discord.Interaction):
+                """Return to main media view"""
+                try:
+                    if not interaction.response.is_done():
+                        await interaction.response.defer()
+                    
+                    # Create new MediaPaginator view
+                    media_view = self.cog.MediaPaginator(
+                        self.cog, self.original_message_id, interaction.channel.id, 
+                        self.media["id"], self.media_type, 2, 1
+                    )
+                    
+                    # Show main media page
+                    embeds = self.cog.render_media_pages(self.media, page=1, total_pages=2)
+                    await interaction.followup.edit_message(interaction.message.id, embeds=embeds, view=media_view)
+                    
+                except Exception as e:
+                    logger.exception(f"Back to media failed: {e}")
+                    try:
+                        if not interaction.response.is_done():
+                            await interaction.response.send_message("⚠️ Failed to return to media view.", ephemeral=True)
+                        else:
+                            await interaction.followup.send("⚠️ Failed to return to media view.", ephemeral=True)
+                    except:
+                        pass
 
 
 
@@ -1397,6 +1641,403 @@ class AniListCog(commands.Cog):
             except Exception:
                 logger.exception("Failed to persist media paginator for manga.")
             return
+
+    # ---------------------
+    # NEW: REVIEW fetching + parsing + embed + pagination
+    # ---------------------
+    async def fetch_review_api(self, review_id: int) -> Optional[dict]:
+        """
+        Attempt to fetch review via AniList GraphQL API.
+        Returns a dict with fields similar to the HTML fallback (id, siteUrl, user, text, rating, likes, ratingAmount, images[])
+        """
+        query = """
+        query($id: Int) {
+          Review(id: $id) {
+            id
+            siteUrl
+            summary
+            body(asHtml: false)
+            rating
+            ratingAmount
+            score
+            user { id name siteUrl avatar { large } }
+            likes
+          }
+        }
+        """
+        variables = {"id": review_id}
+        try:
+            async with self.session.post(ANILIST_API, json={"query": query, "variables": variables}, timeout=20) as resp:
+                text = await resp.text()
+                try:
+                    js = await resp.json()
+                except Exception:
+                    js = None
+                if resp.status != 200:
+                    logger.warning("AniList review API returned non-200: %s - %s", resp.status, text)
+                    return None
+                if not js or "data" not in js or js["data"].get("Review") is None:
+                    logger.info("AniList review API returned no Review for id %s. Response: %s", review_id, text)
+                    return None
+                r = js["data"]["Review"]
+                # Normalize fields
+                body = r.get("body") or r.get("summary") or ""
+                rating = r.get("rating") or r.get("score") or None
+                likes = r.get("likes") or 0
+                rating_amount = r.get("ratingAmount") or None
+                user = r.get("user") or {}
+                site_url = r.get("siteUrl") or f"https://anilist.co/review/{review_id}"
+                return {
+                    "id": r.get("id"),
+                    "siteUrl": site_url,
+                    "user": user,
+                    "body": body,
+                    "rating": rating,
+                    "likes": likes,
+                    "ratingAmount": rating_amount,
+                    "raw": r
+                }
+        except Exception:
+            logger.exception("fetch_review_api failed")
+            return None
+
+    async def fetch_review_parse_fallback(self, review_id: int) -> Optional[dict]:
+        """
+        Robust multilayered fallback: fetch the review HTML and parse out content, images, rating and votes.
+        This function is intentionally defensive and attempts multiple heuristics.
+        """
+        url = f"https://anilist.co/review/{review_id}"
+        logger.info("Review parsing fallback started for %s", url)
+        try:
+            async with self.session.get(url, timeout=HTML_TIMEOUT, headers={"User-Agent": "AniListBot/1.0"}) as resp:
+                html = await resp.text()
+        except Exception:
+            logger.exception("Failed to fetch review page HTML")
+            return None
+
+        # Attempt to find JSON blobs first (data-react-props / ld+json)
+        body_text = None
+        images = []
+        rating = None
+        likes = None
+        rating_amount = None
+        user = {"name": None, "siteUrl": None, "avatar": {"large": None}}
+
+        try:
+            # Look for <script type="application/ld+json"> or data-react-props containing review text
+            m_ld = re.search(r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>', html, re.S | re.I)
+            if m_ld:
+                try:
+                    import json
+                    ld = json.loads(m_ld.group(1))
+                    # ld might contain review body
+                    if isinstance(ld, dict):
+                        body_text = ld.get("reviewBody") or ld.get("description") or body_text
+                        if not images and ld.get("image"):
+                            if isinstance(ld.get("image"), list):
+                                images.extend(ld.get("image"))
+                            else:
+                                images.append(ld.get("image"))
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # fallback: find review content container
+        if not body_text:
+            # AniList displays review text in <div class="markdown"...> often
+            m_body = re.search(r'<div[^>]+class=["\'][^"\']*markdown[^"\']*["\'][^>]*>(.*?)</div>', html, re.S | re.I)
+            if m_body:
+                raw_html = m_body.group(1)
+                # strip tags but keep images for separate parsing
+                # find img srcs inside
+                for img in re.finditer(r'<img[^>]+src=["\']([^"\']+)["\']', raw_html, re.I):
+                    src = img.group(1)
+                    if src and src not in images:
+                        images.append(src)
+                # remove tags
+                body_text = re.sub(r'<[^>]+>', '', raw_html).strip()
+        # Another heuristic
+        if not body_text:
+            m_main = re.search(r'<div[^>]+id=["\']review-body-[^"\']+["\'][^>]*>(.*?)</div>', html, re.S | re.I)
+            if m_main:
+                b = m_main.group(1)
+                for img in re.finditer(r'<img[^>]+src=["\']([^"\']+)["\']', b, re.I):
+                    src = img.group(1)
+                    if src and src not in images:
+                        images.append(src)
+                body_text = re.sub(r'<[^>]+>', '', b).strip()
+
+        # Parse rating (various possible formats)
+        try:
+            m_rate = re.search(r'Rating[:\s]*</strong>\s*([0-9]{1,3})\s*/\s*([0-9]{1,3})', html, re.I)
+            if m_rate:
+                rating = int(m_rate.group(1))
+                # total = int(m_rate.group(2))
+            else:
+                # pattern like "User gave it 80/100"
+                m_rate2 = re.search(r'gave it\s*([0-9]{1,3})\s*/\s*([0-9]{1,3})', html, re.I)
+                if m_rate2:
+                    rating = int(m_rate2.group(1))
+        except Exception:
+            pass
+
+        # Parse likes / helpful votes
+        try:
+            m_likes = re.search(r'([\d,]+)\s*(?:people)?\s*(?:found this review helpful|found\sit\she?lpful|found helpful)', html, re.I)
+            if m_likes:
+                likes = int(m_likes.group(1).replace(",", ""))
+            else:
+                # some pages show "9 of 14 users found this helpful" style
+                m_help = re.search(r'([0-9]{1,4})\s*of\s*([0-9]{1,4})\s*users? found this helpful', html, re.I)
+                if m_help:
+                    likes = int(m_help.group(1))
+                    rating_amount = int(m_help.group(2))
+        except Exception:
+            pass
+
+        # Parse author
+        try:
+            m_user = re.search(r'<a[^>]+href=["\'](https?://anilist\.co/user/[^"\']+)["\'][^>]*>\s*<img[^>]+src=["\']([^"\']+)["\'][^>]*>\s*</a>\s*<a[^>]+href=["\'](https?://anilist\.co/user/[^"\']+)["\'][^>]*>([^<]+)</a>', html, re.S | re.I)
+            if m_user:
+                user["siteUrl"] = m_user.group(1)
+                user["avatar"]["large"] = m_user.group(2)
+                user["name"] = m_user.group(4).strip()
+            else:
+                # simpler
+                m_user2 = re.search(r'<a[^>]+href=["\'](https?://anilist\.co/user/[^"\']+)["\'][^>]*>([^<]+)</a>', html, re.I)
+                if m_user2:
+                    user["siteUrl"] = m_user2.group(1)
+                    user["name"] = m_user2.group(2).strip()
+        except Exception:
+            pass
+
+        # Final cleanup
+        body_text = body_text or ""
+        images = [i for i in images if i]
+        # If we found a "X of Y users found this helpful", but not likes, set likes to X
+        if rating_amount and likes is None:
+            likes = rating_amount
+
+        # Attempt to extract direct image links embedded as markdown or http links in body_text
+        try:
+            for m in re.finditer(r'(https?://[^\s"\']+(?:png|jpe?g|gif|webp))', html, re.I):
+                url_img = m.group(1)
+                if url_img not in images:
+                    images.append(url_img)
+        except Exception:
+            pass
+
+        return {
+            "id": review_id,
+            "siteUrl": url,
+            "user": user,
+            "body": body_text,
+            "images": images,
+            "rating": rating,
+            "likes": likes,
+            "ratingAmount": rating_amount
+        }
+
+    def _make_review_embeds_from_data(self, r: dict) -> List[discord.Embed]:
+        """
+        Convert review dict returned by fetch_review_api or fallback into one or more embeds.
+        Handles media pagination (one image per embed) and converts AniList formatting to Discord-friendly formatting.
+        """
+        text_raw = r.get("body") or ""
+        # Convert AniList markdown/html to discord version using existing clean_text but preserve inline links
+        cleaned = self.clean_text(text_raw)
+
+        # Use extract_media to find any explicit image links in text as well (will remove them from description)
+        media_links, cleaned = self.extract_media(text_raw)
+        # fallback to images field (from HTML parse)
+        if not media_links and r.get("images"):
+            media_links = r.get("images", [])
+
+        # Limit: remove duplicates and keep order
+        seen = set()
+        media_links_unique = []
+        for u in media_links:
+            if u not in seen:
+                media_links_unique.append(u)
+                seen.add(u)
+        media_links = media_links_unique
+
+        # Build base embed (will be copied per-image if pagination needed)
+        user = r.get("user") or {}
+        author_name = user.get("name") or "AniList User"
+        author_url = user.get("siteUrl") or r.get("siteUrl") or ""
+        avatar = (user.get("avatar") or {}).get("large") if isinstance(user.get("avatar"), dict) else None
+
+        title = f"Review by {author_name}"
+        desc = cleaned or "*No review text*"
+
+        # Build fingerprint summary
+        rating = r.get("rating")
+        likes = r.get("likes") or 0
+        rating_amount = r.get("ratingAmount") or None
+
+        # Build aesthetic rating block
+        rating_lines = []
+        if rating is not None:
+            # AniList often uses 100 scale; normalize detection:
+            if isinstance(rating, int) and rating > 10:
+                # assume /100
+                rating_lines.append(f"**User rating:** {rating}/100")
+            else:
+                rating_lines.append(f"**User rating:** {rating}/10")
+        if rating_amount is not None and likes is not None:
+            # Show ratio
+            try:
+                up = int(likes)
+                total = int(rating_amount)
+                pct = (up / total) * 100 if total > 0 else 0
+                rating_lines.append(f"**Public votes:** {up}/{total} ({pct:.0f}% positive)")
+            except Exception:
+                rating_lines.append(f"**Public votes:** {likes}/{rating_amount}")
+        elif likes:
+            rating_lines.append(f"**Helpful votes:** {likes}")
+
+        rating_text = "\n".join(rating_lines) if rating_lines else None
+
+        embeds: List[discord.Embed] = []
+        # If no images or only one image, create single embed
+        if not media_links:
+            em = discord.Embed(title=title, url=author_url, description=desc, color=discord.Color(DEFAULT_EMBED_COLOR))
+            if avatar:
+                em.set_author(name=author_name, url=author_url, icon_url=avatar)
+            else:
+                em.set_author(name=author_name, url=author_url)
+            if rating_text:
+                em.add_field(name="Rating / Votes", value=rating_text, inline=False)
+            em.set_footer(text="AniList Review")
+            embeds.append(em)
+            return embeds
+
+        # If multiple images: create paginated embeds, one image per embed
+        total = len(media_links)
+        for idx, img in enumerate(media_links, start=1):
+            em = discord.Embed(title=title, url=author_url, description=desc if idx == 1 else f"Image {idx}/{total}", color=discord.Color(DEFAULT_EMBED_COLOR))
+            if avatar:
+                em.set_author(name=author_name, url=author_url, icon_url=avatar)
+            else:
+                em.set_author(name=author_name, url=author_url)
+            # set this embed image
+            if any(img.lower().endswith(ext) for ext in (".png", ".jpg", ".jpeg", ".gif", ".webp")):
+                em.set_image(url=img)
+            else:
+                # non-image link, present as field
+                em.add_field(name="Media", value=f"[Link]({img})", inline=False)
+            # Include rating info only on first and last embed (so user sees)
+            if idx == 1 and rating_text:
+                em.add_field(name="Rating / Votes", value=rating_text, inline=False)
+            em.set_footer(text=f"AniList Review — Page {idx}/{total}")
+            embeds.append(em)
+
+        return embeds
+
+    class ReviewPaginator(ui.View):
+        """
+        Simple paginator for review images: Prev | PageNum(disabled) | Next
+        Not persisted to DB (non-persistent view). Buttons edit the message with the appropriate embed.
+        """
+        def __init__(self, embeds: List[discord.Embed], cog: "AniListCog"):
+            super().__init__(timeout=None)
+            self.embeds = embeds
+            self.cog = cog
+            self.current = 0
+            total = len(embeds)
+            self.prev_btn = ui.Button(label="⬅ Prev", style=discord.ButtonStyle.primary)
+            self.page_btn = ui.Button(label=f"{self.current+1}/{total}", style=discord.ButtonStyle.secondary, disabled=True)
+            self.next_btn = ui.Button(label="Next ➡", style=discord.ButtonStyle.primary)
+            self.prev_btn.callback = self.prev_cb
+            self.next_btn.callback = self.next_cb
+            self.add_item(self.prev_btn)
+            self.add_item(self.page_btn)
+            self.add_item(self.next_btn)
+            self._update_buttons()
+
+        def _update_buttons(self):
+            self.prev_btn.disabled = (self.current <= 0)
+            self.next_btn.disabled = (self.current >= len(self.embeds)-1)
+            self.page_btn.label = f"{self.current+1}/{len(self.embeds)}"
+
+        async def prev_cb(self, interaction: discord.Interaction):
+            try:
+                if self.current <= 0:
+                    await interaction.response.send_message("You are already on the first page.", ephemeral=True)
+                    return
+                self.current -= 1
+                self._update_buttons()
+                await interaction.response.edit_message(embeds=[self.embeds[self.current]], view=self)
+            except Exception:
+                logger.exception("ReviewPaginator prev_cb failed")
+                try:
+                    await interaction.response.send_message("Failed to change page.", ephemeral=True)
+                except:
+                    pass
+
+        async def next_cb(self, interaction: discord.Interaction):
+            try:
+                if self.current >= len(self.embeds)-1:
+                    await interaction.response.send_message("You are already on the last page.", ephemeral=True)
+                    return
+                self.current += 1
+                self._update_buttons()
+                await interaction.response.edit_message(embeds=[self.embeds[self.current]], view=self)
+            except Exception:
+                logger.exception("ReviewPaginator next_cb failed")
+                try:
+                    await interaction.response.send_message("Failed to change page.", ephemeral=True)
+                except:
+                    pass
+
+    @commands.Cog.listener()
+    async def on_message_review(self, message: discord.Message):
+        """
+        New listener that handles AniList review URLs like https://anilist.co/review/12345
+        This is separate from on_message to avoid touching existing handler code.
+        """
+        # ignore bots
+        if message.author.bot:
+            return
+
+        m = REVIEW_URL_RE.search(message.content)
+        if not m:
+            return
+
+        review_id = int(m.group(1))
+        # Try GraphQL API first
+        review_data = await self.fetch_review_api(review_id)
+        if not review_data:
+            # Fallback parse
+            review_data = await self.fetch_review_parse_fallback(review_id)
+            if not review_data:
+                await message.channel.send("❌ Failed to fetch review.")
+                return
+
+        # Build embeds
+        try:
+            embeds = self._make_review_embeds_from_data(review_data)
+            # send first embed and attach paginator view if multiple
+            sent = await message.channel.send(embeds=[embeds[0]])
+            if len(embeds) > 1:
+                view = self.ReviewPaginator(embeds=embeds, cog=self)
+                try:
+                    # Add view to bot so it's interactive while bot is running
+                    self.bot.add_view(view, message_id=sent.id)
+                except Exception:
+                    logger.exception("Failed to add ReviewPaginator view to bot (non-fatal).")
+                try:
+                    await sent.edit(view=view)
+                except Exception:
+                    logger.exception("Failed to attach review paginator view to message (message.edit failed).")
+        except Exception:
+            logger.exception("Failed to build/send review embed")
+            try:
+                await message.channel.send("⚠️ Failed to render review.")
+            except Exception:
+                pass
 
     # ---------------------
     # Cog setup
