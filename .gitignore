@@ -14,14 +14,7 @@ logs/
 *.log
 
 # Data directory (databases, caches, runtime data)
-# Temporarily commented out for Railway migration
-# data/
-
-# Allow specific data files for initial upload
-!data/database.db
-!data/profile_cache.json
-!data/cover_cache_index.json
-!data/cover_cache/
+data/
 
 # Database backups
 *.backup
