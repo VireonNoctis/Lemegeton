@@ -214,7 +214,7 @@ class BrowseCog(commands.Cog):
         # AniList Embed
         # --------------------------------------------------
         embed = discord.Embed(
-            title=f"{'🎬' if real_type=='ANIME' else '📖'} {media['title']['romaji'] or media['title']['english']}",
+            title=f"{'🎬' if real_type=='ANIME' else '📖'} {media['title']['english'] or media['title']['romaji']}",
             url=media["siteUrl"],
             description=description,
             color=discord.Color.random()
@@ -303,7 +303,7 @@ class BrowseCog(commands.Cog):
                     color=discord.Color.blue()
                 )
                 # Get the title and emoji for the footer
-                media_title = media['title']['romaji'] or media['title']['english']
+                media_title = media['title']['english'] or media['title']['romaji']
                 emoji = '🎬' if real_type == 'ANIME' else '📖'
                 progress_embed.set_footer(text=f"{emoji} {media_title} • Fetched from AniList")
 
