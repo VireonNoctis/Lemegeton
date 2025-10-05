@@ -2,7 +2,7 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "bash start.sh"
+startCommand = "python init_volume.py && python bot.py"
 restartPolicyType = "always"
 
 # Persistent volume for database and cache files

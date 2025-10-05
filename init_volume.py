@@ -23,6 +23,14 @@ def init_volume():
         print("ℹ️  This script should be run on Railway deployment")
         return
     
+    # Check if database already exists in volume
+    db_path = volume_data / "database.db"
+    if db_path.exists():
+        print(f"✅ Database already exists in volume ({db_path.stat().st_size:,} bytes)")
+        print("ℹ️  Skipping initialization (volume already populated)")
+        print("💡 To force re-initialization, delete the volume and redeploy")
+        return
+    
     # Files to copy
     files_to_copy = [
         "database.db",
