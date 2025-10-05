@@ -8,7 +8,7 @@ from discord.ext import commands
 from discord import ui
 import math
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from database import (
     get_all_users,
     get_all_paginator_states,
@@ -18,6 +18,7 @@ from database import (
 )
 from datetime import datetime, timedelta
 from enum import Enum
+import json
 
 logger = logging.getLogger("AniListCog")
 logger.setLevel(logging.INFO)
@@ -27,59 +28,102 @@ ANILIST_API = "https://graphql.anilist.co"
 ACTIVITY_URL_RE = re.compile(r"https?://anilist\.co/activity/(\d+)", re.IGNORECASE)
 ANIME_URL_RE = re.compile(r"https?://anilist\.co/anime/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
 MANGA_URL_RE = re.compile(r"https?://anilist\.co/manga/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
-
-# NEW: review url regex
 REVIEW_URL_RE = re.compile(r"https?://anilist\.co/review/(\d+)", re.IGNORECASE)
+CHARACTER_URL_RE = re.compile(r"https?://anilist\.co/character/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
+STAFF_URL_RE = re.compile(r"https?://anilist\.co/staff/(\d+)(?:/[^/\s]+)?/?", re.IGNORECASE)
 
 REPLIES_PER_PAGE = 5
-HTML_TIMEOUT = 15  # seconds for parsing fallback HTTP requests
+HTML_TIMEOUT = 20  # seconds for parsing fallback HTTP requests
 
-# DEFAULT EMBED COLOR requested by user
 DEFAULT_EMBED_COLOR = 0x0F1720
 
 # Enhanced Progress Filtering Options
-class ProgressFilter(Enum):
-    ALL = "all"  # Default: show all users
-    ACTIVE_ONLY = "active_only"  # Users with >0 progress
-    COMPLETED_ONLY = "completed_only"  # Users who completed the series
-    HIGH_SCORERS = "high_scorers"  # Users with 8+ ratings
-    RECENT_ACTIVITY = "recent_activity"  # Active within 30 days
-    CUSTOM_RANGE = "custom_range"  # Progress between X-Y
-    WATCHING_NOW = "watching_now"  # Currently watching/reading
-    DROPPED = "dropped"  # Users who dropped the series
+class ProgressFilter(Enum):   
+    ALL = "all"
+    ACTIVE_ONLY = "active_only"
+    COMPLETED_ONLY = "completed_only"
+    HIGH_SCORERS = "high_scorers"
+    RECENT_ACTIVITY = "recent_activity"
+    CUSTOM_RANGE = "custom_range"
+    WATCHING_NOW = "watching_now"
+    DROPPED = "dropped"
 
 PROGRESS_FILTER_OPTIONS = {
-    ProgressFilter.ALL: {
-        "label": "🌟 All Users",
-        "description": "Show all registered users",
-        "emoji": "🌟"
-    },
-    ProgressFilter.ACTIVE_ONLY: {
-        "label": "⚡ Active Users", 
-        "description": "Users with progress > 0",
-        "emoji": "⚡"
-    },
-    ProgressFilter.COMPLETED_ONLY: {
-        "label": "✅ Completed Only",
-        "description": "Users who finished the series", 
-        "emoji": "✅"
-    },
-    ProgressFilter.HIGH_SCORERS: {
-        "label": "⭐ High Scorers",
-        "description": "Users with 8+ ratings",
-        "emoji": "⭐"
-    },
-    ProgressFilter.WATCHING_NOW: {
-        "label": "📺 Currently Active",
-        "description": "Users actively watching/reading",
-        "emoji": "📺"
-    },
-    ProgressFilter.DROPPED: {
-        "label": "❌ Dropped",
-        "description": "Users who dropped the series",
-        "emoji": "❌"
-    }
+    ProgressFilter.ALL: {"label": "🌟 All Users", "description": "Show all registered users", "emoji": "🌟"},
+    ProgressFilter.ACTIVE_ONLY: {"label": "⚡ Active Users", "description": "Users with progress > 0", "emoji": "⚡"},
+    ProgressFilter.COMPLETED_ONLY: {"label": "✅ Completed Only", "description": "Users who finished the series", "emoji": "✅"},
+    ProgressFilter.HIGH_SCORERS: {"label": "⭐ High Scorers", "description": "Users with 8+ ratings", "emoji": "⭐"},
+    ProgressFilter.WATCHING_NOW: {"label": "📺 Currently Active", "description": "Users actively watching/reading", "emoji": "📺"},
+    ProgressFilter.DROPPED: {"label": "❌ Dropped", "description": "Users who dropped the series", "emoji": "❌"}
 }
+
+
+# small helpers (regex for images/markdown)
+IMG_MD_RE = re.compile(r'!\[.*?\]\(\s*(https?://[^\s)]+)\s*\)', re.I)
+IMG_HTML_RE = re.compile(r'<img[^>]+src=["\'](https?://[^"\']+)["\'][^>]*>', re.I)
+IMG_CUSTOM_RE = re.compile(r'imgx\(\s*(https?://[^\s)]+)\s*\)', re.I)
+URL_RE = re.compile(r'(https?://[^\s)>\]]+)')
+
+def _split_into_segments(text: Optional[str]) -> List[Dict[str, str]]:
+    if not text:
+        return []
+    s = text
+    try:
+        s = re.sub(r'<img[^>]+src=["\'](https?://[^"\']+)["\'][^>]*>', r' imgx(\1) ', s, flags=re.I)
+    except Exception:
+        pass
+    segments = []
+    idx = 0
+    L = len(s)
+    while idx < L:
+        m_md = IMG_MD_RE.search(s, idx)
+        m_cus = IMG_CUSTOM_RE.search(s, idx)
+        matches = [m for m in (m_md, m_cus) if m]
+        if not matches:
+            rem = s[idx:].strip()
+            if rem:
+                segments.append({"type": "text", "content": rem})
+            break
+        m = min(matches, key=lambda mm: mm.start())
+        start, end = m.start(), m.end()
+        if start > idx:
+            pre = s[idx:start].strip()
+            if pre:
+                segments.append({"type": "text", "content": pre})
+        url = None
+        try:
+            url = m.group(1)
+        except Exception:
+            u = URL_RE.search(m.group(0))
+            if u:
+                url = u.group(1)
+        if url:
+            segments.append({"type": "image", "url": url})
+        idx = end
+    # merge adjacent texts
+    out = []
+    for seg in segments:
+        if out and seg["type"] == "text" and out[-1]["type"] == "text":
+            out[-1]["content"] += "\n\n" + seg["content"]
+        else:
+            out.append(seg)
+    return out
+
+def _chunk_text(text: str, limit: int = 2000) -> List[str]:
+    if not text:
+        return []
+    chunks = []
+    cur = text
+    while cur:
+        if len(cur) <= limit:
+            chunks.append(cur)
+            break
+        cut = cur.rfind("\n", 0, limit)
+        if cut <= 0:
+            cut = limit
+        chunks.append(cur[:cut].strip())
+        cur = cur[cut:].lstrip("\n")
+    return chunks
 
 
 class AniListCog(commands.Cog):
