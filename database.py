@@ -67,10 +67,6 @@ logger.info("="*50)
 # ------------------------------------------------------
 DB_PATH = Path(config.DB_PATH).resolve()
 
-# Ensure database directory exists (critical for Railway volumes)
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-logger.info(f"Ensured database directory exists: {DB_PATH.parent}")
-
 logger.info(f"Database configuration initialized")
 logger.info(f"Database file path: {DB_PATH}")
 logger.info(f"Database file exists: {DB_PATH.exists()}")

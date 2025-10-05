@@ -1,0 +1,11 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python bot.py"
+restartPolicyType = "always"
+
+# Persistent volume for database and cache files
+[[deploy.volumes]]
+mountPath = "/app/data"
+name = "lemegeton-data"
