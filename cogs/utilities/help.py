@@ -49,148 +49,186 @@ class HelpCog(commands.Cog):
                 "login": {
                     "desc": "Manage your account - register, update, or unregister",
                     "usage": "/login",
-                    "note": "Start here to connect your AniList account!"
+                    "note": "Start here to connect your AniList account!",
+                    "examples": ["/login"]
                 }
             },
             "📊 Profile & Stats": {
                 "profile": {
                     "desc": "View your AniList profile with comprehensive stats, achievements, and bio gallery",
                     "usage": "/profile [user]",
-                    "note": "Features: 🖼️ Gallery (view all bio images), 🏅 Achievements, ⭐ Favorites, 📝 Bio with auto-cleanup, 👥 Social stats, 📅 Account age. Data cached for 12 hours for faster loading."
+                    "note": "Features: 🖼️ Gallery (view all bio images), 🏅 Achievements, ⭐ Favorites, 📝 Bio with auto-cleanup, 👥 Social stats, 📅 Account age. Data cached for 12 hours for faster loading.",
+                    "examples": ["/profile", "/profile @username"]
                 }
             },
             "📺 Anime & Manga": {
                 "browse": {
                     "desc": "Search and browse anime, manga, light novels, and general novels",
                     "usage": "/browse",
-                    "note": "Interactive browsing with advanced filtering and sorting options"
+                    "note": "Interactive browsing with advanced filtering and sorting options",
+                    "examples": ["/browse"]
                 },
                 "trending": {
                     "desc": "View trending anime and manga",
                     "usage": "/trending",
-                    "note": "See what's popular right now"
+                    "note": "See what's popular right now",
+                    "examples": ["/trending"]
                 },
                 "recommendations": {
                     "desc": "Get personalized recommendations based on your highly-rated manga (≥8.0/10)",
                     "usage": "/recommendations [member]",
-                    "note": "AI-powered recommendations with interactive browsing by category"
+                    "note": "AI-powered recommendations with interactive browsing by category",
+                    "examples": ["/recommendations", "/recommendations @friend"]
                 },
                 "random": {
-                    "desc": "Get random anime/manga suggestions",
-                    "usage": "/random",
-                    "note": "For when you can't decide what to watch/read"
+                    "desc": "Get random anime/manga/light novel suggestions from AniList",
+                    "usage": "/random <media_type>",
+                    "note": "For when you can't decide what to watch/read - supports Anime, Manga, Light Novel, or All",
+                    "examples": ["/random anime", "/random manga", "/random light_novel", "/random all"]
+                },
+                "trailer": {
+                    "desc": "Get the official trailer for an anime or manga from AniList",
+                    "usage": "/trailer <type> <title>",
+                    "note": "Fetches trailers with autocomplete support and debug options",
+                    "examples": ["/trailer anime Demon Slayer", "/trailer manga Chainsaw Man"]
                 },
                 "news-manage": {
                     "desc": "Manage Twitter/X news monitoring for anime/manga updates",
                     "usage": "/news-manage",
-                    "note": "Monitor Twitter accounts for anime/manga news"
+                    "note": "Monitor Twitter accounts for anime/manga news",
+                    "examples": ["/news-manage"]
                 }
             },
             "🏆 Challenges & Competition": {
                 "challenge_progress": {
                     "desc": "View your reading challenge progress",
                     "usage": "/challenge_progress",
-                    "note": "Track your annual reading goals"
+                    "note": "Track your annual reading goals",
+                    "examples": ["/challenge_progress"]
                 },
                 "challenge_update": {
                     "desc": "Update your challenge progress",
                     "usage": "/challenge_update",
-                    "note": "Manually update your reading challenge"
+                    "note": "Manually update your reading challenge",
+                    "examples": ["/challenge_update"]
                 },
                 "challenge_manage": {
                     "desc": "Manage reading challenges",
                     "usage": "/challenge_manage",
-                    "note": "Create and manage reading challenges"
+                    "note": "Create and manage reading challenges",
+                    "examples": ["/challenge_manage"]
                 },
                 "challenge_leaderboard": {
                     "desc": "View challenge leaderboards",
                     "usage": "/challenge_leaderboard",
-                    "note": "See who's leading in various challenges"
+                    "note": "See who's leading in various challenges",
+                    "examples": ["/challenge_leaderboard"]
                 },
                 "leaderboard": {
                     "desc": "View server leaderboards for various metrics",
                     "usage": "/leaderboard",
-                    "note": "Server rankings and competitions"
+                    "note": "Server rankings and competitions",
+                    "examples": ["/leaderboard"]
                 }
             },
             "🎮 Gaming": {
                 "steam-profile": {
                     "desc": "Show a Steam profile (vanity or SteamID)",
                     "usage": "/steam-profile <username>",
-                    "note": "View Steam user profiles and stats"
+                    "note": "View Steam user profiles and stats",
+                    "examples": ["/steam-profile gaben", "/steam-profile 76561197960287930"]
                 },
                 "steam-recommendation": {
                     "desc": "Get personalized game recommendations based on your Steam library",
                     "usage": "/steam-recommendation <username>",
-                    "note": "Discover new games similar to ones you enjoy"
+                    "note": "Discover new games similar to ones you enjoy",
+                    "examples": ["/steam-recommendation gaben"]
+                },
+                "steam": {
+                    "desc": "Search for games on Steam with advanced filters",
+                    "usage": "/steam game <game_name> [filters]",
+                    "note": "Filter by genre, price, platform, tags, and sort options with fuzzy matching",
+                    "examples": ["/steam game Elden Ring", "/steam game god war genre:action max_price:30"]
                 },
                 "free-games": {
                     "desc": "Manage free games notifications with interactive interface",
                     "usage": "/free-games",
-                    "note": "Check current free games and setup automatic notifications (Epic, GOG, Steam). Checks every 6 hours."
+                    "note": "Check current free games and setup automatic notifications (Epic, GOG, Steam). Checks every 6 hours.",
+                    "examples": ["/free-games"]
                 }
             },
-            "� Customization": {
+            "🎨 Customization": {
                 "theme": {
                     "desc": "Complete theme customization system - Browse, preview, and apply themes",
                     "usage": "/theme",
-                    "note": "Customize your bot experience with themes"
+                    "note": "Customize your bot experience with themes",
+                    "examples": ["/theme"]
                 },
                 "guild_theme": {
                     "desc": "Manage guild-wide theme settings (Server Moderator only)",
                     "usage": "/guild_theme",
-                    "note": "Set server-wide default themes"
+                    "note": "Set server-wide default themes",
+                    "examples": ["/guild_theme"]
                 }
             },
             "⚙️ Server Management": {
                 "server-config": {
                     "desc": "Configure server settings - roles, channels, and notifications",
                     "usage": "/server-config",
-                    "note": "Manage server-wide bot configuration (Admin only)"
+                    "note": "Manage server-wide bot configuration (Admin only)",
+                    "examples": ["/server-config"]
                 },
                 "moderators": {
                     "desc": "Manage bot moderators (bot-wide permissions)",
                     "usage": "/moderators",
-                    "note": "Add/remove bot moderators with elevated permissions"
+                    "note": "Add/remove bot moderators with elevated permissions",
+                    "examples": ["/moderators"]
                 },
                 "set_bot_updates_channel": {
                     "desc": "Set channel to receive bot updates and announcements (Admin only)",
                     "usage": "/set_bot_updates_channel <channel>",
-                    "note": "Configure where bot update notifications appear"
+                    "note": "Configure where bot update notifications appear",
+                    "examples": ["/set_bot_updates_channel #bot-updates"]
                 },
                 "set_animanga_completion_channel": {
                     "desc": "Set channel to receive anime/manga completion updates (Mod only)",
                     "usage": "/set_animanga_completion_channel <channel>",
-                    "note": "Monitor when users complete series"
+                    "note": "Monitor when users complete series",
+                    "examples": ["/set_animanga_completion_channel #completions"]
                 }
             },
             "🛠️ Utilities": {
                 "notifications": {
                     "desc": "Manage your bot update notification preferences",
                     "usage": "/notifications",
-                    "note": "Control what notifications you receive"
+                    "note": "Control what notifications you receive",
+                    "examples": ["/notifications"]
                 },
                 "planned": {
                     "desc": "View planned bot features",
                     "usage": "/planned",
-                    "note": "See what's coming in future updates"
+                    "note": "See what's coming in future updates",
+                    "examples": ["/planned"]
                 }
             },
             "ℹ️ Bot Information": {
                 "invite": {
                     "desc": "Get an invite link to add this bot to your server",
                     "usage": "/invite",
-                    "note": "Share the bot with other servers"
+                    "note": "Share the bot with other servers",
+                    "examples": ["/invite"]
                 },
                 "feedback": {
                     "desc": "Submit ideas or report bugs",
                     "usage": "/feedback",
-                    "note": "Help improve the bot with your suggestions"
+                    "note": "Help improve the bot with your suggestions",
+                    "examples": ["/feedback ideas Add more themes", "/feedback bugs Profile not loading"]
                 },
                 "help": {
                     "desc": "Display this help information",
                     "usage": "/help [category]",
-                    "note": "Get detailed command information"
+                    "note": "Get detailed command information",
+                    "examples": ["/help", "/help anime", "/help gaming"]
                 }
             }
         }
@@ -241,11 +279,15 @@ class HelpCog(commands.Cog):
 
     def _get_filtered_command_categories(self) -> dict:
         """Return a copy of self.command_categories filtered to only include
-        commands that are currently registered on the bot."""
+        commands that are currently registered on the bot.
+        
+        AUTO-UPDATE FEATURE: This method auto-fills missing metadata from runtime
+        command info (description, usage, examples).
+        """
         registered = self._get_registered_command_names()
         filtered = {}
 
-        # Collect runtime info to optionally fill missing metadata (description/usage)
+        # Collect runtime info to optionally fill missing metadata (description/usage/examples)
         runtime_info = self._get_runtime_command_info()
 
         for category, cmds in self.command_categories.items():
@@ -256,13 +298,19 @@ class HelpCog(commands.Cog):
                     # copy metadata so we don't mutate original
                     entry = dict(meta)
 
-                    # Fill missing description or usage from runtime info
+                    # AUTO-UPDATE: Fill missing fields from runtime info
                     rt = runtime_info.get(cmd_name)
                     if rt:
                         if (not entry.get('desc')) and rt.get('desc'):
                             entry['desc'] = rt.get('desc')
+                            logger.debug(f"Auto-filled description for {cmd_name} from runtime")
                         if (not entry.get('usage')) and rt.get('usage'):
                             entry['usage'] = rt.get('usage')
+                            logger.debug(f"Auto-filled usage for {cmd_name} from runtime")
+                        # Generate basic example if missing
+                        if (not entry.get('examples')) and rt.get('usage'):
+                            entry['examples'] = [rt.get('usage')]
+                            logger.debug(f"Auto-generated example for {cmd_name} from usage")
 
                     kept[cmd_name] = entry
 
@@ -474,13 +522,22 @@ class HelpCog(commands.Cog):
         commands = getattr(self, "_filtered_command_categories", self.command_categories).get(category_name, {})
 
         for cmd_name, cmd_info in commands.items():
+            # Build the field value with optional examples
+            field_value = (
+                f"**Description:** {cmd_info['desc']}\n"
+                f"**Usage:** `{cmd_info['usage']}`\n"
+            )
+            
+            # Add examples if available
+            if 'examples' in cmd_info and cmd_info['examples']:
+                examples_text = '\n'.join([f"  • `{ex}`" for ex in cmd_info['examples']])
+                field_value += f"**Examples:**\n{examples_text}\n"
+            
+            field_value += f"💡 *{cmd_info['note']}*"
+            
             embed.add_field(
                 name=f"/{cmd_name}",
-                value=(
-                    f"**Description:** {cmd_info['desc']}\n"
-                    f"**Usage:** `{cmd_info['usage']}`\n"
-                    f"💡 *{cmd_info['note']}*"
-                ),
+                value=field_value,
                 inline=False
             )
         
@@ -520,7 +577,9 @@ class HelpCog(commands.Cog):
                 "• Recommendations use advanced AI filtering for quality results\n"
                 "• Rate titles 8.0+ for best recommendation accuracy\n"
                 "• Browse supports advanced filtering by genre, year, format\n"
-                "• News monitoring tracks Twitter/X accounts for updates"
+                "• News monitoring tracks Twitter/X accounts for updates\n"
+                "• Use `/trailer` to watch official trailers before starting a series\n"
+                "• Try `/random all` to discover completely random suggestions"
             ),
             "challenges": (
                 "• Join reading challenges to stay motivated\n"
@@ -530,7 +589,8 @@ class HelpCog(commands.Cog):
             "gaming": (
                 "• Steam integration provides game recommendations\n"
                 "• Based on your gaming preferences and activity\n"
-                "• Discover new games similar to ones you enjoy"
+                "• Discover new games similar to ones you enjoy\n"
+                "• Use `/steam game` with filters for precise searches"
             ),
             "customization": (
                 "• Themes personalize your bot experience\n"
