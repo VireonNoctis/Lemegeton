@@ -13,9 +13,6 @@ bot_pid.txt
 logs/
 *.log
 
-# Data directory (databases, caches, runtime data)
-data/
-
 # Database backups
 *.backup
 data/*.backup
